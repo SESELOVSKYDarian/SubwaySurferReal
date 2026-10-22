@@ -3,8 +3,18 @@
 // Es un worker "clásico" (no de módulo) porque MediaPipe carga su WASM con importScripts.
 const VERSION = '0.10.14';
 const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
-const MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+// Con GPU usamos el modelo "full" (más preciso); sin GPU, el "lite" (más rápido)
+const MODEL = (kind) =>
+  `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_${kind}/float16/1/pose_landmarker_${kind}.task`;
+// Detectamos varias personas para poder quedarnos con el jugador e ignorar
+// a quien pase por detrás
+const OPTIONS = {
+  runningMode: 'VIDEO',
+  numPoses: 3,
+  minPoseDetectionConfidence: 0.6,
+  minPosePresenceConfidence: 0.6,
+  minTrackingConfidence: 0.6,
+};
 
 self.exports = {};
 importScripts(`${BASE}/vision_bundle.cjs`);
@@ -14,18 +24,17 @@ let landmarker = null;
 
 async function init() {
   const vision = await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
-  const create = (delegate, extra = {}) =>
+  const create = (kind, delegate, extra = {}) =>
     PoseLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: MODEL_URL, delegate },
-      runningMode: 'VIDEO',
-      numPoses: 1,
+      baseOptions: { modelAssetPath: MODEL(kind), delegate },
+      ...OPTIONS,
       ...extra,
     });
   try {
-    landmarker = await create('GPU', { canvas: new OffscreenCanvas(1, 1) });
+    landmarker = await create('full', 'GPU', { canvas: new OffscreenCanvas(1, 1) });
     return 'GPU';
   } catch {
-    landmarker = await create('CPU');
+    landmarker = await create('lite', 'CPU');
     return 'CPU';
   }
 }
@@ -39,13 +48,12 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ type: 'error', message: String(err?.message || err) });
     }
   } else if (data.type === 'frame') {
-    let landmarks = null;
+    let poses = [];
     try {
-      const result = landmarker.detectForVideo(data.bitmap, data.ts);
-      landmarks = result.landmarks[0] || null;
+      poses = landmarker.detectForVideo(data.bitmap, data.ts).landmarks;
     } finally {
       data.bitmap.close();
     }
-    self.postMessage({ type: 'result', landmarks });
+    self.postMessage({ type: 'result', poses });
   }
 };

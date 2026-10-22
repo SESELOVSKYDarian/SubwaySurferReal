@@ -36,14 +36,21 @@ python3 -m http.server 8000
 4. Levanta las dos manos para empezar.
 
 Si te mueves de sitio o algo no responde bien, pulsa **C** para recalibrar.
+
+**Si la cámara te pierde** (sales del cuadro o alguien se cruza delante), el juego se
+pausa solo. Vuelve al centro, quédate quieto un segundo para recalibrar y el juego
+sigue tras una cuenta atrás. Las personas que pasen por detrás se ven en gris junto
+a la cámara pero no cuentan: el juego sigue siempre al jugador. **P** pausa a mano.
 También se puede jugar con teclado: ← → / A D, ↑ / Espacio, ↓ / S.
 
 ## Cómo funciona
 
 - **`pose-worker.js`** – ejecuta la red neuronal en un hilo aparte (Web Worker) para
   que el juego no se congele mientras analiza la cámara.
-- **`pose.js`** – usa [MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)
-  (33 puntos del cuerpo) y convierte el movimiento en gestos:
+- **`pose.js`** – detecta hasta 3 personas y sigue siempre al jugador (la que continúa
+  donde estaba; al empezar, la más cercana a la cámara). Filtra los puntos con un
+  filtro *One Euro* (quita el temblor sin añadir retraso). Usa [MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)
+  (33 puntos del cuerpo; modelo *full*, el más preciso, si hay GPU) y convierte el movimiento en gestos:
   - *Carril*: posición horizontal del centro de los hombros respecto a la calibración,
     medida en anchos de hombro (así da igual lo lejos que estés).
   - *Salto*: sube todo el cuerpo (cadera y hombros) y, si se ven, los dos pies. También se

@@ -36,16 +36,68 @@ const game = new Game($('game'), {
 });
 
 function play() {
-  if (game.state === 'playing') return;
+  if (game.state === 'playing' || game.state === 'paused') return;
   overlay.classList.add('hidden');
   game.start();
 }
 
 // --- Control por cuerpo (MediaPipe se carga solo al activar la cámara) ---
 let pose = null;
+// --- Pausa: si la cámara te pierde (sales del cuadro, alguien se cruza…) el juego
+// se para, te recalibra cuando vuelves y sigue tras una cuenta atrás ---
+const pauseEl = $('pause');
+let pausedByLoss = false;
+let countdownTimer = null;
+
+function showPause(title, text = '', count = false) {
+  pauseEl.classList.remove('hidden');
+  $('pause-title').textContent = title;
+  $('pause-title').classList.toggle('count', count);
+  $('pause-text').textContent = text;
+}
+
+function hidePause() {
+  pauseEl.classList.add('hidden');
+}
+
+function cancelCountdown() {
+  clearTimeout(countdownTimer);
+  countdownTimer = null;
+}
+
+function resumeWithCountdown(n = 3) {
+  cancelCountdown();
+  if (n === 0) {
+    hidePause();
+    pausedByLoss = false;
+    game.resume();
+    game.setLane(1); // te has recalibrado en el centro
+    return;
+  }
+  showPause(String(n), '¡Prepárate!', true);
+  countdownTimer = setTimeout(() => resumeWithCountdown(n - 1), 700);
+}
+
 const poseHandlers = {
-  onStatus: (text) => ($('pose-status').textContent = text),
-  onCalibrated: () => flash('¡Listo! 🙌', '#7dff9a'),
+  onStatus: (text) => {
+    $('pose-status').textContent = text;
+    if (pausedByLoss && !countdownTimer) $('pause-text').textContent = text;
+  },
+  onLost: () => {
+    cancelCountdown();
+    if (game.state === 'playing') {
+      game.pause();
+      pausedByLoss = true;
+    }
+    if (pausedByLoss) showPause('⏸ Te perdí de vista', 'Vuelve al centro y quédate quieto para recalibrar');
+  },
+  onFound: () => {
+    if (pausedByLoss) showPause('👀 ¡Te veo!', 'Quédate quieto, calibrando…');
+  },
+  onCalibrated: () => {
+    flash('¡Listo! 🙌', '#7dff9a');
+    if (pausedByLoss) resumeWithCountdown();
+  },
   onLane: (lane) => {
     game.setLane(lane + 1);
     flash(['⬅', '⬆', '➡'][lane + 1]);
@@ -110,6 +162,15 @@ window.addEventListener('keydown', (e) => {
     case 'ArrowDown': case 'KeyS': game.roll(); break;
     case 'Enter': play(); break;
     case 'KeyC': pose?.recalibrate(); break;
+    case 'KeyP':
+      if (game.state === 'playing') {
+        game.pause();
+        showPause('⏸ Pausa', 'Pulsa P para seguir');
+      } else if (game.state === 'paused' && !pausedByLoss) {
+        game.resume();
+        hidePause();
+      }
+      break;
     default: return;
   }
   e.preventDefault();

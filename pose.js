@@ -4,8 +4,8 @@
 
 const VERSION = '0.10.14';
 const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
-const MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const MODEL = (kind) =>
+  `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_${kind}/float16/1/pose_landmarker_${kind}.task`;
 
 // Índices de los puntos del esqueleto de MediaPipe
 const NOSE = 0, L_SHOULDER = 11, R_SHOULDER = 12, L_WRIST = 15, R_WRIST = 16, L_HIP = 23, R_HIP = 24;
@@ -26,8 +26,33 @@ const DUCK_DOWN = 0.38;    // bajada/encogimiento para agacharse ("hacerse bolit
 const DUCK_DEEP = 0.6;     // tan agachado que no hace falta confirmar
 const DUCK_EXIT = 0.2;     // por debajo de esto se considera que te levantaste
 const CALIB_FRAMES = 20;   // frames quieto necesarios para calibrar
+const LOST_FRAMES = 10;    // ~1/3 s sin ver al jugador = lo hemos perdido (se pausa)
+const FORGET_FRAMES = 60;  // ~2 s sin verlo: se elige de nuevo a la persona más cercana
+const MAX_JUMP_AWAY = 2.5; // cuánto puede "saltar" el jugador entre fotogramas (en anchos de hombro)
 
 const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+// Filtro "One Euro": quita el temblor de los puntos cuando estás quieto pero casi no
+// añade retraso cuando te mueves rápido (la suavidad depende de la velocidad).
+class OneEuro {
+  constructor(minCutoff = 2.5, beta = 6, dCutoff = 1.5) {
+    Object.assign(this, { minCutoff, beta, dCutoff, x: null });
+  }
+  static alpha(cutoff, dt) {
+    return 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+  }
+  filter(x, t) {
+    if (this.x == null || t - this.t > 0.3) {
+      Object.assign(this, { x, dx: 0, t });
+      return x;
+    }
+    const dt = Math.max(t - this.t, 1e-3);
+    this.t = t;
+    this.dx += OneEuro.alpha(this.dCutoff, dt) * ((x - this.x) / dt - this.dx);
+    this.x += OneEuro.alpha(this.minCutoff + this.beta * Math.abs(this.dx), dt) * (x - this.x);
+    return this.x;
+  }
+}
 
 export class PoseController {
   constructor(video, canvas, handlers = {}, sensitivity = 1) {
@@ -39,6 +64,9 @@ export class PoseController {
     this.running = false;
     this.busy = false;
     this.lastVideoTime = -1;
+    this.track = null;   // posición y tamaño del jugador, para no confundirlo con otros
+    this.missing = 0;
+    this.lost = false;
     this.recalibrate();
   }
 
@@ -93,7 +121,7 @@ export class PoseController {
           worker.onmessage = ({ data: d }) => {
             if (d.type !== 'result') return;
             this.busy = false;
-            this.process(d.landmarks);
+            this.process(d.poses);
           };
           resolve();
         } else if (data.type === 'error') {
@@ -109,15 +137,18 @@ export class PoseController {
   async startMainThread() {
     const { FilesetResolver, PoseLandmarker } = await import(`${BASE}/vision_bundle.mjs`);
     const vision = await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
-    const options = (delegate) => ({
-      baseOptions: { modelAssetPath: MODEL_URL, delegate },
+    const options = (kind, delegate) => ({
+      baseOptions: { modelAssetPath: MODEL(kind), delegate },
       runningMode: 'VIDEO',
-      numPoses: 1,
+      numPoses: 3,
+      minPoseDetectionConfidence: 0.6,
+      minPosePresenceConfidence: 0.6,
+      minTrackingConfidence: 0.6,
     });
     try {
-      this.landmarker = await PoseLandmarker.createFromOptions(vision, options('GPU'));
+      this.landmarker = await PoseLandmarker.createFromOptions(vision, options('full', 'GPU'));
     } catch {
-      this.landmarker = await PoseLandmarker.createFromOptions(vision, options('CPU'));
+      this.landmarker = await PoseLandmarker.createFromOptions(vision, options('lite', 'CPU'));
     }
     this.mode = 'hilo principal';
   }
@@ -147,7 +178,7 @@ export class PoseController {
         }
       } else {
         const result = this.landmarker.detectForVideo(this.video, ts);
-        this.process(result.landmarks[0]);
+        this.process(result.landmarks);
       }
     }
     this.scheduleFrame();
@@ -166,12 +197,56 @@ export class PoseController {
     this.lastDuckEnd = 0;
     this.prev = null;
     this.meter = { jump: 0, duck: 0 };
+    this.filters = {};
   }
 
-  draw(lm) {
+  // De todas las personas detectadas, elige al jugador: la que sigue donde estaba
+  // el jugador en el fotograma anterior. Si aún no hay jugador, la más grande
+  // (la más cercana a la cámara) cerca del centro. Los demás se ignoran.
+  selectPlayer(poses) {
+    const cands = [];
+    for (const lm of poses) {
+      const v = (i) => (lm[i].visibility ?? 1) > 0.5;
+      const pts = [NOSE, L_SHOULDER, R_SHOULDER, L_HIP, R_HIP].filter(v);
+      if (pts.length < 2) continue;
+      const size = v(L_SHOULDER) && v(R_SHOULDER)
+        ? Math.hypot(lm[L_SHOULDER].x - lm[R_SHOULDER].x, lm[L_SHOULDER].y - lm[R_SHOULDER].y)
+        : this.track?.size;
+      if (!size) continue;
+      cands.push({ lm, size, cx: avg(pts.map((i) => lm[i].x)), cy: avg(pts.map((i) => lm[i].y)) });
+    }
+    if (!cands.length) return null;
+
+    let best;
+    const t = this.track;
+    if (t) {
+      const score = (c) => Math.hypot(c.cx - t.cx, c.cy - t.cy) / t.size + Math.abs(Math.log(c.size / t.size)) * 2;
+      best = cands.reduce((a, c) => (score(c) < score(a) ? c : a));
+      if (score(best) > MAX_JUMP_AWAY) return null;
+    } else {
+      const central = cands.filter((c) => c.cx > 0.15 && c.cx < 0.85);
+      best = (central.length ? central : cands).reduce((a, c) => (c.size > a.size ? c : a));
+    }
+    this.track = { cx: best.cx, cy: best.cy, size: t ? t.size + (best.size - t.size) * 0.3 : best.size };
+    return best.lm;
+  }
+
+  draw(lm, poses = []) {
     const { ctx, canvas } = this;
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
+    // Las demás personas, en gris: se ven pero no cuentan
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(200,200,200,0.5)';
+    ctx.beginPath();
+    for (const other of poses) {
+      if (other === lm) continue;
+      for (const [a, b] of BONES) {
+        ctx.moveTo(other[a].x * W, other[a].y * H);
+        ctx.lineTo(other[b].x * W, other[b].y * H);
+      }
+    }
+    ctx.stroke();
     if (lm) {
       ctx.lineWidth = 5;
       ctx.lineCap = 'round';
@@ -210,7 +285,7 @@ export class PoseController {
   }
 
   // Medidas del cuerpo en este fotograma (null si no se ve esa parte)
-  measure(lm) {
+  measure(lm, t) {
     const vis = (i) => (lm[i].visibility ?? 1) > 0.5;
     const m = {};
     if (vis(L_SHOULDER) && vis(R_SHOULDER)) {
@@ -224,20 +299,48 @@ export class PoseController {
     // Para el salto cuentan los dos pies: el que esté más abajo
     if (vis(L_ANKLE) && vis(R_ANKLE)) m.ay = Math.max(lm[L_ANKLE].y, lm[R_ANKLE].y);
     if (m.sy != null && m.hy != null) m.torso = m.hy - m.sy;
+    for (const k of Object.keys(m)) {
+      // Lo horizontal se suaviza más (carriles estables); lo vertical casi sin retraso (saltos)
+      this.filters[k] ??= k === 'x' || k === 'sw' ? new OneEuro(1.5, 4) : new OneEuro(4, 20);
+      m[k] = this.filters[k].filter(m[k], t);
+    }
     return m;
   }
 
-  process(lm) {
-    this.draw(lm);
+  process(poses) {
+    poses = poses || [];
+    const lm = this.selectPlayer(poses);
+    this.draw(lm, poses);
     if (!lm) {
-      this.status('No te veo 👀 — ponte delante de la cámara');
+      this.missing++;
       this.prev = null;
+      if (this.missing === LOST_FRAMES && this.base) {
+        this.lost = true;
+        this.h.onLost?.();
+      }
+      if (this.missing > FORGET_FRAMES) this.track = null;
+      this.status(
+        this.lost
+          ? '⏸ Te perdí — vuelve al centro y quédate quieto'
+          : poses.length ? 'Sigo buscándote…' : 'No te veo 👀 — ponte delante de la cámara',
+      );
       return;
     }
+    this.missing = 0;
+    if (this.lost) {
+      // Has vuelto: recalibramos por si ya no estás en el mismo sitio
+      this.lost = false;
+      this.recalibrate();
+      this.h.onFound?.();
+    }
+    this.processPlayer(lm);
+  }
+
+  processPlayer(lm) {
     const visible = (i) => (lm[i].visibility ?? 1) > 0.5;
     const now = performance.now();
     this.checkHandsUp(lm, visible, now);
-    const m = this.measure(lm);
+    const m = this.measure(lm, now / 1000);
 
     if (!this.base) {
       if (m.sy == null) {

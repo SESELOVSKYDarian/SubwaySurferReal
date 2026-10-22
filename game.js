@@ -334,8 +334,17 @@ export class Game {
   }
 
   start() {
+    if (this.state === 'playing' || this.state === 'paused') return;
     if (this.state === 'over') this.reset();
     this.state = 'playing';
+  }
+
+  pause() {
+    if (this.state === 'playing') this.state = 'paused';
+  }
+
+  resume() {
+    if (this.state === 'paused') this.state = 'playing';
   }
 
   get score() {
@@ -748,12 +757,13 @@ export class Game {
     g.root.visible = this.guardZ < 12;
     const reached = over && this.guardZ < 1.6;
     const t = this.time * 11;
-    this.pose(g, t, reached ? 'grab' : this.state === 'ready' ? 'idle' : 'run');
+    const still = this.state === 'ready' || this.state === 'paused';
+    this.pose(g, t, reached ? 'grab' : still ? 'idle' : 'run');
 
     const d = this.dog;
     d.root.position.set(this.guardX + 1.2, 0, this.guardZ - 0.4);
     d.root.visible = g.root.visible;
-    d.legs.forEach((l, i) => (l.rotation.x = reached || this.state === 'ready' ? 0 : Math.sin(t * 1.3 + (i % 2) * Math.PI) * 0.7));
+    d.legs.forEach((l, i) => (l.rotation.x = reached || still ? 0 : Math.sin(t * 1.3 + (i % 2) * Math.PI) * 0.7));
   }
 
   gameOver(reason) {
