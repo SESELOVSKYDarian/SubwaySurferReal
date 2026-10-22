@@ -44,13 +44,19 @@
         <li><b>¡Cuidado con el guardia!</b> Si tropiezas dos veces seguidas, te atrapa</li>
         <li><b>Levanta las dos manos</b> → empezar / reiniciar</li>
       </ul>
+      <label class="sens">
+        Sensibilidad de salto / agacharse
+        <input id="sens" type="range" min="0.6" max="1.6" step="0.1" value="1">
+        <span id="sens-value">100%</span>
+      </label>
       <div class="buttons">
         <button id="camBtn">📷 Activar cámara</button>
         <button id="playBtn">▶ Jugar</button>
       </div>
       <p class="hint">
         Ponte a ~2 m de la cámara, que se te vea de la cintura para arriba (mejor cuerpo entero),
-        y quédate quieto un segundo para calibrar.<br>
+        y quédate quieto un segundo para calibrar. La barra junto a la cámara muestra
+        cuánto te falta para saltar (arriba) o agacharte (abajo): al pasar la raya blanca, cuenta.<br>
         Teclado: ← → / A D carril · ↑ / Espacio saltar · ↓ / S agacharse · C recalibrar
       </p>
     </div>

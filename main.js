@@ -58,6 +58,7 @@ const poseHandlers = {
     game.roll();
     flash('AGACHADO ⤓', '#4ad0ff');
   },
+  onDuckHold: () => game.holdRoll(),
   onHandsUp: play,
 };
 
@@ -67,7 +68,7 @@ $('camBtn').addEventListener('click', async () => {
   btn.textContent = 'Cargando…';
   try {
     const { PoseController } = await import('./pose.js');
-    pose = new PoseController($('video'), $('skeleton'), poseHandlers);
+    pose = new PoseController($('video'), $('skeleton'), poseHandlers, sensitivity);
     await pose.start();
     btn.textContent = '📷 Cámara activa';
     $('subtitle').textContent = 'Quédate quieto para calibrar y luego levanta las dos manos para empezar';
@@ -79,6 +80,24 @@ $('camBtn').addEventListener('click', async () => {
   }
 });
 $('playBtn').addEventListener('click', play);
+
+// Sensibilidad del salto y de agacharse (se recuerda en este navegador)
+let sensitivity = 1;
+try {
+  sensitivity = Number(localStorage.getItem('sensitivity')) || 1;
+} catch {}
+const sensInput = $('sens');
+const showSens = () => ($('sens-value').textContent = `${Math.round(sensitivity * 100)}%`);
+sensInput.value = sensitivity;
+showSens();
+sensInput.addEventListener('input', () => {
+  sensitivity = Number(sensInput.value);
+  if (pose) pose.sensitivity = sensitivity;
+  showSens();
+  try {
+    localStorage.setItem('sensitivity', String(sensitivity));
+  } catch {}
+});
 
 // --- Control por teclado ---
 window.addEventListener('keydown', (e) => {

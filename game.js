@@ -357,15 +357,27 @@ export class Game {
   left() { this.setLane(this.lane - 1); }
   right() { this.setLane(this.lane + 1); }
   jump() {
-    if (this.state !== 'playing' || !this.grounded || this.flyTimer > 0) return;
+    if (this.state !== 'playing' || this.flyTimer > 0) return;
+    // Si aún estamos en el aire, el salto se guarda un momento y sale al aterrizar
+    if (!this.grounded) {
+      this.jumpBuffer = 0.2;
+      return;
+    }
+    this.jumpBuffer = 0;
     this.vy = JUMP_SPEED;
     this.grounded = false;
     this.rollTimer = 0;
   }
   roll() {
     if (this.state !== 'playing' || this.flyTimer > 0) return;
+    this.jumpBuffer = 0;
     this.rollTimer = ROLL_TIME;
-    if (!this.grounded) this.vy = -25; // en el aire: bajar de golpe
+    if (!this.grounded && this.vy > -25) this.vy = -25; // en el aire: bajar de golpe
+  }
+  // Mientras sigas agachado delante de la cámara, el corredor sigue rodando
+  holdRoll() {
+    if (this.state !== 'playing' || this.flyTimer > 0) return;
+    this.rollTimer = Math.max(this.rollTimer, 0.25);
   }
 
   // --- Generación de obstáculos ---
@@ -624,6 +636,8 @@ export class Game {
       }
     }
     this.rollTimer = Math.max(0, this.rollTimer - dt);
+    this.jumpBuffer = Math.max(0, (this.jumpBuffer || 0) - dt);
+    if (this.jumpBuffer > 0 && this.grounded) this.jump();
 
     if (this.invuln > 0 || this.flyTimer > 0) return;
     const height = this.rollTimer > 0 ? ROLL_HEIGHT : STAND_HEIGHT;

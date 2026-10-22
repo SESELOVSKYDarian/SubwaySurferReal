@@ -46,8 +46,13 @@ También se puede jugar con teclado: ← → / A D, ↑ / Espacio, ↓ / S.
   (33 puntos del cuerpo) y convierte el movimiento en gestos:
   - *Carril*: posición horizontal del centro de los hombros respecto a la calibración,
     medida en anchos de hombro (así da igual lo lejos que estés).
-  - *Salto / agacharse*: subida o bajada de los hombros, medida en largos de torso; también
-    se detecta por la velocidad del movimiento para reaccionar antes.
+  - *Salto*: sube todo el cuerpo (cadera y hombros) y, si se ven, los dos pies. También se
+    detecta por la velocidad del movimiento para reaccionar antes.
+  - *Agacharse / hacerse bolita*: baja la cabeza o los hombros, o se encoge el torso (vale
+    aunque al encogerte la cámara deje de ver bien los hombros). Mientras sigas agachado,
+    el corredor sigue rodando. El pequeño amago que se hace antes de saltar no cuenta.
+  - La barra junto a la cámara muestra en directo cuánto falta para que cuente un salto
+    (arriba) o una agachada (abajo), y en el menú hay un control de **sensibilidad**.
   - Los umbrales están arriba del archivo (`LANE_ENTER`, `JUMP_UP`, `DUCK_DOWN`…) por si
     quieres hacerlo más o menos sensible.
 - **`game.js`** – el juego con [Three.js](https://threejs.org): corredor animado,
