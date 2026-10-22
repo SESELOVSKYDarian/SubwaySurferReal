@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subway Surfer Real</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="score">0</div>
+    <div id="coins">🪙 0</div>
+  </div>
+
+  <div id="action"></div>
+
+  <div id="cam">
+    <video id="video" playsinline muted></video>
+    <canvas id="skeleton"></canvas>
+    <div id="pose-status">Cámara apagada</div>
+  </div>
+
+  <div id="overlay">
+    <div class="panel">
+      <h1 id="title">Subway Surfer <span>REAL</span></h1>
+      <p id="subtitle">Controla al corredor con tu cuerpo</p>
+      <ul id="howto">
+        <li><b>Paso a la izquierda / derecha</b> → cambiar de carril</li>
+        <li><b>Salta</b> → saltar las vallas bajas</li>
+        <li><b>Agáchate</b> → pasar por debajo de las barras</li>
+        <li><b>Levanta las dos manos</b> → empezar / reiniciar</li>
+      </ul>
+      <div class="buttons">
+        <button id="camBtn">📷 Activar cámara</button>
+        <button id="playBtn">▶ Jugar</button>
+      </div>
+      <p class="hint">
+        Ponte a ~2 m de la cámara, que se te vea de la cintura para arriba (mejor cuerpo entero),
+        y quédate quieto un segundo para calibrar.<br>
+        Teclado: ← → / A D carril · ↑ / Espacio saltar · ↓ / S agacharse · C recalibrar
+      </p>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
