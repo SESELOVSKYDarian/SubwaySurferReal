@@ -11,7 +11,7 @@ function flash(text, color = '#fff') {
   actionEl.style.color = color;
   actionEl.classList.add('show');
   clearTimeout(actionTimer);
-  actionTimer = setTimeout(() => actionEl.classList.remove('show'), 250);
+  actionTimer = setTimeout(() => actionEl.classList.remove('show'), 350);
 }
 
 const game = new Game($('game'), {
@@ -19,12 +19,19 @@ const game = new Game($('game'), {
     $('score').textContent = score;
     $('coins').textContent = `🪙 ${coins}`;
   },
-  onGameOver(score, coins) {
-    $('title').textContent = '¡Choque! 💥';
+  onCoin() {},
+  onStumble: () => flash('¡TROPIEZO! 👮', '#ff5a5a'),
+  onJetpack: () => flash('¡JETPACK! 🚀', '#ffb42e'),
+  onPower(fraction) {
+    $('power').classList.toggle('show', fraction > 0);
+    $('power-fill').style.width = `${fraction * 100}%`;
+  },
+  onGameOver(score, coins, reason) {
+    $('title').textContent = reason === 'caught' ? '¡Te atrapó el guardia! 👮' : '¡Choque! 💥';
     $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — levanta las dos manos para volver a jugar`;
     $('howto').style.display = 'none';
     $('playBtn').textContent = '↻ Otra vez';
-    setTimeout(() => overlay.classList.remove('hidden'), 600);
+    setTimeout(() => game.state === 'over' && overlay.classList.remove('hidden'), 600);
   },
 });
 

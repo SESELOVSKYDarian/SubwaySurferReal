@@ -26,6 +26,28 @@ html, body {
 }
 #score { font-size: 42px; }
 #coins { font-size: 26px; color: #ffd84a; }
+#power {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 24px;
+}
+#power.show { display: flex; }
+#power .bar {
+  width: 140px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, .45);
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, .8);
+}
+#power-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff7a1f, #ffd84a);
+}
 
 #action {
   position: fixed;

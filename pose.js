@@ -1,24 +1,30 @@
 // Detección del esqueleto con MediaPipe Pose y traducción a gestos del juego.
-import {
-  PoseLandmarker,
-  FilesetResolver,
-  DrawingUtils,
-} from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+// La red neuronal corre en un Web Worker (pose-worker.js); si el navegador no lo
+// permite, se usa el hilo principal como respaldo.
 
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
+const VERSION = '0.10.14';
+const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
 // Índices de los puntos del esqueleto de MediaPipe
 const NOSE = 0, L_SHOULDER = 11, R_SHOULDER = 12, L_WRIST = 15, R_WRIST = 16, L_HIP = 23, R_HIP = 24;
+const BONES = [
+  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24],
+  [23, 25], [25, 27], [24, 26], [26, 28], [27, 31], [28, 32], [0, 11], [0, 12],
+];
 
 // Umbrales (en unidades relativas al cuerpo, así no dependen de la distancia a la cámara)
-const LANE_ENTER = 0.75;   // anchos de hombro desplazado para cambiar de carril
-const LANE_EXIT = 0.45;    // histéresis para volver al centro
-const JUMP_UP = 0.16;      // subida de hombros (en largos de torso) para saltar
-const DUCK_DOWN = 0.35;    // bajada de hombros para agacharse
+const LANE_ENTER = 0.6;    // anchos de hombro desplazado para cambiar de carril
+const LANE_EXIT = 0.35;    // histéresis para volver al centro
+const JUMP_UP = 0.15;      // subida de hombros (en largos de torso) para saltar
+const JUMP_EARLY = 0.07;   // ...o una subida menor pero rápida
+const JUMP_SPEED = 1.4;    // largos de torso por segundo
+const DUCK_DOWN = 0.32;    // bajada de hombros para agacharse
+const DUCK_EARLY = 0.16;
+const DUCK_SPEED = 1.6;
 const REARM = 0.08;        // zona neutra para volver a armar los gestos
-const CALIB_FRAMES = 25;   // frames quieto necesarios para calibrar
+const CALIB_FRAMES = 20;   // frames quieto necesarios para calibrar
 
 export class PoseController {
   constructor(video, canvas, handlers = {}) {
@@ -27,6 +33,7 @@ export class PoseController {
     this.ctx = canvas.getContext('2d');
     this.h = handlers;
     this.running = false;
+    this.busy = false;
     this.lastVideoTime = -1;
     this.recalibrate();
   }
@@ -43,7 +50,61 @@ export class PoseController {
       throw new Error('el navegador bloquea la cámara: abre el juego por https:// o http://localhost');
     }
     this.status('Cargando modelo de esqueleto…');
-    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+    const [stream] = await Promise.all([
+      navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480, frameRate: { ideal: 60 }, facingMode: 'user' },
+        audio: false,
+      }),
+      this.startWorker().catch((err) => {
+        console.warn('Worker no disponible, uso el hilo principal:', err);
+        return this.startMainThread();
+      }),
+    ]);
+    this.video.srcObject = stream;
+    await this.video.play();
+    this.canvas.width = this.video.videoWidth;
+    this.canvas.height = this.video.videoHeight;
+
+    this.running = true;
+    this.scheduleFrame();
+  }
+
+  startWorker() {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./pose-worker.js', import.meta.url));
+      const timer = setTimeout(() => {
+        worker.terminate();
+        reject(new Error('el worker tardó demasiado'));
+      }, 30000);
+      worker.onerror = (e) => {
+        clearTimeout(timer);
+        worker.terminate();
+        reject(new Error(e.message || 'error en el worker'));
+      };
+      worker.onmessage = ({ data }) => {
+        if (data.type === 'ready') {
+          clearTimeout(timer);
+          this.worker = worker;
+          this.mode = `worker ${data.delegate}`;
+          worker.onmessage = ({ data: d }) => {
+            if (d.type !== 'result') return;
+            this.busy = false;
+            this.process(d.landmarks);
+          };
+          resolve();
+        } else if (data.type === 'error') {
+          clearTimeout(timer);
+          worker.terminate();
+          reject(new Error(data.message));
+        }
+      };
+      worker.postMessage({ type: 'init' });
+    });
+  }
+
+  async startMainThread() {
+    const { FilesetResolver, PoseLandmarker } = await import(`${BASE}/vision_bundle.mjs`);
+    const vision = await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
     const options = (delegate) => ({
       baseOptions: { modelAssetPath: MODEL_URL, delegate },
       runningMode: 'VIDEO',
@@ -54,20 +115,38 @@ export class PoseController {
     } catch {
       this.landmarker = await PoseLandmarker.createFromOptions(vision, options('CPU'));
     }
+    this.mode = 'hilo principal';
+  }
 
-    this.status('Pidiendo permiso de cámara…');
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480, facingMode: 'user' },
-      audio: false,
-    });
-    this.video.srcObject = stream;
-    await this.video.play();
-    this.canvas.width = this.video.videoWidth;
-    this.canvas.height = this.video.videoHeight;
-    this.drawer = new DrawingUtils(this.ctx);
+  // Procesa cada fotograma nuevo de la cámara en cuanto llega
+  scheduleFrame() {
+    if (!this.running) return;
+    if (this.video.requestVideoFrameCallback) {
+      this.video.requestVideoFrameCallback(() => this.onFrame());
+    } else {
+      requestAnimationFrame(() => this.onFrame());
+    }
+  }
 
-    this.running = true;
-    this.loop();
+  async onFrame() {
+    const t = this.video.currentTime;
+    if (t !== this.lastVideoTime && !this.busy && this.video.readyState >= 2) {
+      this.lastVideoTime = t;
+      const ts = performance.now();
+      if (this.worker) {
+        this.busy = true;
+        try {
+          const bitmap = await createImageBitmap(this.video);
+          this.worker.postMessage({ type: 'frame', bitmap, ts }, [bitmap]);
+        } catch {
+          this.busy = false;
+        }
+      } else {
+        const result = this.landmarker.detectForVideo(this.video, ts);
+        this.process(result.landmarks[0]);
+      }
+    }
+    this.scheduleFrame();
   }
 
   recalibrate() {
@@ -79,29 +158,40 @@ export class PoseController {
     this.handsUpSince = 0;
     this.lastHandsUp = 0;
     this.lastJump = 0;
+    this.prev = null;
   }
 
-  loop = () => {
-    if (!this.running) return;
-    if (this.video.currentTime !== this.lastVideoTime) {
-      this.lastVideoTime = this.video.currentTime;
-      const result = this.landmarker.detectForVideo(this.video, performance.now());
-      this.process(result.landmarks[0]);
+  draw(lm) {
+    const { ctx, canvas } = this;
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    if (!lm) return;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#4ad0ff';
+    ctx.beginPath();
+    for (const [a, b] of BONES) {
+      if ((lm[a].visibility ?? 1) < 0.4 || (lm[b].visibility ?? 1) < 0.4) continue;
+      ctx.moveTo(lm[a].x * W, lm[a].y * H);
+      ctx.lineTo(lm[b].x * W, lm[b].y * H);
     }
-    requestAnimationFrame(this.loop);
-  };
+    ctx.stroke();
+    ctx.fillStyle = '#ffd84a';
+    for (const i of [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
+      if ((lm[i].visibility ?? 1) < 0.4) continue;
+      ctx.beginPath();
+      ctx.arc(lm[i].x * W, lm[i].y * H, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
   process(lm) {
-    const { ctx, canvas } = this;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    this.draw(lm);
     if (!lm) {
       this.status('No te veo 👀 — ponte delante de la cámara');
+      this.prev = null;
       return;
     }
-
-    this.drawer.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS, { color: '#4ad0ff', lineWidth: 4 });
-    this.drawer.drawLandmarks(lm, { color: '#ffd84a', fillColor: '#ff5a5a', radius: 4 });
 
     const visible = (i) => (lm[i].visibility ?? 1) > 0.5;
     if (!visible(L_SHOULDER) || !visible(R_SHOULDER)) {
@@ -128,6 +218,11 @@ export class PoseController {
     const dx = (sx - b.x) / b.sw;       // + = a la derecha
     const dy = (sy - b.y) / b.torso;    // + = más abajo
 
+    // Velocidad vertical (largos de torso por segundo) para reaccionar antes
+    let vy = 0;
+    if (this.prev && now > this.prev.t) vy = ((dy - this.prev.dy) * 1000) / (now - this.prev.t);
+    this.prev = { dy, t: now };
+
     // Carril (absoluto respecto al punto calibrado, con histéresis)
     let lane = this.lane;
     if (lane === 0) {
@@ -146,13 +241,14 @@ export class PoseController {
     }
 
     // Salto: los hombros suben de golpe
-    if (this.jumpArmed && dy < -JUMP_UP) {
+    if (this.jumpArmed && (dy < -JUMP_UP || (dy < -JUMP_EARLY && vy < -JUMP_SPEED))) {
       this.jumpArmed = false;
       this.lastJump = now;
       this.h.onJump?.();
     }
     // Agacharse: los hombros bajan (ignoramos el aterrizaje justo después de saltar)
-    if (this.duckArmed && dy > DUCK_DOWN && now - this.lastJump > 600) {
+    const ducking = dy > DUCK_DOWN || (dy > DUCK_EARLY && vy > DUCK_SPEED);
+    if (this.duckArmed && ducking && now - this.lastJump > 600) {
       this.duckArmed = false;
       this.h.onDuck?.();
     }
@@ -166,7 +262,7 @@ export class PoseController {
     }
 
     const laneName = ['izquierda', 'centro', 'derecha'][lane + 1];
-    this.status(`✅ Carril: ${laneName} · Δx ${dx.toFixed(2)} · Δy ${dy.toFixed(2)}`);
+    this.status(`✅ ${laneName} · Δx ${dx.toFixed(2)} · Δy ${dy.toFixed(2)} · ${this.mode}`);
   }
 
   calibrate(sx, sy, sw, torso) {

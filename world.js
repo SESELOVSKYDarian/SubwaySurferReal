@@ -15,7 +15,12 @@ const WALL_H = 3.6;           // el nivel de la calle está encima del muro
 const BUILD_X = 10.5;
 const GANTRY_GAP = 50;
 
-const std = (o = {}) => new THREE.MeshStandardMaterial({ roughness: 0.85, ...o });
+// El escenario usa materiales Lambert (mucho más baratos de dibujar que los PBR);
+// solo los metales usan MeshStandardMaterial para tener reflejos.
+const mat = ({ metalness, roughness, ...o } = {}) =>
+  metalness
+    ? new THREE.MeshStandardMaterial({ metalness, roughness: roughness ?? 0.85, ...o })
+    : new THREE.MeshLambertMaterial(o);
 
 // Copia una geometría ya colocada (para fusionar piezas en un solo mesh)
 function placed(geo, x, y, z, rx = 0, ry = 0, rz = 0) {
@@ -27,8 +32,9 @@ function placed(geo, x, y, z, rx = 0, ry = 0, rz = 0) {
   return g;
 }
 
-function mesh(geo, mat, { cast = true, receive = true } = {}) {
-  const m = new THREE.Mesh(geo, mat);
+// Por defecto nada del escenario proyecta ni recibe sombras: es lo más caro de dibujar
+function mesh(geo, material, { cast = false, receive = false } = {}) {
+  const m = new THREE.Mesh(geo, material);
   m.castShadow = cast;
   m.receiveShadow = receive;
   return m;
@@ -37,8 +43,8 @@ function mesh(geo, mat, { cast = true, receive = true } = {}) {
 export class World {
   constructor(scene) {
     this.scene = scene;
-    this.metal = std({ color: 0x3d4247, metalness: 0.7, roughness: 0.5 });
-    this.concrete = std({ map: T.concrete(), color: 0xd8d2c6 });
+    this.metal = mat({ color: 0x3d4247, metalness: 0.7, roughness: 0.5 });
+    this.concrete = mat({ map: T.concrete(), color: 0xd8d2c6 });
     this.buildTrack();
     this.buildSides();
     this.buildBuildings();
@@ -52,7 +58,7 @@ export class World {
 
     const gravelTex = T.gravel();
     gravelTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
-    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), std({ map: gravelTex }), { cast: false });
+    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), mat({ map: gravelTex }), { receive: true });
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = NEAR_Z - len / 2;
     this.track.add(ground);
@@ -62,7 +68,7 @@ export class World {
     const perLane = Math.floor(len / gap);
     const sleepers = new THREE.InstancedMesh(
       new THREE.BoxGeometry(1.9, 0.14, 0.24),
-      std({ map: T.wood() }),
+      mat({ map: T.wood() }),
       perLane * LANE_X.length,
     );
     const m = new THREE.Matrix4();
@@ -80,27 +86,27 @@ export class World {
     // Raíles y bordillos: son uniformes, así que pueden quedarse quietos
     const railGeo = new THREE.BoxGeometry(0.09, 0.16, len);
     const railTopGeo = new THREE.BoxGeometry(0.075, 0.03, len);
-    const railMat = std({ color: 0x6d655d, metalness: 0.8, roughness: 0.6 });
-    const railTopMat = std({ color: 0xd8dde2, metalness: 1, roughness: 0.2 });
+    const railMat = mat({ color: 0x6d655d, metalness: 0.8, roughness: 0.6 });
+    const railTopMat = mat({ color: 0xd8dde2, metalness: 1, roughness: 0.2 });
     for (const x of LANE_X) {
       for (const side of [-0.72, 0.72]) {
-        const rail = mesh(railGeo, railMat, { cast: false });
+        const rail = mesh(railGeo, railMat);
         rail.position.set(x + side, 0.22, NEAR_Z - len / 2);
         this.scene.add(rail);
-        const top = mesh(railTopGeo, railTopMat, { cast: false });
+        const top = mesh(railTopGeo, railTopMat);
         top.position.set(x + side, 0.31, NEAR_Z - len / 2);
         this.scene.add(top);
       }
     }
     for (const s of [-1, 1]) {
-      const curb = mesh(new THREE.BoxGeometry(1.4, 0.4, len), std({ color: 0xa8a297 }));
+      const curb = mesh(new THREE.BoxGeometry(1.4, 0.4, len), mat({ color: 0xa8a297 }), { receive: true });
       curb.position.set(s * 4.5, 0.2, NEAR_Z - len / 2);
       this.scene.add(curb);
     }
 
     // Cables de la catenaria
     const wireGeo = new THREE.CylinderGeometry(0.022, 0.022, len, 4).rotateX(Math.PI / 2);
-    const wireMat = std({ color: 0x1a1a1a });
+    const wireMat = mat({ color: 0x1a1a1a });
     for (const x of LANE_X) {
       for (const y of [6.3, 6.9]) {
         const w = new THREE.Mesh(wireGeo, wireMat);
@@ -111,10 +117,10 @@ export class World {
   }
 
   buildSides() {
-    const graffitiMats = Array.from({ length: 6 }, () => std({ map: T.graffitiWall() }));
+    const graffitiMats = Array.from({ length: 6 }, () => mat({ map: T.graffitiWall() }));
     const chain = T.chainLink();
     chain.repeat.set(SEG / 1.2, 2.2 / 1.2);
-    const fenceMat = std({
+    const fenceMat = mat({
       map: chain, transparent: true, depthWrite: false, side: THREE.DoubleSide, metalness: 0.5, roughness: 0.5,
     });
 
@@ -122,6 +128,14 @@ export class World {
     const capGeo = new THREE.BoxGeometry(0.95, 0.18, SEG);
     const walkGeo = new THREE.BoxGeometry(BUILD_X - WALL_X, 0.2, SEG);
     const fenceGeo = new THREE.PlaneGeometry(SEG, 2.2).rotateY(Math.PI / 2);
+    // Remate del muro + acera de arriba en una sola pieza por lado
+    const topGeo = {};
+    for (const s of [-1, 1]) {
+      topGeo[s] = mergeGeometries([
+        placed(capGeo, s * WALL_X, WALL_H + 0.09, 0),
+        placed(walkGeo, s * (WALL_X + (BUILD_X - WALL_X) / 2), WALL_H - 0.1, 0),
+      ]);
+    }
 
     const post = new THREE.CylinderGeometry(0.045, 0.045, 2.3, 6);
     const railZ = new THREE.CylinderGeometry(0.035, 0.035, SEG, 6).rotateX(Math.PI / 2);
@@ -135,8 +149,8 @@ export class World {
       new THREE.BoxGeometry(1.4, 0.08, 0.08).translate(-0.7, 4.9, 0),
     ]);
     const lampHeadGeo = new THREE.BoxGeometry(0.45, 0.16, 0.3).translate(-1.35, 4.82, 0);
-    const lampHeadMat = std({ color: 0xffe6b0, emissive: 0xffc070, emissiveIntensity: 1.5 });
-    const lampMat = std({ color: 0x24302a, metalness: 0.6, roughness: 0.5 });
+    const lampHeadMat = mat({ color: 0xffe6b0, emissive: 0xffc070, emissiveIntensity: 1.5 });
+    const lampMat = mat({ color: 0x24302a, metalness: 0.6, roughness: 0.5 });
 
     // Árbol estilizado
     const trunkGeo = new THREE.CylinderGeometry(0.12, 0.18, 2.4, 7).translate(0, 1.2, 0);
@@ -147,8 +161,8 @@ export class World {
       placed(blob.clone().scale(1.0, 0.9, 1.0), -0.7, 3.8, -0.5),
       placed(blob.clone().scale(0.9, 0.9, 0.9), 0.1, 4.5, 0),
     ]);
-    const trunkMat = std({ color: 0x5a4130 });
-    const foliageMats = [0x4f7f2e, 0x3f6e2a, 0x6a8f35].map((c) => std({ color: c, flatShading: true }));
+    const trunkMat = mat({ color: 0x5a4130 });
+    const foliageMats = [0x4f7f2e, 0x3f6e2a, 0x6a8f35].map((c) => mat({ color: c, flatShading: true }));
 
     this.segments = [];
     this.segCount = Math.ceil((NEAR_Z - FAR_Z) / SEG) + 1;
@@ -156,15 +170,10 @@ export class World {
       for (let i = 0; i < this.segCount; i++) {
         const g = new THREE.Group();
         const wallMats = Array(6).fill(this.concrete);
-        const wall = mesh(wallGeo, wallMats);
+        const wall = mesh(wallGeo, wallMats, { cast: true, receive: true });
         wall.position.set(s * WALL_X, WALL_H / 2, 0);
         g.add(wall);
-        const cap = mesh(capGeo, this.concrete);
-        cap.position.set(s * WALL_X, WALL_H + 0.09, 0);
-        g.add(cap);
-        const walk = mesh(walkGeo, this.concrete, { cast: false });
-        walk.position.set(s * (WALL_X + (BUILD_X - WALL_X) / 2), WALL_H - 0.1, 0);
-        g.add(walk);
+        g.add(mesh(topGeo[s], this.concrete));
         const fence = new THREE.Mesh(fenceGeo, fenceMat);
         fence.position.set(s * WALL_X, WALL_H + 1.3, 0);
         g.add(fence);
@@ -173,7 +182,7 @@ export class World {
         g.add(frame);
 
         const lamp = new THREE.Group();
-        lamp.add(mesh(lampGeo, lampMat), mesh(lampHeadGeo, lampHeadMat, { cast: false }));
+        lamp.add(mesh(lampGeo, lampMat), mesh(lampHeadGeo, lampHeadMat));
         lamp.scale.x = s;
         lamp.position.set(s * (WALL_X + 0.7), WALL_H, 0);
         g.add(lamp);
@@ -208,8 +217,8 @@ export class World {
 
   buildBuildings() {
     this.facades = T.FACADE_STYLES.map((s) => T.facade(s));
-    const roofMat = std({ color: 0x5b5752 });
-    const billboardMat = std({ map: T.billboard(), emissive: 0x330000, roughness: 0.6 });
+    const roofMat = mat({ color: 0x5b5752 });
+    const billboardMat = mat({ map: T.billboard(), emissive: 0x330000, roughness: 0.6 });
     const unit = new THREE.BoxGeometry(1, 1, 1);
 
     // Escalera de incendios (6 pisos), hacia -x desde la fachada
@@ -225,7 +234,7 @@ export class World {
     const upright = new THREE.BoxGeometry(0.05, 6 * 3.2, 0.05);
     for (const z of [-1.8, 1.8]) parts.push(placed(upright, -1.1, 3.2 * 3.5, z));
     const fireGeo = mergeGeometries(parts);
-    const fireMat = std({ color: 0x1f2124, metalness: 0.6, roughness: 0.6 });
+    const fireMat = mat({ color: 0x1f2124, metalness: 0.6, roughness: 0.6 });
 
     this.buildings = [];
     this.buildingEdge = {};
@@ -234,13 +243,12 @@ export class World {
       while (z > FAR_Z) {
         const front = this.facades[0].clone();
         const ends = this.facades[0].clone();
-        const frontMat = std({ map: front });
-        const endMat = std({ map: ends });
+        const frontMat = mat({ map: front });
+        const endMat = mat({ map: ends });
         const mats = [endMat, endMat, roofMat, roofMat, endMat, endMat];
         mats[s > 0 ? 1 : 0] = frontMat;
-        // Los edificios no proyectan sombra: taparían toda la vía
-        const box = mesh(unit, mats, { cast: false });
-        const fire = mesh(fireGeo, fireMat, { cast: false });
+        const box = mesh(unit, mats);
+        const fire = mesh(fireGeo, fireMat);
         fire.scale.x = s;
         const board = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), billboardMat);
         board.rotation.y = -s * Math.PI / 2;
@@ -305,7 +313,7 @@ export class World {
       const tex = this.facades[Math.random() < 0.7 ? 3 : 2].clone();
       tex.repeat.set(w / 8, h / 6.4);
       tex.needsUpdate = true;
-      const b = new THREE.Mesh(unit, std({ map: tex, color: 0xb6c8de }));
+      const b = new THREE.Mesh(unit, mat({ map: tex, color: 0xb6c8de }));
       b.scale.set(w, h, w);
       b.position.set(x, h / 2, z);
       this.scene.add(b);

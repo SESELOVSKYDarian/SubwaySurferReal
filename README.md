@@ -10,7 +10,13 @@ en tiempo real y el corredor hace lo mismo que tú.
 | Te agachas                         | Pasa por debajo de barras  |
 | Levantas las dos manos             | Empieza / reinicia         |
 
-Los trenes no se pueden saltar: hay que cambiar de carril.
+Los vagones no se pueden saltar: hay que cambiar de carril… o subirse por una
+**rampa** y correr por encima. De vez en cuando aparece un **🚀 jetpack**: cógelo
+y vuelas unos segundos recogiendo monedas en el aire.
+
+**¡Cuidado con el guardia y su perro!** Si tropiezas (te chocas de lado con un vagón
+o con una valla baja) se te pegan detrás; si vuelves a tropezar antes de que se
+cansen, te atrapan. Chocar de frente con un vagón o con una barra alta es fin de partida.
 
 ## Cómo jugar
 
@@ -34,11 +40,14 @@ También se puede jugar con teclado: ← → / A D, ↑ / Espacio, ↓ / S.
 
 ## Cómo funciona
 
+- **`pose-worker.js`** – ejecuta la red neuronal en un hilo aparte (Web Worker) para
+  que el juego no se congele mientras analiza la cámara.
 - **`pose.js`** – usa [MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)
   (33 puntos del cuerpo) y convierte el movimiento en gestos:
   - *Carril*: posición horizontal del centro de los hombros respecto a la calibración,
     medida en anchos de hombro (así da igual lo lejos que estés).
-  - *Salto / agacharse*: subida o bajada brusca de los hombros, medida en largos de torso.
+  - *Salto / agacharse*: subida o bajada de los hombros, medida en largos de torso; también
+    se detecta por la velocidad del movimiento para reaccionar antes.
   - Los umbrales están arriba del archivo (`LANE_ENTER`, `JUMP_UP`, `DUCK_DOWN`…) por si
     quieres hacerlo más o menos sensible.
 - **`game.js`** – el juego con [Three.js](https://threejs.org): corredor animado,
@@ -49,5 +58,8 @@ También se puede jugar con teclado: ← → / A D, ↑ / Espacio, ↓ / S.
 - **`textures.js`** – todas las texturas (grafitis, ladrillo, ventanas, grava, tren,
   monedas, cielo…) se dibujan por código en un `<canvas>`, sin descargar imágenes.
 - **`main.js`** – conecta los gestos y el teclado con el juego.
+
+Si el ordenador no llega a ~45 FPS, el juego baja la resolución automáticamente (y en
+último caso las sombras) para mantenerse fluido.
 
 Todo corre en tu navegador; la imagen de la cámara no se envía a ningún sitio.
