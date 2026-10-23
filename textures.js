@@ -42,6 +42,18 @@ function wrapped(w, h, x, y, r, draw) {
   }
 }
 
+export function asphalt() {
+  const [c,g]=makeCanvas(512,512);
+  g.fillStyle='#34383a';g.fillRect(0,0,512,512);
+  for(let i=0;i<18000;i++) {
+    const value=Math.floor(rand(35,100));g.fillStyle=`rgba(${value},${value},${value},.45)`;
+    g.fillRect(rand(0,512),rand(0,512),rand(.5,2),rand(.5,2));
+  }
+  g.strokeStyle='rgba(14,17,18,.55)';g.lineWidth=1.4;
+  for(let i=0;i<7;i++) {g.beginPath();let x=rand(0,512),y=rand(0,512);g.moveTo(x,y);for(let k=0;k<5;k++){x+=rand(-17,17);y+=rand(5,23);g.lineTo(x,y);}g.stroke();}
+  return toTexture(c);
+}
+
 export function gravel() {
   const S = 512;
   const [c, g] = makeCanvas(S, S);
@@ -109,7 +121,7 @@ export function concrete() {
   return toTexture(c);
 }
 
-const WORDS = ['TÉCNICA', 'TALLER', 'ELECTRO', 'MECÁNICA', 'PROMO', 'DISEÑO', 'ROBOT', 'ET', 'TORNO', 'LAB'];
+const WORDS = ['MAR DEL PLATA', 'LA FELIZ', 'BARRIO', 'PUERTO', 'TÉCNICA', 'TALLER', 'ELECTRO', 'MECÁNICA', 'PROMO', 'DISEÑO', 'ROBOT', 'ET', 'TORNO', 'LAB'];
 const PALETTES = [
   ['#2fb8ff', '#1b4fd8', '#bff3ff'],
   ['#ff4fa3', '#8a1fd1', '#ffd1ec'],
@@ -119,9 +131,9 @@ const PALETTES = [
   ['#ff3b3b', '#a30f3a', '#ffd0d0'],
 ];
 
-function graffitiPiece(g, x, y, size) {
-  const word = pick(WORDS);
-  const [c1, c2, light] = pick(PALETTES);
+function graffitiPiece(g, x, y, size, label, palette) {
+  const word = label || pick(WORDS);
+  const [c1, c2, light] = palette || pick(PALETTES);
   g.save();
   g.translate(x, y);
   g.rotate(rand(-0.12, 0.12));
@@ -175,7 +187,7 @@ function graffitiPiece(g, x, y, size) {
 }
 
 // Muro de hormigón con grafitis (y a veces hiedra colgando)
-export function graffitiWall() {
+export function graffitiWall(theme = 'mdp') {
   const W = 1024, H = 240;
   const [c, g] = makeCanvas(W, H);
   concreteBase(g, W, H, '#a49d90');
@@ -195,9 +207,25 @@ export function graffitiWall() {
     g.fillStyle = grd;
     g.fillRect(x, 0, rand(4, 20), H);
   }
-  const pieces = 2 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < pieces; i++) {
-    graffitiPiece(g, (W / pieces) * (i + 0.5) + rand(-40, 40), rand(110, 150), rand(85, 120));
+  if (theme === 'spot') {
+    // Letras blancas inclinadas y O naranja con órbita, como la referencia SPOT.
+    g.save();g.translate(130,65);g.transform(1,0,-.20,1,0,0);
+    g.fillStyle='#101113';g.fillRect(-25,-20,790,125);
+    g.font='italic 900 110px Arial';g.textBaseline='top';
+    g.fillStyle='#f4f4ee';g.fillText('SP',0,0);g.fillText('T',270,0);
+    g.fillStyle='#ff791e';g.fillText('O',175,0);
+    g.strokeStyle='#ff791e';g.lineWidth=5;g.beginPath();g.ellipse(219,54,60,38,-.8,0,Math.PI*2);g.stroke();
+    g.restore();
+    graffitiPiece(g,865,123,53,'MDP',['#fb8b32','#c73e16','#ffe0a9']);
+  } else if (theme === 'aldosivi' || theme === 'alvarado') {
+    const aldo=theme==='aldosivi';
+    const palette=aldo?['#f2d332','#197346','#fff1a2']:['#e9edf0','#2054a2','#ffffff'];
+    graffitiPiece(g,500,115,108,aldo?'ALDOSIVI':'ALVARADO',palette);
+    g.font='italic bold 25px sans-serif';g.fillStyle=aldo?'#f4d733':'#e5edf6';
+    g.fillText(aldo?'EL TIBURÓN · PUERTO':'EL TORITO · MAR DEL PLATA',95,207);
+  } else {
+    graffitiPiece(g,310,120,66,'MAR DEL PLATA',['#54c3d2','#185a9b','#d8f0f0']);
+    graffitiPiece(g,790,125,77,'LA FELIZ',['#ffd04b','#ec632e','#ffedc3']);
   }
   // Firmas pequeñas
   g.font = 'italic bold 26px "Comic Sans MS", cursive, sans-serif';
@@ -396,7 +424,7 @@ export function stripes(a, b) {
 }
 
 // Lateral de un vagón de metro (10 m de largo)
-export function trainSide(color) {
+export function trainSide(color, line = '542', stripe = '#e8e2cf') {
   const W = 1024, H = 256;
   const [c, g] = makeCanvas(W, H);
   const grd = g.createLinearGradient(0, 0, 0, H);
@@ -404,7 +432,7 @@ export function trainSide(color) {
   grd.addColorStop(1, shade(color, -12));
   g.fillStyle = grd;
   g.fillRect(0, 0, W, H);
-  g.fillStyle = '#e8e2cf';
+  g.fillStyle = stripe;
   g.fillRect(0, 168, W, 10);
   g.fillStyle = '#2b2b2b';
   g.fillRect(0, H - 28, W, 28);
@@ -433,15 +461,24 @@ export function trainSide(color) {
     glass(dx + 10, 55, 40, 80);
   }
   for (const x of [40, 400, 560, 900]) glass(x, 50, 90, 90);
+  g.fillStyle='#e7e1cf';g.font='bold 36px Arial';g.textAlign='center';
+  g.fillText(line,510,216);
+  g.font='bold 15px Arial';g.fillText('MAR DEL PLATA',510,241);
+  g.strokeStyle='#555c5e';g.lineWidth=2;
+  for(const x of [120,450,830]){g.strokeRect(x,192,86,34);g.fillStyle='#14191b';g.fillRect(x+9,208,15,4);}
+  // Pasarruedas pintados, juntas y señalización de transporte argentino.
+  for(const x of [165,842]){g.fillStyle='#161a1b';g.beginPath();g.ellipse(x,255,39,32,0,Math.PI,2*Math.PI);g.fill();}
+  g.fillStyle='#d49d28';for(const x of [25,500,995])g.fillRect(x,228,8,5);
+
   for (let i = 0; i < 20; i++) {
     g.fillStyle = `rgba(40,30,20,${rand(0.05, 0.2)})`;
     g.fillRect(rand(0, W), rand(150, H), rand(20, 120), rand(4, 30));
   }
   grain(g, W, H, 12);
-  return toTexture(c);
+  const texture=toTexture(c);texture.name=`Colectivo-${line}`;return texture;
 }
 
-export function trainFront(color) {
+export function trainFront(color, line = '542', stripe = '#e8e2cf', rear = false) {
   const S = 256;
   const [c, g] = makeCanvas(S, S);
   g.fillStyle = color;
@@ -456,17 +493,24 @@ export function trainFront(color) {
   g.fillStyle = '#c9c9c9';
   g.fillRect(124, 40, 8, 90);
   g.fillStyle = '#111';
-  g.fillRect(80, 8, 96, 26);
+  g.fillRect(12, 5, 232, 32);
   g.fillStyle = '#ffb42e';
-  g.font = 'bold 20px monospace';
+  g.font = 'bold 22px monospace';
   g.textAlign = 'center';
-  g.fillText('TALLERES', 128, 28);
-  g.fillStyle = '#e8e2cf';
+  g.fillText(`${line} · ${rear ? 'MDP' : 'CENTRO'}`, 128, 29);
+  g.fillStyle = stripe;
   g.fillRect(0, 168, S, 10);
   g.fillStyle = '#2b2b2b';
   g.fillRect(0, 220, S, 36);
+  // Parabrisas con limpiaparabrisas, ópticas y patente argentina.
+  g.strokeStyle='#14191d';g.lineWidth=3;
+  for(const x of [63,165]){g.beginPath();g.moveTo(x,125);g.lineTo(x+25,96);g.lineTo(x+46,101);g.stroke();}
+  g.fillStyle=rear?'#a32320':'#e2ddc5';g.fillRect(13,188,32,15);g.fillRect(211,188,32,15);
+  g.fillStyle='#121619';for(let y=186;y<218;y+=6)g.fillRect(70,y,116,2);
+  g.fillStyle='#dcded7';g.fillRect(101,230,54,15);g.fillStyle='#3388ac';g.fillRect(101,230,54,3);
+  g.font='bold 8px monospace';g.fillStyle='#242a30';g.fillText(`MDP ${line}`,128,242);
   grain(g, S, S, 10);
-  return toTexture(c);
+  const texture=toTexture(c);texture.name=`Colectivo-${line}`;return texture;
 }
 
 export function coinFace() {

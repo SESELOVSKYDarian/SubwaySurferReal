@@ -319,3 +319,48 @@ test('brazos de cámara: retarget, independencia, suavizado, pausa y vuelta a ca
   });
  }finally{await page.close();}
 });
+
+test('tablero, banco roto, tres líneas de colectivo y detalle adaptativo',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();
+ await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try {
+  await page.goto(env.url);
+  await page.evaluate(async()=>{
+   const THREE=await import('three');const {Game}=await import('./game.js');
+   const game=new Game(document.querySelector('#game'));const [r,t]=await Promise.all([game.characterReady,game.officerReady]);
+   game.renderer.render=()=>{};
+   const triangles=model=>{let n=0;model.traverse(o=>{if(o.isMesh)n+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3});return n;};
+   const high=triangles(r.model);if(high<60000||high>65536)throw Error(`Presupuesto alto: ${high}`);
+   r.setDetail(false);const low=triangles(r.model);if(low>22000||low>=high*.5)throw Error(`LOD no reduce coste: ${low}`);
+   r.setDetail(true);if(triangles(r.model)!==high)throw Error('No restaura alta calidad');
+   game.start();game.nextSpawn=Infinity;
+   if(!game.world.track.getObjectByName('AsphaltRoad')||!game.world.track.getObjectByName('LaneMarkings'))throw Error('Falta calle argentina');
+   game.addObstacle('low',1,0);let o=game.obstacles[0];
+   if(!o.mesh.getObjectByName('DraftingBoard'))throw Error('Falta tablero');
+   const boardBounds=new THREE.Box3().setFromObject(o.mesh);
+   if(boardBounds.max.y>o.yMax+.02||boardBounds.max.y<.8)throw Error('Tablero fuera de caja de colisión');
+   game.y=1.1;game.vy=0;game.grounded=false;game.updatePhysics(0,0);
+   if(game.danger||game.state!=='playing')throw Error('Salto sobre tablero choca');
+   game.reset();game.start();game.nextSpawn=Infinity;
+   game.roll();for(let i=0;i<40;i++){game.holdRoll();game.update(1/60);}
+   game.addObstacle('high',1,0);
+   if(!game.obstacles[0].mesh.getObjectByName('BrokenSchoolDesk'))throw Error('Falta banco');
+   game.updatePhysics(0,0);
+   if(game.state!=='playing')throw Error('Agacharse no pasa bajo el banco');
+   game.reset();game.start();game.addObstacle('high',1,0);game.updatePhysics(0,0);
+   if(game.state!=='over')throw Error('De pie atraviesa el banco');
+   for(let i=0;i<3;i++){
+    game.reset();const random=Math.random;try{Math.random=()=>i/3+.02;game.addObstacle('train',1,-10);}finally{Math.random=random;}
+    const bus=game.obstacles[0].mesh;
+    if(bus.userData.line!==['542','720','563'][i])throw Error('Línea incorrecta');
+    if(bus.children.length>8)throw Error('Demasiadas piezas sin fusionar en colectivo');
+   }
+   game.reset();game.start();game.nextSpawn=Infinity;game.setQuality('balanced');game.update(1/60);
+   if(triangles(r.model)>22000||triangles(t.model)>22000)throw Error('Modo equilibrado no usa LOD');
+   const geo=game.A.school.board.children[0].geometry;
+   game.addObstacle('low',0,-10);game.addObstacle('low',2,-20);
+   for(const o of game.obstacles)if(o.mesh.getObjectByName('DraftingBoard').children[0].geometry!==geo)throw Error('Duplica geometría escolar');
+   game.renderer.dispose();
+  });
+ }finally{await page.close();}
+});

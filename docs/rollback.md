@@ -81,3 +81,15 @@ git pull --ff-only origin main
 git revert --no-edit arm-tracking-v1
 git push origin main
 ```
+
+## Deshacer la ambientación marplatense y el nuevo detalle de personajes
+
+Respaldo remoto: `backup/main-before-marplatense-1620238`.
+Para restaurar el comportamiento y los modelos anteriores sin borrar historial:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit marplatense-v1
+git push origin main
+```

@@ -8,11 +8,31 @@ const getSource = () => source || (source = new GLTFLoader().loadAsync(
   new URL('./assets/characters/technical-student.glb', import.meta.url).href,
 ).catch(error => { source = null; throw error; }));
 
+let lowSource;
+const getLowSource = () => lowSource || (lowSource = new GLTFLoader().loadAsync(
+  new URL('./assets/characters/technical-student-low.glb', import.meta.url).href,
+).catch(() => { lowSource = null; return null; }));
+
 // Rig de alumno/taller: cabeza descubierta, ropa y guardapolvo modelados como
 // geometría propia. Las posturas se calculan desde cero, sin sumar giros de una
 // carrera a un salto ni usar el temporizador de colisión como ángulo del cuerpo.
 export async function loadRunner(parent, { teacher = false } = {}) {
-  const gltf = await getSource();
+  const [gltf, low] = await Promise.all([getSource(), getLowSource()]);
+  const lowGeometries = new Map();
+  low?.scene.traverse(mesh => { if (mesh.isMesh) lowGeometries.set(mesh.name, mesh.geometry); });
+  const detailMeshes = [];
+  const shapeTeacher = (geometry, name) => {
+    if (!teacher || !name.startsWith('Human')) return geometry;
+    const copy=geometry.clone(), p=copy.attributes.position;
+    for (let i=0;i<p.count;i++) {
+      const y=p.getY(i);
+      if (y>1.74) {
+        const jaw=THREE.MathUtils.smoothstep(y,1.74,1.84)*(1-THREE.MathUtils.smoothstep(y,1.94,2.03));
+        p.setX(i,p.getX(i)*(1+.06*jaw));
+      }
+    }
+    copy.computeVertexNormals();return copy;
+  };
   const model = clone(gltf.scene);
   model.name = teacher ? 'Teacher' : 'TechnicalStudent';
   model.updateMatrixWorld(true);
@@ -27,6 +47,11 @@ export async function loadRunner(parent, { teacher = false } = {}) {
         Object.assign(copy, surface('fabric'));
         copy.roughness = 0.92;
       }
+      if (copy.name === 'Skin') {
+        Object.assign(copy, surface('skin'));
+        copy.roughness = .72;
+        if (teacher) copy.color.setRGB(.56,.38,.28);
+      }
       if (teacher && copy.name === 'StudentCoat') {
         copy.color.setHex(0x77776d);
         copy.name = 'TeacherCoat';
@@ -35,6 +60,10 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       return copy;
     });
     if (object.material.length === 1) object.material = object.material[0];
+    object.geometry = shapeTeacher(object.geometry, object.name);
+    const lowGeometry = lowGeometries.get(object.name);
+    detailMeshes.push({ mesh: object, high: object.geometry,
+      low: lowGeometry ? shapeTeacher(lowGeometry, object.name) : object.geometry });
     if (object.isSkinnedMesh) {
       object.skeleton.update();
       object.computeBoundingBox();
@@ -115,6 +144,15 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   };
   const controller = {
     model, bones, poseState,
+    setDetail(high = true) {
+      for (const entry of detailMeshes) {
+        const geometry=high ? entry.high : entry.low;
+        if (entry.mesh.geometry !== geometry) {
+          entry.mesh.geometry=geometry;
+          entry.mesh.boundingBox=entry.mesh.boundingSphere=null;
+        }
+      }
+    },
     reset() {
       Object.values(bones).forEach(bone => bone.quaternion.copy(rest[bone.name.replace(/^mixamorig:?/, '')]));
       for (const name of Object.keys(armWeights)) { armWeights[name] = 0; delete armRotations[name]; }

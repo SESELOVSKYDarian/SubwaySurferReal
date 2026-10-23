@@ -5,10 +5,10 @@ const {harness}=require('./harness.cjs');
   const page=await env.browser.newPage({viewport:{width:960,height:540}});
   await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
   await page.goto(env.url);
-  const result=await page.evaluate(async()=>{
+  const result=await page.evaluate(async(quality)=>{
    let seed=77;Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
    const {Game}=await import('./game.js');const game=new Game(document.querySelector('#game'));
-   await Promise.all([game.characterReady,game.officerReady]);game.start();
+   await Promise.all([game.characterReady,game.officerReady]);game.setQuality(quality);game.start();
    const gl=game.renderer.getContext();const debug=gl.getExtension('WEBGL_debug_renderer_info');
    const renderer=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):'unavailable';
    const pixel=new Uint8Array(4),renders=[],intervals=[];let previous;
@@ -26,6 +26,6 @@ const {harness}=require('./harness.cjs');
     frameMeanMs:+average(intervals).toFixed(2),fps:+(1000/average(intervals)).toFixed(2),
     renderMeanMs:+average(renders).toFixed(2),renderP95Ms:+sorted[Math.ceil(sorted.length*.95)-1].toFixed(2),
     drawCalls:game.renderer.info.render.calls,triangles:game.renderer.info.render.triangles};
-  });console.log(JSON.stringify(result,null,2));
+  },process.env.QUALITY||'auto');console.log(JSON.stringify(result,null,2));
  }finally{await env.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

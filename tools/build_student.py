@@ -2,7 +2,8 @@
 Run with Python 3 + numpy. No Blender, server or remote assets at game runtime.
 Garment, rig and accessories are authored here; no soldier geometry is retained.
 """
-import gzip,json,math,struct,pathlib
+import gzip,json,math,struct,pathlib,sys
+HIGH = '--low' not in sys.argv
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 verts=[];groups={};name=''
@@ -44,7 +45,39 @@ eye=mat('EyeWhite',[.65,.67,.62],.4);iris=mat('Iris',[.075,.045,.025],.35)
 pupil=mat('Pupil',[.005,.004,.003],.3);buttons=mat('Buttons',[.01,.015,.025],.55)
 # Each primitive owns topology and UVs; bones use model axes and local translations.
 primitives={}
+def refine_skin(points, faces):
+ # Una pasada Catmull-Clark conserva la anatomía y suaviza cara/manos.
+ P=np.asarray(points,dtype=np.float64);centers=np.array([P[f].mean(axis=0) for f in faces])
+ edges={};adj=[[] for _ in P]
+ for fi,f in enumerate(faces):
+  for i,a in enumerate(f):
+   b=f[(i+1)%len(f)];edges.setdefault(tuple(sorted((a,b))),[]).append(fi);adj[a].append(fi)
+ output=P.copy();neighbors=[[] for _ in P];boundary=[[] for _ in P]
+ for (a,b),fs in edges.items():
+  neighbors[a].append(b);neighbors[b].append(a)
+  if len(fs)==1:boundary[a].append(b);boundary[b].append(a)
+ for i,p in enumerate(P):
+  if len(boundary[i])==2:target=.75*p+.125*P[boundary[i]].sum(axis=0)
+  elif neighbors[i]:
+   n=len(neighbors[i]);F=centers[list(set(adj[i]))].mean(axis=0);R=((P[neighbors[i]]+p)/2).mean(axis=0)
+   target=(F+2*R+(n-3)*p)/n
+  else:target=p
+  # Mantener los rasgos del original en los ojos y la boca.
+  output[i]=p*.55+target*.45
+ points=list(output);edge_ids={}
+ for (a,b),fs in edges.items():
+  edge_ids[(a,b)]=len(points)
+  points.append((P[a]+P[b]+centers[fs].sum(axis=0))/4 if len(fs)==2 else (P[a]+P[b])/2)
+ face_ids=[]
+ for c in centers:face_ids.append(len(points));points.append(c)
+ result=[]
+ for fi,f in enumerate(faces):
+  for i,a in enumerate(f):
+   prev=f[(i-1)%len(f)];nxt=f[(i+1)%len(f)]
+   result.append([a,edge_ids[tuple(sorted((a,nxt)))],face_ids[fi],edge_ids[tuple(sorted((prev,a)))]])
+ return points,result
 def addmesh(label,points,faces,material,weights):
+ if HIGH and label=='Human' and material==skin:points,faces=refine_skin(points,faces)
  P=np.array(points,dtype=np.float32);F=[]
  for f in faces:
   for k in range(1,len(f)-1):F.append([f[0],f[k],f[k+1]])
@@ -119,7 +152,7 @@ for short in ['l','r']:
  sphere('Face',center,[.022,.0035,.005],hair,fixed('Head'),12,6)
 for side in ['Left','Right']:
  ankle=positions[B[side+'Foot']]
- points=[];faces=[];segments=20
+ points=[];faces=[];segments=32 if HIGH else 20
  # Continuous shoe shell from heel/cuff to toe, with a nearly flat sole.
  # Separate ellipsoids made the toes look detached during a running stride.
  sections=[(.06,.055,.015,.20),(0,.075,.01,.23),(-.12,.10,.01,.125),(-.23,.085,.01,.09),(-.32,.025,.018,.05)]
@@ -135,7 +168,7 @@ for side in ['Left','Right']:
  addmesh('Clothes',points,faces,shoe,fixed(side+'Foot'))
 # Long coat: tailored waist, front opening/lapels and split rear hem.
 rings=[(.67,.27,.17,.012),(.75,.26,.165,.01),(.99,.235,.15,.008),(1.2,.235,.15,.008),(1.47,.26,.17,.015),(1.60,.23,.15,.20),(1.72,.105,.09,.72)]
-points=[];faces=[];segments=48
+points=[];faces=[];segments=64 if HIGH else 48
 for y,rx,rz,gap in rings:
  for i in range(segments+1):
   a=gap+(2*math.pi-2*gap)*i/segments;points.append([rx*math.sin(a),y,-rz*math.cos(a)])
@@ -156,7 +189,7 @@ for side in ['Left','Right']:
  sphere('Coat',[shoulder[0],shoulder[1]-.025,shoulder[2]],[.087,.075,.085],coat,{side+'Arm':.5,'Spine2':.5},16,10)
  elbow=positions[B[side+'ForeArm']];wrist=positions[B[side+'Hand']]
  centers=[(shoulder,.085),(shoulder*.5+elbow*.5,.078),(elbow,.067),(elbow*.4+wrist*.6,.061),(wrist,.048)]
- points=[];faces=[];segments=20
+ points=[];faces=[];segments=32 if HIGH else 20
  for k,(center,radius) in enumerate(centers):
   tangent=centers[min(k+1,len(centers)-1)][0]-centers[max(0,k-1)][0];tangent/=np.linalg.norm(tangent)
   u=np.cross(tangent,[0,0,1]);u/=np.linalg.norm(u);v=np.cross(tangent,u)
@@ -214,6 +247,6 @@ for n in nodes:
 j={'asset':{'version':'2.0','generator':'Technical-school character builder','copyright':'CC0 MakeHuman base; authored coat and rig; see ATTRIBUTION.md'},'scene':0,'scenes':[{'nodes':[0]}],'nodes':nodes,'meshes':meshes,'skins':[{'joints':list(range(1,len(bones)+1)),'inverseBindMatrices':inverse,'skeleton':1}],'materials':materials,'buffers':[{'byteLength':len(buffer)}],'bufferViews':views,'accessors':accessors}
 raw=json.dumps(j,separators=(',',':')).encode();raw+=b' '*((-len(raw))%4);buffer+=b'\0'*((-len(buffer))%4)
 output=struct.pack('<III',0x46546c67,2,12+8+len(raw)+8+len(buffer))+struct.pack('<II',len(raw),0x4e4f534a)+raw+struct.pack('<II',len(buffer),0x004e4942)+buffer
-path=ROOT/'assets/characters/technical-student.glb'
+path=ROOT/'assets/characters'/('technical-student.glb' if HIGH else 'technical-student-low.glb')
 temporary=path.with_suffix('.tmp');temporary.write_bytes(output);temporary.replace(path)
 print(path,len(output),'bytes',len(bones),'bones',sum(len(p[2]) for parts in primitives.values() for p in parts),'triangles')

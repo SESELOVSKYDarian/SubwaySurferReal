@@ -1,4 +1,4 @@
-// Escenario: vías, muros con grafitis, vallas, edificios, catenarias y skyline.
+// Escenario: calle, muros con grafitis, vallas, edificios y skyline.
 // Todo lo que pasa junto al jugador se recicla: al quedar detrás de la cámara se
 // manda otra vez al fondo con un aspecto distinto.
 import * as THREE from 'three';
@@ -9,12 +9,11 @@ import { surface } from './materials.js';
 export const LANE_X = [-2.2, 0, 2.2];
 export const NEAR_Z = 24;     // un poco por detrás de la cámara
 const FAR_Z = -336;           // hasta donde llega el escenario
-const TILE = 4;               // la grava y las traviesas se repiten cada 4 m
+const TILE = 4;               // repetición del asfalto y las marcas viales
 const SEG = 24;               // largo de cada tramo de muro
 const WALL_X = 6.4;
 const WALL_H = 3.6;           // el nivel de la calle está encima del muro
 const BUILD_X = 10.5;
-const GANTRY_GAP = 50;
 
 // El escenario usa materiales Lambert (mucho más baratos de dibujar que los PBR);
 // solo los metales usan MeshStandardMaterial para tener reflejos.
@@ -50,7 +49,6 @@ export class World {
     this.buildTrack();
     this.buildSides();
     this.buildBuildings();
-    this.buildGantries();
     this.buildSkyline();
   }
 
@@ -58,47 +56,22 @@ export class World {
     const len = Math.ceil((NEAR_Z - FAR_Z) / TILE) * TILE;
     this.track = new THREE.Group();
 
-    const gravelTex = T.gravel();
-    gravelTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
-    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), mat({ map: gravelTex, ...surface('stone') }), { receive: true });
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.z = NEAR_Z - len / 2;
-    this.track.add(ground);
-
-    // Traviesas: un único InstancedMesh (1 draw call para cientos de piezas)
-    const gap = 0.8;
-    const perLane = Math.floor(len / gap);
-    const sleepers = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(1.9, 0.14, 0.24),
-      mat({ map: T.wood() }),
-      perLane * LANE_X.length,
-    );
-    const m = new THREE.Matrix4();
-    let i = 0;
-    for (const x of LANE_X) {
-      for (let k = 0; k < perLane; k++) {
-        m.makeTranslation(x, 0.07, NEAR_Z - k * gap);
-        sleepers.setMatrixAt(i++, m);
-      }
+    const roadTex = T.asphalt();
+    roadTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
+    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), mat({ map: roadTex }), { receive: true });
+    ground.name='AsphaltRoad';ground.rotation.x = -Math.PI / 2;
+    ground.position.z = NEAR_Z - len / 2;this.track.add(ground);
+    const perLane = Math.floor(len / TILE);
+    const markings = new THREE.InstancedMesh(new THREE.PlaneGeometry(.075,2),mat({color:0xcac7ae}),perLane*2);
+    markings.name='LaneMarkings';const matrix=new THREE.Matrix4(),q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
+    let i=0;
+    for(const x of [-1.1,1.1])for(let k=0;k<perLane;k++){
+      matrix.compose(new THREE.Vector3(x,.008,NEAR_Z-k*TILE),q,new THREE.Vector3(1,1,1));markings.setMatrixAt(i++,matrix);
     }
-    sleepers.receiveShadow = true;
-    this.track.add(sleepers);
-    this.scene.add(this.track);
-
-    // Raíles y bordillos: son uniformes, así que pueden quedarse quietos
-    const railGeo = new THREE.BoxGeometry(0.09, 0.16, len);
-    const railTopGeo = new THREE.BoxGeometry(0.075, 0.03, len);
-    const railMat = mat({ color: 0x6d655d, metalness: 0.8, roughness: 0.6 });
-    const railTopMat = mat({ color: 0xd8dde2, metalness: 1, roughness: 0.2 });
-    for (const x of LANE_X) {
-      for (const side of [-0.72, 0.72]) {
-        const rail = mesh(railGeo, railMat);
-        rail.position.set(x + side, 0.22, NEAR_Z - len / 2);
-        this.scene.add(rail);
-        const top = mesh(railTopGeo, railTopMat);
-        top.position.set(x + side, 0.31, NEAR_Z - len / 2);
-        this.scene.add(top);
-      }
+    this.track.add(markings);this.scene.add(this.track);
+    for(const x of [-3.5,3.5]){
+      const edge=mesh(new THREE.BoxGeometry(.08,.008,len),mat({color:0xb7ac78}));
+      edge.position.set(x,.006,NEAR_Z-len/2);this.scene.add(edge);
     }
     for (const s of [-1, 1]) {
       const curb = mesh(new THREE.BoxGeometry(1.4, 0.4, len), mat({ color: 0xa8a297 }), { receive: true });
@@ -106,21 +79,11 @@ export class World {
       this.scene.add(curb);
     }
 
-    // Cables de la catenaria
-    const wireGeo = new THREE.CylinderGeometry(0.022, 0.022, len, 4).rotateX(Math.PI / 2);
-    const wireMat = mat({ color: 0x1a1a1a });
-    for (const x of LANE_X) {
-      for (const y of [6.3, 6.9]) {
-        const w = new THREE.Mesh(wireGeo, wireMat);
-        w.position.set(x, y, NEAR_Z - len / 2);
-        this.scene.add(w);
-      }
-    }
   }
 
   buildSides() {
     const graffitiMats = Array.from({ length: 6 }, (_, i) => i < 2
-      ? this.concrete : mat({ map: T.graffitiWall(), ...surface('concrete') }));
+      ? this.concrete : mat({ map: T.graffitiWall(['aldosivi', 'alvarado', 'spot', 'mdp'][i - 2]), ...surface('concrete') }));
     const chain = T.chainLink();
     chain.repeat.set(SEG / 1.2, 2.2 / 1.2);
     const fenceMat = mat({
@@ -326,23 +289,6 @@ export class World {
     b.board.position.set(b.s * (BUILD_X - 0.05), WALL_H + 9, 0);
   }
 
-  buildGantries() {
-    const post = new THREE.BoxGeometry(0.28, 7.6, 0.28);
-    const beam = new THREE.BoxGeometry(10, 0.18, 0.22);
-    const brace = new THREE.BoxGeometry(0.08, 0.75, 0.08);
-    const parts = [placed(post, -4.9, 3.8, 0), placed(post, 4.9, 3.8, 0), placed(beam, 0, 7.5, 0), placed(beam, 0, 6.95, 0)];
-    for (let x = -4.5; x <= 4.5; x += 0.75) parts.push(placed(brace, x, 7.22, 0, 0, 0, (x * 4) % 2 ? 0.7 : -0.7));
-    const geo = mergeGeometries(parts);
-    this.gantries = [];
-    this.gantryCount = Math.ceil((NEAR_Z - FAR_Z) / GANTRY_GAP);
-    for (let i = 0; i < this.gantryCount; i++) {
-      const g = mesh(geo, this.metal);
-      g.position.z = NEAR_Z - 20 - i * GANTRY_GAP;
-      this.scene.add(g);
-      this.gantries.push(g);
-    }
-  }
-
   // Skyline unido en una sola geometría: la bruma oculta el detalle lejano.
   buildSkyline() {
     const parts = [];
@@ -381,13 +327,6 @@ export class World {
         b.group.position.z = this.buildingEdge[b.s] - b.w / 2;
         this.buildingEdge[b.s] -= b.w;
       }
-    }
-
-    for (const g of this.gantries) {
-      g.position.z += move;
-      g.visible = g.position.z > -this.viewDistance;
-      g.castShadow = g.position.z > -45;
-      if (g.position.z > NEAR_Z) g.position.z -= this.gantryCount * GANTRY_GAP;
     }
   }
 }

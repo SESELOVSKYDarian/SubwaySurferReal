@@ -4,7 +4,7 @@ Corredor en tercera persona ambientado alrededor de una escuela técnica. El alu
 lleva un guardapolvo azul inspirado en la referencia: cabeza descubierta, pelo
 corto, solapas, botones y bolsillos. Un profesor lo persigue tras los tropiezos.
 El profesor es **provisional**: su apariencia específica queda pendiente de la foto.
-El entorno urbano y las vías se conservan, con carteles y grafitis de talleres,
+El entorno urbano tiene asfalto, carriles y colectivos argentinos, con grafitis de talleres,
 electromecánica y laboratorios.
 
 ## Jugar
@@ -25,9 +25,10 @@ servicios externos para jugar con teclado.
 - Inicio y reanudación con cuenta atrás 3–2–1. El seguimiento incompleto pausa la partida hasta recalibrar.
 - La cámara se reutiliza entre partidas y se reconecta si el navegador conserva el permiso.
 
-Hay rampas para subir a vagones, monedas y jetpack. El primer tropiezo acerca al
-profesor; otro tropiezo durante la persecución termina la partida. Las barras
-altas y los choques frontales con vagones también terminan la partida.
+Hay tableros de dibujo para saltar, bancos escolares rotos para pasar agachado,
+rampas para subir a colectivos, monedas y jetpack. El primer tropiezo acerca al
+profesor; otro tropiezo durante la persecución termina la partida. Los bancos
+y los choques frontales con colectivos también terminan la partida.
 
 ## Animación y colisiones
 
@@ -66,6 +67,7 @@ Para reconstruir el GLB (opcional, no hace falta para jugar):
 ```bash
 python3 -m pip install -r tools/requirements.txt
 python3 tools/build_student.py
+python3 tools/build_student.py --low
 ```
 
 La fuente CC0 comprimida está incluida; la reconstrucción no descarga recursos.
@@ -101,3 +103,5 @@ de contar solo comandos enviados al renderizador. Ver
 Detalles de seguimiento y techo de vagones: [cámara y cuenta atrás](docs/camera-countdown.md).
 
 El alumno acompaña brazos, codos y orientación aproximada de las manos captados por la cámara. [Detalles y límites](docs/arm-tracking.md).
+
+Ambientación marplatense: colectivos 542 rojo, 720 verde/amarillo y 563 azul; pintadas de Aldosivi, Alvarado y SPOT. [Modelos, optimización y validación](docs/marplatense.md).

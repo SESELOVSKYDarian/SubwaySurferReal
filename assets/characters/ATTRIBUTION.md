@@ -33,3 +33,13 @@ Mixamo. It is not loaded by the current character module.
 Mixamo's FAQ permits royalty-free use within video games. No MIT license is
 asserted for that legacy model. The Three.js engine, GLTFLoader, SkeletonUtils
 and RoundedBoxGeometry retain their MIT license in `vendor/three/LICENSE`.
+
+## Marplatense detail revision
+
+The high-detail model refines exposed skin with one authored Catmull-Clark style
+pass and uses 64 coat contour segments; the low-detail model keeps the original
+skin topology. Both are reproducible with `tools/build_student.py` (add `--low`
+for the low version), retain the same 19-bone rig and use the CC0 source above.
+Teacher proportions and materials are runtime variations, not a likeness of a
+specific teacher. School furniture, bus liveries and painted wall lettering are
+procedural game artwork based on the requested references.

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { loadRunner, loadOfficer } from './character.js';
 import { mintCoin, buildShepherd } from './props.js';
+import { schoolProps } from './school-props.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { World, LANE_X, NEAR_Z } from './world.js';
@@ -142,19 +143,23 @@ export class Game {
 
   // Geometrías y materiales compartidos por obstáculos, monedas y objetos
   buildAssets() {
-    const white = std({ color: 0xf2f2f2 });
-    const redWhite = std({ map: T.stripes('#f4f4f4', '#d62828') });
     const yellowBlack = std({ map: T.stripes('#ffc61a', '#1c1c1c') });
     const gray = std({ color: 0x8b9096, metalness: 0.7, roughness: 0.4 });
     const dark = std({ color: 0x222426, metalness: 0.4 });
-    const lamp = std({ color: 0xff5a1f, emissive: 0xff3b00, emissiveIntensity: 2 });
     const headlight = std({ color: 0xfff6d8, emissive: 0xfff0c0, emissiveIntensity: 3 });
 
-    const trains = ['#2e8a4f', '#3a6fb0', '#a9aeb5'].map((c) => {
-      const side = std({ map: T.trainSide(c), metalness: 0.35, roughness: 0.45 });
-      const front = std({ map: T.trainFront(c), metalness: 0.35, roughness: 0.45 });
-      return [side, side, gray, dark, front, front];
+    const busLines = [
+      { line: '542', color: '#b8262e', stripe: '#ece3d1' },
+      { line: '720', color: '#268342', stripe: '#f4cf28' },
+      { line: '563', color: '#245caf', stripe: '#e7e7df' },
+    ];
+    const trains = busLines.map(({line, color, stripe}) => {
+      const side = std({ map: T.trainSide(color, line, stripe), metalness: .3, roughness: .53 });
+      const front = std({ map: T.trainFront(color, line, stripe), metalness: .3, roughness: .53 });
+      const back = std({ map: T.trainFront(color, line, stripe, true), metalness: .3, roughness: .53 });
+      return [side, side, gray, dark, front, back];
     });
+    const school = schoolProps();
 
     const minted = mintCoin();
 
@@ -171,26 +176,32 @@ export class Game {
     for (const z of [-3.4, 3.4]) {
       undercarriage.push(box(1.65, 0.25, 1.5).translate(0, 0, z));
       for (const x of [-0.92, 0.92]) {
-        undercarriage.push(new THREE.CylinderGeometry(0.29, 0.29, 0.18, 16).rotateZ(Math.PI / 2).translate(x, 0, z));
+        undercarriage.push(new THREE.CylinderGeometry(0.37, 0.37, 0.18, 20).rotateZ(Math.PI / 2).translate(x, 0, z));
       }
     }
     const bogieGeometry = mergeGeometries(undercarriage);
     undercarriage.forEach(geometry => geometry.dispose());
+    const busTrimParts = [new RoundedBoxGeometry(2.06,.20,9.9,2,.07).translate(0,3.20,0)];
+    const mirrors=[];
+    for(const x of [-1.03,1.03]) {
+      for(const z of [-3.4,3.4])busTrimParts.push(new THREE.CylinderGeometry(.14,.14,.025,16).rotateZ(Math.PI/2).translate(x,.32,z));
+      busTrimParts.push(box(.30,.035,.035).translate(x*1.06,2.35,4.35));
+      mirrors.push(box(.12,.24,.20).translate(x*1.17,2.27,4.35));
+    }
+    for(const z of [-5.03,5.03])busTrimParts.push(box(2.14,.12,.12).translate(0,.70,z));
+    const merged = parts => {
+      const plain=parts.map(p=>p.index?p.toNonIndexed():p.clone());
+      const result=mergeGeometries(plain);parts.forEach(p=>p.dispose());plain.forEach(p=>p.dispose());return result;
+    };
+    const busTrim=merged(busTrimParts),busMirrors=merged(mirrors);
     this.A = {
-      white, redWhite, yellowBlack, gray, dark, lamp, headlight, trains,
+      yellowBlack, gray, dark, headlight, trains, busLines, school, busTrim, busMirrors,
       rampMats: [dark, yellowBlack],
       rampGeo,
       coinGeo: minted.geometry,
       coinFarGeo: minted.farGeometry,
       coinMat: minted.material,
-      board: new RoundedBoxGeometry(1.9, 0.42, 0.1, 2, 0.025),
-      leg: box(0.07, 1.0, 0.07),
-      foot: box(0.1, 0.05, 0.7),
-      lampGeo: new THREE.SphereGeometry(0.08, 10, 6),
-      post: new THREE.CylinderGeometry(0.07, 0.07, 2.5, 12),
-      highBoard: new RoundedBoxGeometry(2.04, 0.7, 0.1, 2, 0.025),
       trainBody: new RoundedBoxGeometry(2.1, 2.6, 10, 2, 0.08),
-      roof: new THREE.CylinderGeometry(1.05, 1.05, 10, 16, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2).scale(1, 0.22, 1),
       bogie: bogieGeometry,
       light: new THREE.SphereGeometry(0.11, 10, 6),
       halo: new THREE.TorusGeometry(0.75, 0.06, 8, 32),
@@ -527,28 +538,23 @@ export class Game {
     };
     let yMin = 0, yMax, depth, ramp = 0;
     if (type === 'low') {
-      // Valla baja a rayas rojas y blancas: hay que saltar
-      add(A.board, [A.white, A.white, A.white, A.white, A.redWhite, A.redWhite], 0, 0.8);
-      for (const x of [-0.8, 0.8]) {
-        add(A.leg, A.gray, x, 0.5, 0.18).rotation.x = 0.35;
-        add(A.leg, A.gray, x, 0.5, -0.18).rotation.x = -0.35;
-        add(A.foot, A.gray, x, 0.03, 0, false);
-        add(A.lampGeo, A.lamp, x * 0.95, 1.1, 0, false);
-      }
+      g.add(A.school.board.clone());
       yMax = 1.0;
-      depth = 0.4;
+      depth = 1.08;
     } else if (type === 'high') {
-      // Barra alta amarilla y negra: hay que agacharse
-      for (const x of [-0.95, 0.95]) add(A.post, A.yellowBlack, x, 1.25);
-      add(A.highBoard, [A.dark, A.dark, A.dark, A.dark, A.yellowBlack, A.yellowBlack], 0, 1.85);
+      g.add(A.school.desk.clone());
       yMin = 1.5;
-      yMax = 2.3;
-      depth = 0.3;
+      yMax = 1.65;
+      depth = .8;
     } else {
-      // Vagón de metro: cambiar de carril... o subirse por la rampa y correr por encima
-      const mats = A.trains[Math.floor(Math.random() * A.trains.length)];
+      // Colectivo argentino: conserva rampas y techo transitable.
+      const busIndex = Math.floor(Math.random() * A.trains.length);
+      const mats = A.trains[busIndex];
+      g.name = `Colectivo${A.busLines[busIndex].line}`;
+      g.userData.line = A.busLines[busIndex].line;
       add(A.trainBody, mats, 0, 1.85);
-      add(A.roof, A.gray, 0, 3.15, 0, false);
+      add(A.busTrim, A.gray, 0, 0, 0, false);
+      add(A.busMirrors, A.dark, 0, 0, 0, false);
       add(A.bogie, A.dark, 0, 0.32, 0, false);
       for (const x of [-0.7, 0.7]) add(A.light, A.headlight, x, 1.0, 5.02, false);
       yMax = TRAIN_TOP;
@@ -721,6 +727,7 @@ export class Game {
       THREE.MathUtils.clamp(this.rig.root.rotation.z, -0.16, 0.16), 12, dt);
     this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
     if (this.runner) {
+      this.runner.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7);
       if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed,
         arms: performance.now() - this.armSeenAt < 350 ? this.armTargets : null });
 
@@ -908,6 +915,7 @@ export class Game {
     this.officerAnchor.position.copy(g.root.position);
     this.officerAnchor.visible = g.root.visible;
     if (this.officer) {
+      this.officer.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
       if (this.state !== 'paused') this.officer.update(dt, {
         running: !still && !reached, airborne: false, rolling: false,
         speed: this.speed, grabbing: reached,
