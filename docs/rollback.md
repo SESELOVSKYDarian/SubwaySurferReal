@@ -57,3 +57,15 @@ git push origin main
 
 Devuelve la versión del alumno militar y del policía anterior a esta adaptación,
 conservando el historial. El archivo de respaldo permanece disponible en GitHub.
+
+## Deshacer cámara, cuenta atrás y apoyo sobre vagones
+
+Respaldo remoto: `backup/main-before-camera-countdown-e4c3c32`.
+La etiqueta `camera-countdown-v1` identifica esta actualización:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit camera-countdown-v1
+git push origin main
+```

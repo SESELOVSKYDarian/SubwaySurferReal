@@ -22,6 +22,8 @@ servicios externos para jugar con teclado.
 - **↓ / S:** agacharse; mantener prolonga la postura y soltar inicia la salida.
 - **P:** pausar/reanudar; **C:** recalibrar la cámara.
 - Con cámara: pasos laterales, salto, agachado y ambas manos arriba para iniciar.
+- Inicio y reanudación con cuenta atrás 3–2–1. El seguimiento incompleto pausa la partida hasta recalibrar.
+- La cámara se reutiliza entre partidas y se reconecta si el navegador conserva el permiso.
 
 Hay rampas para subir a vagones, monedas y jetpack. El primer tropiezo acerca al
 profesor; otro tropiezo durante la persecución termina la partida. Las barras
@@ -95,3 +97,5 @@ El benchmark espera trabajo gráfico terminado mediante lectura de píxel, en lu
 de contar solo comandos enviados al renderizador. Ver
 [`docs/animation-fixes.md`](docs/animation-fixes.md) para la validación actual y
 [`docs/rollback.md`](docs/rollback.md) para volver a una versión anterior.
+
+Detalles de seguimiento y techo de vagones: [cámara y cuenta atrás](docs/camera-countdown.md).

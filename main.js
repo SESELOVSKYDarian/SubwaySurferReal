@@ -1,5 +1,6 @@
 // Une el juego con los controles (cuerpo vía cámara + teclado).
 import { Game } from './game.js';
+import { PlaySession } from './session.js';
 
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
@@ -34,74 +35,41 @@ const game = new Game($('game'), {
     $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — levanta las dos manos para volver a jugar`;
     $('howto').style.display = 'none';
     $('playBtn').textContent = '↻ Otra vez';
-    setTimeout(() => game.state === 'over' && overlay.classList.remove('hidden'), 600);
+    setTimeout(() => game.state === 'over' && !session.pending && overlay.classList.remove('hidden'), 600);
   },
 });
 
 $('quality').addEventListener('change', event => game.setQuality(event.target.value));
 
-function play() {
-  if (game.state === 'playing' || game.state === 'paused') return;
-  overlay.classList.add('hidden');
-  game.start();
-}
-
-// --- Control por cuerpo (MediaPipe se carga solo al activar la cámara) ---
 let pose = null;
-// --- Pausa: si la cámara te pierde (sales del cuadro, alguien se cruza…) el juego
-// se para, te recalibra cuando vuelves y sigue tras una cuenta atrás ---
 const pauseEl = $('pause');
-let pausedByLoss = false;
-let countdownTimer = null;
-
 function showPause(title, text = '', count = false) {
   pauseEl.classList.remove('hidden');
   $('pause-title').textContent = title;
   $('pause-title').classList.toggle('count', count);
   $('pause-text').textContent = text;
 }
-
-function hidePause() {
-  pauseEl.classList.add('hidden');
-}
-
-function cancelCountdown() {
-  clearTimeout(countdownTimer);
-  countdownTimer = null;
-}
-
-function resumeWithCountdown(n = 3) {
-  cancelCountdown();
-  if (n === 0) {
-    hidePause();
-    pausedByLoss = false;
-    game.resume();
-    game.setLane(1); // te has recalibrado en el centro
-    return;
-  }
-  showPause(String(n), '¡Prepárate!', true);
-  countdownTimer = setTimeout(() => resumeWithCountdown(n - 1), 700);
+const session = new PlaySession(game, showPause, () => pauseEl.classList.add('hidden'));
+function play() {
+  if (game.state === 'playing' || session.pending || session.manual) return;
+  overlay.classList.add('hidden');
+  session.request();
 }
 
 const poseHandlers = {
   onStatus: (text) => {
     $('pose-status').textContent = text;
-    if (pausedByLoss && !countdownTimer) $('pause-text').textContent = text;
+    if (session.pending && !session.ready) $('pause-text').textContent = text;
   },
   onLost: () => {
-    cancelCountdown();
-    if (game.state === 'playing') {
-      game.pause();
-      pausedByLoss = true;
-    }
-    if (pausedByLoss) showPause('⏸ Te perdí de vista', 'Vuelve al centro y quédate quieto para recalibrar');
+    session.tracking(false);
+    if (pose && !pose.running) $('retryCam').classList.remove('hidden');
   },
-  onFound: () => {
-    if (pausedByLoss) showPause('👀 ¡Te veo!', 'Quédate quieto, calibrando…');
-  },
+  onCalibrating: () => session.tracking(false),
   onCalibrated: () => {
     flash('¡Listo! 🙌', '#7dff9a');
-    if (pausedByLoss) resumeWithCountdown();
+    game.setLane(1);
+    session.tracking(true);
   },
   onLane: (lane) => {
     game.setLane(lane + 1);
@@ -120,23 +88,28 @@ const poseHandlers = {
   onHandsUp: play,
 };
 
-$('camBtn').addEventListener('click', async () => {
+async function activateCamera() {
   const btn = $('camBtn');
   btn.disabled = true;
   btn.textContent = 'Cargando…';
   try {
     const { PoseController } = await import('./pose.js');
-    pose = new PoseController($('video'), $('skeleton'), poseHandlers, sensitivity);
+    pose ??= new PoseController($('video'), $('skeleton'), poseHandlers, sensitivity);
+    session.tracking(false);
     await pose.start();
     btn.textContent = '📷 Cámara activa';
+    $('retryCam').classList.add('hidden');
     $('subtitle').textContent = 'Quédate quieto para calibrar y luego levanta las dos manos para empezar';
   } catch (err) {
     console.error(err);
     btn.disabled = false;
     btn.textContent = '📷 Reintentar cámara';
+    if (session.pending) $('retryCam').classList.remove('hidden');
     $('pose-status').textContent = `Error: ${err.message}`;
   }
-});
+}
+$('camBtn').addEventListener('click', activateCamera);
+$('retryCam').addEventListener('click', activateCamera);
 $('playBtn').addEventListener('click', play);
 
 // Sensibilidad del salto y de agacharse (se recuerda en este navegador)
@@ -173,13 +146,7 @@ window.addEventListener('keydown', (e) => {
     case 'Enter': play(); break;
     case 'KeyC': pose?.recalibrate(); break;
     case 'KeyP':
-      if (game.state === 'playing') {
-        game.pause();
-        showPause('⏸ Pausa', 'Pulsa P para seguir');
-      } else if (game.state === 'paused' && !pausedByLoss) {
-        game.resume();
-        hidePause();
-      }
+      session.togglePause();
       break;
     default: return;
   }
@@ -194,3 +161,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// Consultar el permiso no abre un diálogo. Solo reconectamos automáticamente si ya está concedido.
+navigator.permissions?.query({ name: 'camera' }).then(permission => {
+  if (permission.state === 'granted') activateCamera();
+}).catch(() => {});

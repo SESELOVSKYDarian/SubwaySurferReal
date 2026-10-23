@@ -78,26 +78,36 @@ export class PoseController {
   }
 
   async start() {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error('el navegador bloquea la cámara: abre el juego por https:// o http://localhost');
-    }
-    this.status('Cargando modelo de esqueleto…');
-    const [stream] = await Promise.all([
-      navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, frameRate: { ideal: 60 }, facingMode: 'user' },
-        audio: false,
-      }),
-      this.startWorker().catch((err) => {
-        console.warn('Worker no disponible, uso el hilo principal:', err);
-        return this.startMainThread();
-      }),
-    ]);
-    this.video.srcObject = stream;
-    await this.video.play();
-    this.canvas.width = this.video.videoWidth;
-    this.canvas.height = this.video.videoHeight;
+    if (this.running) return;
+    if (this.startPromise) return this.startPromise;
+    this.startPromise = this.openCamera().finally(() => { this.startPromise = null; });
+    return this.startPromise;
+  }
 
-    this.running = true;
+  async openCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Abre el juego por HTTPS para usar la cámara');
+    this.status('Cargando cámara y esqueleto…');
+    // Conservar el stream y el modelo: reintentar no vuelve a pedir acceso ni carga todo otra vez.
+    if (!this.stream?.getVideoTracks().some(track => track.readyState === 'live')) {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480, frameRate: { ideal: 60 }, facingMode: 'user' }, audio: false,
+      });
+      for (const track of this.stream.getVideoTracks()) track.onended = () => {
+        this.running = false; this.recalibrate(); this.h.onLost?.();
+      };
+    }
+    if (!this.worker && !this.landmarker) {
+      await this.startWorker().catch(() => this.startMainThread());
+    }
+    this.video.srcObject = this.stream;
+    await this.video.play();
+    this.canvas.width = this.video.videoWidth; this.canvas.height = this.video.videoHeight;
+    this.running = true; this.lastResult = performance.now();
+    this.watchdog ??= setInterval(() => {
+      if (this.running && performance.now() - this.lastResult > 1200 && !this.lost) {
+        this.lost = true; this.recalibrate(); this.h.onLost?.();
+      }
+    }, 300);
     this.scheduleFrame();
   }
 
@@ -185,6 +195,7 @@ export class PoseController {
   }
 
   recalibrate() {
+    this.h.onCalibrating?.();
     if (this.ducking) this.h.onDuckEnd?.();
     this.base = null;
     this.samples = [];
@@ -309,13 +320,18 @@ export class PoseController {
   }
 
   process(poses) {
+    this.lastResult = performance.now();
     poses = poses || [];
-    const lm = this.selectPlayer(poses);
+    let lm = this.selectPlayer(poses);
+    // Una cabeza aislada no sirve para controlar ni calibrar el cuerpo.
+    if (lm && ![L_SHOULDER, R_SHOULDER, L_HIP, R_HIP].every(i =>
+      (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.01 && lm[i].x < 0.99 && lm[i].y > 0.01 && lm[i].y < 0.99)) lm = null;
     this.draw(lm, poses);
     if (!lm) {
       this.missing++;
       this.prev = null;
-      if (this.missing === LOST_FRAMES && this.base) {
+      if (!this.base) this.samples = [];
+      if (this.missing === LOST_FRAMES && !this.lost) {
         this.lost = true;
         this.h.onLost?.();
       }
@@ -344,7 +360,8 @@ export class PoseController {
     const m = this.measure(lm, now / 1000);
 
     if (!this.base) {
-      if (m.sy == null) {
+      if (m.sy == null || m.hy == null || m.sw < 0.06 || m.torso < 0.08) {
+        this.samples = [];
         this.status('Necesito ver tus hombros para calibrar');
         return;
       }

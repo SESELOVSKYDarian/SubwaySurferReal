@@ -193,3 +193,6 @@ button:disabled { opacity: .5; cursor: default; }
   font: inherit;
 }
 #quality:focus-visible { outline: 2px solid #ffd84a; outline-offset: 3px; }
+
+#retryCam { margin-top: 16px; }
+#retryCam.hidden { display: none; }

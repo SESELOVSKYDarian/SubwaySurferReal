@@ -608,7 +608,7 @@ export class Game {
   surfaceAt(x) {
     let h = 0, ramp = false;
     for (const o of this.obstacles) {
-      if (o.type !== 'train' || Math.abs(o.mesh.position.x - x) > 1.0) continue;
+      if (o.type !== 'train' || Math.abs(o.mesh.position.x - x) >= 1.1) continue;
       const front = o.mesh.position.z + o.depth / 2;
       const back = o.mesh.position.z - o.depth / 2;
       if (back - PLAYER_HALF_DEPTH <= 0 && 0 <= front + PLAYER_HALF_DEPTH) {
@@ -712,7 +712,8 @@ export class Game {
 
     this.updatePlayerMesh(dt, rolling);
     this.characterAnchor.position.set(this.x, this.y, 0);
-    this.characterAnchor.rotation.z = this.rig.root.rotation.z;
+    this.characterAnchor.rotation.z = THREE.MathUtils.damp(this.characterAnchor.rotation.z,
+      THREE.MathUtils.clamp(this.rig.root.rotation.z, -0.16, 0.16), 12, dt);
     this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
     if (this.runner) {
       if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed });
@@ -761,13 +762,18 @@ export class Game {
         this.invuln = 1.5; // margen para aterrizar tranquilo
       }
     } else {
+      const previousY = this.y;
+      const wasGrounded = this.grounded;
       this.y += this.vy * dt - 0.5 * GRAVITY * dt * dt;
       this.vy -= GRAVITY * dt;
       const g = this.surfaceAt(this.x);
-      // Se puede "pisar" una superficie si estamos justo encima o un poco por debajo
-      const reach = g.ramp ? 2.5 : Math.max(0.7, -this.vy * dt + 0.15);
+      // Barrido vertical: aterrizar al cruzar el techo, sin trepar paredes.
+      const rampStep = Math.max(0.7, (move + PLAYER_HALF_DEPTH) * TRAIN_TOP / RAMP_LEN + 0.05);
+      const canLand = g.ramp
+        ? wasGrounded || previousY >= g.h - 0.15
+        : previousY >= g.h - 0.01 || (wasGrounded && previousY >= g.h - rampStep);
       this.grounded = false;
-      if (this.vy <= 0 && this.y <= g.h && this.y >= g.h - reach) {
+      if (this.vy <= 0 && this.y <= g.h && canLand) {
         this.y = g.h;
         this.vy = 0;
         this.grounded = true;
@@ -792,7 +798,7 @@ export class Game {
       if (!hitX || !hitZ) continue;
 
       if (o.type === 'train') {
-        if (this.y >= TRAIN_TOP - 0.7) continue; // vamos por encima
+        if (this.y >= TRAIN_TOP - 0.01) continue; // vamos por encima
         // Si el frente del vagón acaba de llegar es un choque de frente;
         // si no, nos hemos metido de lado al cambiar de carril
         const headOn = front + PLAYER_HALF_DEPTH < move + 0.6;

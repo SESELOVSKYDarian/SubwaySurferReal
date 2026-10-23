@@ -21,7 +21,7 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
   const pausedScore=await page.locator('#score').innerText();await page.waitForTimeout(700);
   assert.equal(await page.locator('#score').innerText(),pausedScore);
   await page.keyboard.press('KeyP');
-  assert.equal(await page.locator('#pause').evaluate(el=>el.classList.contains('hidden')),true);
+  await page.waitForFunction(()=>document.querySelector('#pause').classList.contains('hidden'));
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Space');await page.keyboard.press('ArrowDown');
   await page.selectOption('#quality','balanced');
   assert.equal(await page.locator('#quality').inputValue(),'balanced');
@@ -256,4 +256,31 @@ test('salto repetible a 30, 60 y 120 Hz, caída rápida y reinicio limpios',{tim
   });
   assert.ok(result.every(peak=>peak>2.15&&peak<2.26));
  }finally{await page.close();}
+});
+
+
+test('techo del vagón: bordes, aterrizaje rápido y choque frontal', {timeout:120000}, async()=>{
+ const page=await env.browser.newPage();
+ await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try {
+  await page.goto(env.url);
+  await page.evaluate(async()=>{
+   const {Game}=await import('./game.js');
+   const g=new Game(document.querySelector('#game'));await g.characterReady;
+   g.renderer.render=()=>{};
+   const setup=()=>{g.reset();g.start();g.nextSpawn=Infinity;g.addObstacle('train',1,-4);g.obstacles[0].mesh.position.z=-4;};
+   setup();
+   g.x=1.05;g.y=3.3;g.grounded=true;
+   g.updatePhysics(0,0);
+   if(g.state!=='playing'||g.y!==3.3||!g.grounded)throw Error('Borde del techo sin apoyo');
+   setup();g.y=3.6;g.vy=-20;g.grounded=false;g.updatePhysics(.05,0);
+   if(g.state!=='playing'||g.y!==3.3||!g.grounded)throw Error('Aterrizaje atravesó techo');
+   setup();const train=g.obstacles[0];train.ramp=6;train.mesh.position.z=-5.3;
+   g.y=3.3*(6-2)/6;g.grounded=true;g.updatePhysics(.05,1.7);
+   if(g.state!=='playing'||g.y!==3.3)throw Error('Choque al terminar rampa a máxima velocidad');
+   setup();g.y=0;g.updatePhysics(.016,0);
+   if(g.state==='playing')throw Error('Dejó atravesar el vagón a nivel del suelo');
+   g.renderer.dispose();
+  });
+ } finally {await page.close();}
 });

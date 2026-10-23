@@ -108,8 +108,9 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       // todo el personaje. Mantener agachado no reinicia ninguna animación.
       legPose('Left', poseState.phase, blend);
       legPose('Right', poseState.phase + Math.PI, blend);
-      move('Spine', -0.12*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight, 0, 0, blend);
-      move('Spine2', -0.35*poseState.crouch, Math.sin(poseState.phase)*0.04*poseState.run, 0, blend);
+      move('Spine', -0.16*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight,
+        -Math.sin(poseState.phase)*0.045*poseState.run, 0, blend);
+      move('Spine2', -0.35*poseState.crouch, Math.sin(poseState.phase)*0.09*poseState.run, 0, blend);
       move('Neck', 0.12*poseState.crouch, 0, 0, blend);
       move('Head', 0.02, 0, 0, blend);
       for (const [side, sign] of [['Left',1],['Right',-1]]) {
