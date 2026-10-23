@@ -40,3 +40,20 @@ git push origin main
 ```
 
 Esto conserva la primera mejora visual y la cámara en tercera persona.
+
+## Deshacer la ambientación de técnica y los cambios de animación
+
+Respaldo remoto: `backup/main-before-tecnica-5929fc5`, commit
+`5929fc50aff67e2b3c454fe052c50ce7c0f6c5bb`. La etiqueta `tecnica-animation-v1`
+identifica un commit normal:
+
+```bash
+git fetch origin --tags
+git switch main
+git pull --ff-only origin main
+git revert --no-edit tecnica-animation-v1
+git push origin main
+```
+
+Devuelve la versión del alumno militar y del policía anterior a esta adaptación,
+conservando el historial. El archivo de respaldo permanece disponible en GitHub.

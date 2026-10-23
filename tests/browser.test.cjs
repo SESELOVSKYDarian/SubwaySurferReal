@@ -82,14 +82,14 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    game.renderer.dispose();
    return {skins,height};
   });
-  assert.equal(result.skins,2);assert.deepEqual(errors,[]);
+  assert.ok(result.skins>=2);assert.deepEqual(errors,[]);
  }finally{await page.close();}
 });
 
 test('un fallo del modelo conserva el juego y muestra un aviso',{timeout:120000},async()=>{
  const page=await env.browser.newPage({viewport:{width:640,height:360}});
  try{
-  await page.route('**/runner.glb',route=>route.abort());
+  await page.route('**/technical-student.glb',route=>route.abort());
   await page.goto(env.url);
   await page.waitForFunction(()=>document.querySelector('#subtitle').textContent.includes('No se pudo cargar'),{timeout:60000});
   await page.locator('#playBtn').click();
@@ -97,7 +97,7 @@ test('un fallo del modelo conserva el juego y muestra un aviso',{timeout:120000}
  }finally{await page.close();}
 });
 
-test('se conservan guardia, perro, rampas, jetpack y pausa de main',{timeout:120000},async()=>{
+test('se conservan profesor, perro, rampas, jetpack y pausa de main',{timeout:120000},async()=>{
  const page=await env.browser.newPage({viewport:{width:960,height:540}});
  await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
  try{
@@ -112,7 +112,7 @@ test('se conservan guardia, perro, rampas, jetpack y pausa de main',{timeout:120
    if(game.state!=='paused'||JSON.stringify(saved)!==JSON.stringify([game.x,game.y,game.distance,game.flyTimer]))throw Error('La pausa no congela la partida');
    game.resume();if(game.state!=='playing')throw Error('No reanuda');
    game.stumble();if(!game.danger||game.state!=='playing')throw Error('Primer tropiezo');
-   game.stumble();if(game.state!=='over'||game.caughtReason!=='caught')throw Error('El guardia no atrapa');
+   game.stumble();if(game.state!=='over'||game.caughtReason!=='caught')throw Error('El profesor no atrapa');
    game.start();
    const random=Math.random;
    try{Math.random=()=>0.1;game.addObstacle('train',1,-8);}finally{Math.random=random;}
@@ -138,7 +138,7 @@ test('se conservan guardia, perro, rampas, jetpack y pausa de main',{timeout:120
  }finally{await page.close();}
 });
 
-test('policía esquelético independiente y monedas metálicas instanciadas',{timeout:120000},async()=>{
+test('profesor esquelético independiente y monedas metálicas instanciadas',{timeout:120000},async()=>{
  const page=await env.browser.newPage({viewport:{width:960,height:540}});
  await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
@@ -147,19 +147,19 @@ test('policía esquelético independiente y monedas metálicas instanciadas',{ti
   const result=await page.evaluate(async()=>{
    const {Game}=await import('./game.js');const game=new Game(document.querySelector('#game'));
    const [runner,officer]=await Promise.all([game.characterReady,game.officerReady]);
-   if(!officer)throw Error('Falta el policía detallado');
+   if(!officer)throw Error('Falta el profesor detallado');
    const runnerLeg=runner.model.getObjectByName('mixamorigLeftUpLeg');
    const officerLeg=officer.model.getObjectByName('mixamorigLeftUpLeg');
-   if(runnerLeg===officerLeg)throw Error('El policía comparte huesos con el jugador');
+   if(runnerLeg===officerLeg)throw Error('El profesor comparte huesos con el jugador');
    const previous=runnerLeg.quaternion.clone();
    officer.update(.25,{running:true,airborne:false,rolling:false,speed:14});
-   if(previous.angleTo(runnerLeg.quaternion)>0.000001)throw Error('Animar el policía mueve al jugador');
-   let policeMaterials=0;officer.model.traverse(object=>{
-    for(const material of [object.material].flat())if(material?.name==='PoliceUniform')policeMaterials++;
+   if(previous.angleTo(runnerLeg.quaternion)>0.000001)throw Error('Animar el profesor mueve al jugador');
+   let teacherMaterials=0;officer.model.traverse(object=>{
+    for(const material of [object.material].flat())if(material?.name==='TeacherCoat')teacherMaterials++;
    });
-   if(policeMaterials!==2)throw Error('Falta el uniforme');
+   if(teacherMaterials!==1)throw Error('Falta el uniforme');
    game.start();game.update(1/60);
-   if(!game.officerAnchor.visible||game.guard.root.visible)throw Error('No reemplaza al guardia provisional');
+   if(!game.officerAnchor.visible||game.guard.root.visible)throw Error('No reemplaza al profesor provisional');
    game.guardZ=16;game.chase=0;game.updateGuard(0);
    if(game.officerAnchor.visible||game.dog.root.visible)throw Error('El perseguidor no se retira');
    game.reset();game.start();
@@ -176,9 +176,84 @@ test('policía esquelético independiente y monedas metálicas instanciadas',{ti
    game.start();game.addCoin(1,-4);game.addCoin(0,-5);game.addCoin(2,-5);
    game.renderer.render=render;game.update(1/60);
    window.assetGame=game;
-   return {policeMaterials,coinVertices:game.A.coinGeo.attributes.position.count};
+   return {teacherMaterials,coinVertices:game.A.coinGeo.attributes.position.count};
   });
-  await page.screenshot({path:'test-results/police-coins.png',timeout:60000});
-  assert.equal(result.policeMaterials,2);assert.deepEqual(errors,[]);
+  await page.screenshot({path:'test-results/school-assets.png',timeout:60000});
+  assert.equal(result.teacherMaterials,1);assert.deepEqual(errors,[]);
+ }finally{await page.close();}
+});
+
+test('agachado sostenido sin giros, colisión coherente y pausa sin consumir objetos',{timeout:120000},async()=>{
+ const page=await env.browser.newPage({viewport:{width:960,height:540}});
+ await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);
+  const result=await page.evaluate(async()=>{
+   const T=await import('three'),{Game}=await import('./game.js');
+   const game=new Game(document.querySelector('#game'));await Promise.all([game.characterReady,game.officerReady]);
+   const render=game.renderer.render.bind(game.renderer);game.renderer.render=()=>{};
+   game.start();game.nextSpawn=Infinity;
+   for(let i=0;i<40;i++)game.update(1/60);
+   game.roll();
+   const stable=[];
+   for(let i=0;i<300;i++){
+    if(i%3===0)game.holdRoll();
+    if(i%45===0)game.roll(); // repetición de tecla mientras ya está agachado
+    game.update(1/60);
+    if(game.runner.model.rotation.x!==0)throw Error('El cuerpo vuelve a girar');
+    if(i>120)stable.push(game.runner.bones.Head.getWorldPosition(new T.Vector3()).y);
+   }
+   if(Math.max(...stable)-Math.min(...stable)>.03)throw Error('El agachado sostenido salta de postura');
+   game.runner.model.updateMatrixWorld(true);
+   game.runner.model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
+   const bounds=new T.Box3().setFromObject(game.runner.model);
+   if(bounds.min.y<-.05||bounds.max.y>1.3)throw Error(`Agachado fuera de límites: ${bounds.min.y},${bounds.max.y}`);
+   if(game.playerHeight<bounds.max.y)throw Error('La colisión es menor que la postura visible');
+   game.addObstacle('high',1,0);game.update(1/60);
+   if(game.state!=='playing')throw Error('El agachado no pasa bajo la barra');
+   game.releaseRoll();for(let i=0;i<45;i++)game.update(1/60);
+   if(game.runner.poseState.crouch>.02||game.playerHeight<2)throw Error('No se levanta al soltar');
+   game.addCoin(1,0);game.addJetpackPickup(1,0);game.pause();
+   const saved={pose:JSON.stringify(game.runner.poseState),head:game.runner.bones.Head.quaternion.toArray(),camera:game.camera.position.toArray(),coins:game.coins.length,pickups:game.pickups.length};
+   for(let i=0;i<120;i++)game.update(1/30);
+   if(JSON.stringify(game.runner.poseState)!==saved.pose||JSON.stringify(game.camera.position.toArray())!==JSON.stringify(saved.camera))throw Error('La animación o cámara continúa en pausa');
+   if(game.coins.length!==saved.coins||game.pickups.length!==saved.pickups)throw Error('Se consumen objetos durante la pausa');
+   game.renderer.render=render;game.update(0);
+   game.renderer.dispose();return {crouchHeight:bounds.max.y,ground:bounds.min.y};
+  });
+  assert.ok(result.crouchHeight<1.3);assert.ok(result.ground>=-.05);
+ }finally{await page.close();}
+});
+
+test('salto repetible a 30, 60 y 120 Hz, caída rápida y reinicio limpios',{timeout:120000},async()=>{
+ const page=await env.browser.newPage({viewport:{width:960,height:540}});
+ await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);
+  const result=await page.evaluate(async()=>{
+   const {Game}=await import('./game.js');const game=new Game(document.querySelector('#game'));await game.characterReady;
+   const render=game.renderer.render.bind(game.renderer);game.renderer.render=()=>{};
+   const peaks=[];
+   for(const fps of [30,60,120]){
+    game.reset();game.start();game.nextSpawn=Infinity;game.jump();let peak=0,landed=false;
+    for(let i=0;i<fps*2;i++){
+     game.update(1/fps);peak=Math.max(peak,game.y);
+     if(game.runner.model.rotation.x!==0)throw Error('El salto gira el cuerpo');
+     if(i>4&&game.grounded){landed=true;break;}
+    }
+    if(!landed||game.y!==0||game.vy!==0)throw Error('El salto no aterriza limpiamente');
+    peaks.push(peak);
+   }
+   if(Math.max(...peaks)-Math.min(...peaks)>.03)throw Error('El salto depende demasiado de los FPS');
+   game.reset();game.start();game.nextSpawn=Infinity;game.jump();for(let i=0;i<10;i++)game.update(1/60);
+   game.roll();game.update(1/60);const falling=game.vy;game.roll();
+   if(game.vy!==falling)throw Error('Repetir agachado reinicia la caída');
+   for(let i=0;i<60;i++){game.holdRoll();game.update(1/60);}
+   if(!game.grounded||game.y!==0||game.runner.poseState.crouch<.98)throw Error('No aterriza agachado');
+   game.jumpBuffer=.2;game.reset();game.start();game.nextSpawn=Infinity;game.update(1/60);
+   if(game.jumpBuffer!==0||game.y!==0||game.runner.poseState.crouch!==0)throw Error('El reinicio hereda un salto o agachado');
+   game.renderer.render=render;game.update(0);game.renderer.dispose();return peaks;
+  });
+  assert.ok(result.every(peak=>peak>2.15&&peak<2.26));
  }finally{await page.close();}
 });

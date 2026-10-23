@@ -1,0 +1,219 @@
+"""Build the local technical-school character from the CC0 MakeHuman base.
+Run with Python 3 + numpy. No Blender, server or remote assets at game runtime.
+Garment, rig and accessories are authored here; no soldier geometry is retained.
+"""
+import gzip,json,math,struct,pathlib
+import numpy as np
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+verts=[];groups={};name=''
+with gzip.open(ROOT/'assets/characters/source/makehuman-base.obj.gz','rt') as file:
+ for line in file:
+  if line.startswith('v '):verts.append(list(map(float,line.split()[1:4])))
+  elif line.startswith('g '):name=line[2:].strip();groups.setdefault(name,[])
+  elif line.startswith('f '):groups[name].append([int(x.split('/')[0])-1 for x in line.split()[1:]])
+V=np.array(verts);minimum=min(V[i,1] for face in groups['body'] for i in face)
+S=2.03/(max(V[i,1] for face in groups['body'] for i in face)-minimum)
+def convert(p):return np.array([p[0]*S,(p[1]-minimum)*S,-p[2]*S])
+def joint(name):
+ ids={i for face in groups[name] for i in face};return convert(V[list(ids)].mean(axis=0))
+bones=[];positions=[];parents=[]
+def bone(name,p,parent=None):
+ bones.append(name);positions.append(np.array(p));parents.append(bones.index(parent) if parent else None)
+ return len(bones)-1
+bone('Hips',joint('joint-pelvis'))
+bone('Spine',joint('joint-spine-3'),'Hips')
+bone('Spine2',joint('joint-spine-1'),'Spine')
+bone('Neck',joint('joint-neck'),'Spine2')
+bone('Head',joint('joint-head'),'Neck')
+for side,short in [('Left','l'),('Right','r')]:
+ bone(side+'Arm',joint('joint-'+short+'-shoulder'),'Spine2')
+ bone(side+'ForeArm',joint('joint-'+short+'-elbow'),side+'Arm')
+ bone(side+'Hand',joint('joint-'+short+'-hand'),side+'ForeArm')
+ bone(side+'UpLeg',joint('joint-'+short+'-upper-leg'),'Hips')
+ bone(side+'Leg',joint('joint-'+short+'-knee'),side+'UpLeg')
+ bone(side+'Foot',joint('joint-'+short+'-ankle'),side+'Leg')
+ bone(side+'ToeBase',joint('joint-'+short+'-foot-1'),side+'Foot')
+B={name:i for i,name in enumerate(bones)}
+materials=[]
+def mat(name,color,rough=.8,double=False):
+ materials.append({'name':name,'pbrMetallicRoughness':{'baseColorFactor':[*color,1],'metallicFactor':0,'roughnessFactor':rough},'doubleSided':double});return len(materials)-1
+skin=mat('Skin',[.58,.35,.23],.8);coat=mat('StudentCoat',[.025,.055,.13],.92,True)
+shirt=mat('Shirt',[.73,.74,.69],.9);pants=mat('Trousers',[.025,.035,.055],.95)
+shoe=mat('Shoes',[.015,.017,.019],.72);hair=mat('Hair',[.035,.021,.014],.95)
+eye=mat('EyeWhite',[.65,.67,.62],.4);iris=mat('Iris',[.075,.045,.025],.35)
+pupil=mat('Pupil',[.005,.004,.003],.3);buttons=mat('Buttons',[.01,.015,.025],.55)
+# Each primitive owns topology and UVs; bones use model axes and local translations.
+primitives={}
+def addmesh(label,points,faces,material,weights):
+ P=np.array(points,dtype=np.float32);F=[]
+ for f in faces:
+  for k in range(1,len(f)-1):F.append([f[0],f[k],f[k+1]])
+ F=np.array(F,dtype=np.uint32);N=np.zeros_like(P)
+ for tri in F:
+  n=np.cross(P[tri[1]]-P[tri[0]],P[tri[2]]-P[tri[0]])
+  for i in tri:N[i]+=n
+ N/=np.maximum(np.linalg.norm(N,axis=1,keepdims=True),1e-8)
+ J=np.zeros((len(P),4),np.uint16);W=np.zeros((len(P),4),np.float32)
+ for i,p in enumerate(P):
+  ws=weights(p) if callable(weights) else weights
+  total=sum(ws.values())
+  for k,(bn,w) in enumerate(sorted(ws.items(),key=lambda x:-x[1])[:4]):J[i,k]=B[bn];W[i,k]=w/total
+  W[i]/=max(W[i].sum(),1e-8)
+ UV=np.stack([P[:,0]*4,P[:,1]*4],axis=1).astype(np.float32)
+ primitives.setdefault(label,[]).append((P,N,F,J,W,UV,material))
+def fixed(name):return {name:1.}
+def blend(p,choices):
+ scores={}
+ for name,end in choices:
+  a=positions[B[name]];b=positions[B[end]];d=b-a;t=np.clip(np.dot(p-a,d)/max(np.dot(d,d),1e-8),0,1)
+  distance=np.linalg.norm(p-(a+t*d));scores[name]=1/(.015+distance)**4
+ top=sorted(scores.items(),key=lambda x:-x[1])[:3];return dict(top)
+def skinweights(p):
+ if p[1]>1.80:return fixed('Head')
+ if p[1]>1.60:return fixed('Neck')
+ if abs(p[0])>.45:return fixed(('Left' if p[0]>0 else 'Right')+'Hand')
+ side='Left' if p[0]>0 else 'Right'
+ if p[1]<.16:return fixed(side+'Foot')
+ return blend(p,[(side+'UpLeg',side+'Leg'),(side+'Leg',side+'Foot')])
+# The covered torso and upper thighs are omitted. There is no bare body under the coat.
+for material in [skin,pants]:
+ faces=[]
+ for f in groups['body']:
+  center=V[f].mean(axis=0);p=convert(center)
+  exposed=p[1]>1.72 or (abs(p[0])>.50 and p[1]<1.37)
+  if (material==skin and exposed) or (material==pants and .14<p[1]<.77):faces.append(list(reversed(f)))
+ ids=sorted({i for f in faces for i in f});mapping={idx:i for i,idx in enumerate(ids)}
+ points=[convert(V[i]) for i in ids]
+ addmesh('Human',points,[[mapping[i] for i in f] for f in faces],material,skinweights)
+# Actual eye surfaces, not painted dots on a helmet.
+for short in ['l','r']:
+ fs=groups['helper-'+short+'-eye'];ids=sorted({i for f in fs for i in f});mapping={idx:i for i,idx in enumerate(ids)}
+ addmesh('Face',[convert(V[i]) for i in ids],[[mapping[i] for i in reversed(f)] for f in fs],eye,fixed('Head'))
+def sphere(label,center,radii,material,weights,segments=16,rings=10):
+ points=[];faces=[]
+ for y in range(rings+1):
+  a=math.pi*y/rings
+  for x in range(segments):
+   b=2*math.pi*x/segments;points.append(np.array(center)+np.array([math.sin(a)*math.cos(b),math.cos(a),math.sin(a)*math.sin(b)])*radii)
+ for y in range(rings):
+  for x in range(segments):
+   a=y*segments+x;b=y*segments+(x+1)%segments;c=b+segments;d=a+segments;faces.append([a,b,c,d])
+ addmesh(label,points,faces,material,weights)
+for short in ['l','r']:
+ center=joint('joint-'+short+'-eye');center[2]-=.014
+ sphere('Face',center,[.009,.010,.005],iris,fixed('Head'),12,8)
+ center[2]-=.004;sphere('Face',center,[.0045,.006,.003],pupil,fixed('Head'),10,6)
+# Scalp follows the anatomical head. Offset avoids coplanar hair/skin flicker.
+fs=[]
+for face in groups['body']:
+ c=V[face].mean(axis=0)
+ if c[1]>7.78 or (c[1]>7.10 and c[2]<.10) or (c[1]>7.4 and abs(c[0])>.65):fs.append(list(reversed(face)))
+ids=sorted({i for f in fs for i in f});mapping={i:k for k,i in enumerate(ids)}
+points=[]
+for i in ids:
+ p=convert(V[i]);d=p-convert([0,7.65,.05]);p+=d/max(np.linalg.norm(d),1e-5)*.006;points.append(p)
+addmesh('Hair',points,[[mapping[i] for i in f] for f in fs],hair,fixed('Head'))
+# Hair follows the scalp directly; no separate floating quiff/helmet.
+for short in ['l','r']:
+ center=joint('joint-'+short+'-eye');center[1]+=.023;center[2]-=.008
+ sphere('Face',center,[.022,.0035,.005],hair,fixed('Head'),12,6)
+for side in ['Left','Right']:
+ ankle=positions[B[side+'Foot']]
+ points=[];faces=[];segments=20
+ # Continuous shoe shell from heel/cuff to toe, with a nearly flat sole.
+ # Separate ellipsoids made the toes look detached during a running stride.
+ sections=[(.06,.055,.015,.20),(0,.075,.01,.23),(-.12,.10,.01,.125),(-.23,.085,.01,.09),(-.32,.025,.018,.05)]
+ for z,width,bottom,top in sections:
+  for j in range(segments):
+   angle=j*2*math.pi/segments
+   points.append([ankle[0]+width*math.sin(angle),(top+bottom)/2+(top-bottom)/2*math.cos(angle),z])
+ for k in range(len(sections)-1):
+  for j in range(segments):
+   a=k*segments+j;b=k*segments+(j+1)%segments;faces.append([a,b,b+segments,a+segments])
+ faces.append(list(reversed(range(segments))))
+ faces.append(list(range((len(sections)-1)*segments,len(sections)*segments)))
+ addmesh('Clothes',points,faces,shoe,fixed(side+'Foot'))
+# Long coat: tailored waist, front opening/lapels and split rear hem.
+rings=[(.67,.27,.17,.012),(.75,.26,.165,.01),(.99,.235,.15,.008),(1.2,.235,.15,.008),(1.47,.26,.17,.015),(1.60,.23,.15,.20),(1.72,.105,.09,.72)]
+points=[];faces=[];segments=48
+for y,rx,rz,gap in rings:
+ for i in range(segments+1):
+  a=gap+(2*math.pi-2*gap)*i/segments;points.append([rx*math.sin(a),y,-rz*math.cos(a)])
+for ring in range(len(rings)-1):
+ for i in range(segments):
+  # Small vent at the lower back prevents the hem bridging both thighs rigidly.
+  if ring==0 and abs(i-segments/2)<1:continue
+  a=ring*(segments+1)+i;faces.append([a,a+segments+1,a+segments+2,a+1])
+def coatweights(p):
+ if p[1]<1.06:
+  side='Left' if p[0]>0 else 'Right';leg=np.clip((1.06-p[1])/.44,0,1)*.55
+  return {'Hips':1-leg,side+'UpLeg':leg}
+ t=float(np.clip((p[1]-1.06)/.5,0,1));return {'Hips':max(.01,1-t),'Spine2':max(.01,t)}
+addmesh('Coat',points,faces,coat,coatweights)
+# Sleeves follow shoulder/elbow/wrist instead of being rigid floating pieces.
+for side in ['Left','Right']:
+ shoulder=positions[B[side+'Arm']].copy();shoulder[0]*=.86
+ sphere('Coat',[shoulder[0],shoulder[1]-.025,shoulder[2]],[.087,.075,.085],coat,{side+'Arm':.5,'Spine2':.5},16,10)
+ elbow=positions[B[side+'ForeArm']];wrist=positions[B[side+'Hand']]
+ centers=[(shoulder,.085),(shoulder*.5+elbow*.5,.078),(elbow,.067),(elbow*.4+wrist*.6,.061),(wrist,.048)]
+ points=[];faces=[];segments=20
+ for k,(center,radius) in enumerate(centers):
+  tangent=centers[min(k+1,len(centers)-1)][0]-centers[max(0,k-1)][0];tangent/=np.linalg.norm(tangent)
+  u=np.cross(tangent,[0,0,1]);u/=np.linalg.norm(u);v=np.cross(tangent,u)
+  for j in range(segments):points.append(center+radius*(math.cos(j*2*math.pi/segments)*u+math.sin(j*2*math.pi/segments)*v))
+ for k in range(len(centers)-1):
+  for j in range(segments):a=k*segments+j;b=k*segments+(j+1)%segments;faces.append([a,b,b+segments,a+segments])
+ faces.append(list(reversed(range(segments))))
+ addmesh('Coat',points,faces,coat,lambda p,s=side:blend(p,[(s+'Arm',s+'ForeArm'),(s+'ForeArm',s+'Hand')]))
+def panel(label,coordinates,material,weights):addmesh(label,coordinates,[list(reversed(range(len(coordinates))))],material,weights)
+panel('Clothes',[[-.085,1.55,-.155],[.085,1.55,-.155],[.08,1.71,-.105],[-.08,1.71,-.105]],shirt,coatweights)
+for sign in [-1,1]:
+ # Folded collar and lapel, offset from the coat surface.
+ panel('Coat',[[sign*.015,1.39,-.177],[sign*.135,1.55,-.177],[sign*.11,1.70,-.105],[sign*.045,1.65,-.13]],coat,coatweights)
+ for y,rx,rz in [(1.05,.17,.163),(1.47,.15,.174)]:
+  if y>1.4 and sign<0:continue
+  panel('Coat',[[sign*(rx-.065),y-.08,-rz],[sign*(rx+.065),y-.08,-rz],[sign*(rx+.065),y+.035,-rz],[sign*(rx-.065),y+.035,-rz]],coat,coatweights)
+for y in [1.30,1.14,.98,.82]:sphere('Clothes',[.012,y,-.161 if y>1.0 else -.17],[.014,.014,.007],buttons,coatweights,10,6)
+# Write a native GLB with one rig shared by every garment and face primitive.
+buffer=bytearray();views=[];accessors=[]
+def acc(array,kind,component=5126):
+ array=np.asarray(array,dtype={5126:'<f4',5123:'<u2',5125:'<u4'}[component]);
+ while len(buffer)%4:buffer.append(0)
+ offset=len(buffer);buffer.extend(array.tobytes());views.append({'buffer':0,'byteOffset':offset,'byteLength':array.nbytes})
+ count=len(array);entry={'bufferView':len(views)-1,'componentType':component,'count':count,'type':kind}
+ if kind=='VEC3' and component==5126:entry.update(min=array.min(axis=0).tolist(),max=array.max(axis=0).tolist())
+ accessors.append(entry);return len(accessors)-1
+nodes=[{'name':'TechnicalStudent','children':[]}]
+for i,name in enumerate(bones):
+ parent=parents[i];translation=positions[i]-(positions[parent] if parent is not None else 0)
+ nodes.append({'name':'mixamorig'+name,'translation':translation.tolist(),'children':[]})
+ (nodes[parent+1]['children'] if parent is not None else nodes[0]['children']).append(i+1)
+ibm=[]
+for p in positions:
+ matrix=np.eye(4);matrix[:3,3]=-p;ibm.append(matrix.T.flatten())
+inverse=acc(ibm,'MAT4');meshes=[]
+for label,parts in primitives.items():
+ # Merge repeated pocket/button/sleeve primitives sharing a material.
+ # A coat is one draw, rather than one draw per garment panel.
+ grouped={}
+ for part in parts:grouped.setdefault(part[-1],[]).append(part)
+ merged=[]
+ for material,entries in grouped.items():
+  arrays=[[],[],[],[],[],[]];offset=0
+  for P,N,F,J,W,UV,_ in entries:
+   for target,data in zip(arrays,[P,N,F+offset,J,W,UV]):target.append(data)
+   offset+=len(P)
+  merged.append((*[np.concatenate(array) for array in arrays],material))
+ parts=merged
+ entries=[]
+ for P,N,F,J,W,UV,material in parts:
+  entries.append({'attributes':{'POSITION':acc(P,'VEC3'),'NORMAL':acc(N,'VEC3'),'TEXCOORD_0':acc(UV,'VEC2'),'JOINTS_0':acc(J,'VEC4',5123),'WEIGHTS_0':acc(W,'VEC4')},'indices':acc(F.flatten(),'SCALAR',5125),'material':material})
+ meshes.append({'name':label,'primitives':entries});nodes.append({'name':label,'mesh':len(meshes)-1,'skin':0});nodes[0]['children'].append(len(nodes)-1)
+for n in nodes:
+ if not n.get('children'):n.pop('children',None)
+j={'asset':{'version':'2.0','generator':'Technical-school character builder','copyright':'CC0 MakeHuman base; authored coat and rig; see ATTRIBUTION.md'},'scene':0,'scenes':[{'nodes':[0]}],'nodes':nodes,'meshes':meshes,'skins':[{'joints':list(range(1,len(bones)+1)),'inverseBindMatrices':inverse,'skeleton':1}],'materials':materials,'buffers':[{'byteLength':len(buffer)}],'bufferViews':views,'accessors':accessors}
+raw=json.dumps(j,separators=(',',':')).encode();raw+=b' '*((-len(raw))%4);buffer+=b'\0'*((-len(buffer))%4)
+output=struct.pack('<III',0x46546c67,2,12+8+len(raw)+8+len(buffer))+struct.pack('<II',len(raw),0x4e4f534a)+raw+struct.pack('<II',len(buffer),0x004e4942)+buffer
+path=ROOT/'assets/characters/technical-student.glb'
+temporary=path.with_suffix('.tmp');temporary.write_bytes(output);temporary.replace(path)
+print(path,len(output),'bytes',len(bones),'bones',sum(len(p[2]) for parts in primitives.values() for p in parts),'triangles')

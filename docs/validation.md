@@ -1,3 +1,6 @@
+> Histórico de las primeras mejoras visuales. Para el estado actual de Técnica Run,
+> ver [animation-fixes.md](animation-fixes.md).
+
 # Validación de la mejora visual
 
 ## Comportamiento comprobado

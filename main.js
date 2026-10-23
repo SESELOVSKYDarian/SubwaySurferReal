@@ -23,14 +23,14 @@ const game = new Game($('game'), {
     $('coins').textContent = `🪙 ${coins}`;
   },
   onCoin() {},
-  onStumble: () => flash('¡TROPIEZO! 👮', '#ff5a5a'),
+  onStumble: () => flash('¡TROPIEZO! 👨‍🏫', '#ff5a5a'),
   onJetpack: () => flash('¡JETPACK! 🚀', '#ffb42e'),
   onPower(fraction) {
     $('power').classList.toggle('show', fraction > 0);
     $('power-fill').style.width = `${fraction * 100}%`;
   },
   onGameOver(score, coins, reason) {
-    $('title').textContent = reason === 'caught' ? '¡Te atrapó el guardia! 👮' : '¡Choque! 💥';
+    $('title').textContent = reason === 'caught' ? '¡Te atrapó el profesor! 👨‍🏫' : '¡Choque! 💥';
     $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — levanta las dos manos para volver a jugar`;
     $('howto').style.display = 'none';
     $('playBtn').textContent = '↻ Otra vez';
@@ -116,6 +116,7 @@ const poseHandlers = {
     flash('AGACHADO ⤓', '#4ad0ff');
   },
   onDuckHold: () => game.holdRoll(),
+  onDuckEnd: () => game.releaseRoll(),
   onHandsUp: play,
 };
 
@@ -157,7 +158,11 @@ sensInput.addEventListener('input', () => {
 });
 
 // --- Control por teclado ---
+window.addEventListener('keyup', e => {
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') game.releaseRoll();
+});
 window.addEventListener('keydown', (e) => {
+  if (e.repeat && ['Space', 'KeyW', 'ArrowUp'].includes(e.code)) return;
   switch (e.code) {
     case 'ArrowLeft': case 'KeyA': game.left(); break;
     case 'ArrowRight': case 'KeyD': game.right(); break;

@@ -1,113 +1,79 @@
-# Subway Surfer REAL 🏃‍♂️📷
+# Técnica Run
 
-Un "Subway Surfers" que se juega **con el cuerpo**: la cámara detecta tu esqueleto
-en tiempo real y el corredor hace lo mismo que tú.
+Corredor en tercera persona ambientado alrededor de una escuela técnica. El alumno
+lleva un guardapolvo azul inspirado en la referencia: cabeza descubierta, pelo
+corto, solapas, botones y bolsillos. Un profesor lo persigue tras los tropiezos.
+El profesor es **provisional**: su apariencia específica queda pendiente de la foto.
+El entorno urbano y las vías se conservan, con carteles y grafitis de talleres,
+electromecánica y laboratorios.
 
-| Tú haces…                          | En el juego…               |
-|------------------------------------|----------------------------|
-| Paso a la izquierda / derecha      | Cambia de carril           |
-| Saltas                             | Salta las vallas bajas     |
-| Te agachas                         | Pasa por debajo de barras  |
-| Levantas las dos manos             | Empieza / reinicia         |
-
-Los vagones no se pueden saltar: hay que cambiar de carril… o subirse por una
-**rampa** y correr por encima. De vez en cuando aparece un **🚀 jetpack**: cógelo
-y vuelas unos segundos recogiendo monedas en el aire.
-
-**¡Cuidado con el guardia y su perro!** Si tropiezas (te chocas de lado con un vagón
-o con una valla baja) se te pegan detrás; si vuelves a tropezar antes de que se
-cansen, te atrapan. Chocar de frente con un vagón o con una barra alta es fin de partida.
-
-## Cómo jugar
-
-La cámara del navegador solo funciona en `https://` o en `localhost`, así que no
-basta con abrir `index.html` con doble clic. Sirve la carpeta:
+## Jugar
 
 ```bash
 python3 -m http.server 8000
-# y abre http://localhost:8000
 ```
 
-(o publícalo en GitHub Pages, que ya va por https).
+Abrir el servidor local en un navegador con WebGL. También se publica desde `main`
+en GitHub Pages. Es una aplicación estática: no necesita compilación, Node ni
+servicios externos para jugar con teclado.
 
-1. Pulsa **📷 Activar cámara** y da permiso.
-2. Ponte a unos 2 m, que se te vean al menos hombros y cadera, en el centro.
-3. Quédate quieto ~1 s hasta que diga **¡Listo!** (eso calibra tu posición "neutra").
-4. Levanta las dos manos para empezar.
+- **← / → o A / D:** carriles.
+- **↑ / W / Espacio:** saltar. La repetición automática de tecla no encadena saltos.
+- **↓ / S:** agacharse; mantener prolonga la postura y soltar inicia la salida.
+- **P:** pausar/reanudar; **C:** recalibrar la cámara.
+- Con cámara: pasos laterales, salto, agachado y ambas manos arriba para iniciar.
 
-Si te mueves de sitio o algo no responde bien, pulsa **C** para recalibrar.
+Hay rampas para subir a vagones, monedas y jetpack. El primer tropiezo acerca al
+profesor; otro tropiezo durante la persecución termina la partida. Las barras
+altas y los choques frontales con vagones también terminan la partida.
 
-**Si la cámara te pierde** (sales del cuadro o alguien se cruza delante), el juego se
-pausa solo. Vuelve al centro, quédate quieto un segundo para recalibrar y el juego
-sigue tras una cuenta atrás. Las personas que pasen por detrás se ven en gris junto
-a la cámara pero no cuentan: el juego sigue siempre al jugador. **P** pausa a mano.
-También se puede jugar con teclado: ← → / A D, ↑ / Espacio, ↓ / S.
+## Animación y colisiones
 
-## Cómo funciona
+Agacharse sostiene una postura baja: no gira el cuerpo ni reinicia una voltereta
+al recibir detecciones repetidas. Carrera, salto, agachado y vuelo se mezclan con
+transiciones suavizadas. Las piernas usan dos eslabones y las posturas parten de
+una base estable, sin acumulación de giros sobre la animación anterior.
 
-- **`pose-worker.js`** – ejecuta la red neuronal en un hilo aparte (Web Worker) para
-  que el juego no se congele mientras analiza la cámara.
-- **`pose.js`** – detecta hasta 3 personas y sigue siempre al jugador (la que continúa
-  donde estaba; al empezar, la más cercana a la cámara). Filtra los puntos con un
-  filtro *One Euro* (quita el temblor sin añadir retraso). Usa [MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)
-  (33 puntos del cuerpo; modelo *full*, el más preciso, si hay GPU) y convierte el movimiento en gestos:
-  - *Carril*: posición horizontal del centro de los hombros respecto a la calibración,
-    medida en anchos de hombro (así da igual lo lejos que estés).
-  - *Salto*: sube todo el cuerpo (cadera y hombros) y, si se ven, los dos pies. También se
-    detecta por la velocidad del movimiento para reaccionar antes.
-  - *Agacharse / hacerse bolita*: baja la cabeza o los hombros, o se encoge el torso (vale
-    aunque al encogerte la cámara deje de ver bien los hombros). Mientras sigas agachado,
-    el corredor sigue rodando. El pequeño amago que se hace antes de saltar no cuenta.
-  - La barra junto a la cámara muestra en directo cuánto falta para que cuente un salto
-    (arriba) o una agachada (abajo), y en el menú hay un control de **sensibilidad**.
-  - Los umbrales están arriba del archivo (`LANE_ENTER`, `JUMP_UP`, `DUCK_DOWN`…) por si
-    quieres hacerlo más o menos sensible.
-- **`game.js`** – el juego con [Three.js](https://threejs.org): corredor animado,
-  obstáculos (vallas, barras, vagones de metro), monedas, colisiones, luces y cámara.
-- **`world.js`** – el escenario: vías con grava y traviesas, muros con grafitis y hiedra,
-  vallas metálicas, farolas, árboles, edificios de ladrillo con escaleras de incendios,
-  catenarias y rascacielos al fondo. Las piezas se reciclan para que el recorrido sea infinito.
-- **`textures.js`** – todas las texturas (grafitis, ladrillo, ventanas, grava, tren,
-  monedas, cielo…) se dibujan por código en un `<canvas>`, sin descargar imágenes.
-- **`main.js`** – conecta los gestos y el teclado con el juego.
+La altura de colisión sigue el agachado visible. La trayectoria del salto usa
+integración balística para reducir diferencias entre tasas de cuadros. Pausar
+congela también las posturas, monedas, jetpack y cámara; no consume objetos.
 
-Si el ordenador no llega a ~45 FPS, el juego baja la resolución automáticamente (y en
-último caso las sombras) para mantenerse fluido.
+La cámara permanece detrás del alumno, encuadra los tres carriles y se aleja en
+pantallas verticales. El selector de calidad adapta resolución y distancia de
+visualización. El rendimiento depende del equipo: no se garantizan 60 FPS.
 
-Todo corre en tu navegador; la imagen de la cámara no se envía a ningún sitio.
+## Cámara corporal
 
-## Apariencia y rendimiento
+La cámara requiere un contexto seguro y permiso del navegador. MediaPipe se carga
+solo al activarla: `pose-worker.js` analiza en un hilo aparte y `pose.js` sigue al
+jugador, filtra los puntos y detecta gestos. El menú permite ajustar sensibilidad.
+Si se pierde al jugador, la partida se pausa y recalibra antes de continuar.
+MediaPipe y sus modelos aún se descargan de CDN/Google; los píxeles de cámara se
+procesan en el navegador. Three.js y los personajes se sirven desde el repositorio.
 
-La cámara permanece en tercera persona, detrás del corredor. Mantiene a la vista
-el cuerpo completo y los tres carriles, y se aleja en pantallas verticales para
-conservar el encuadre.
+## Modelo y fuentes
 
-El corredor detallado es un modelo humano con texturas y animaciones esqueléticas
-locales (`assets/characters/runner.glb`). Cambia entre reposo y carrera con una
-transición; salto y rodada combinan la física del juego y poses aditivas. Si el
-modelo no se puede cargar, el personaje procedural permite seguir jugando.
-La procedencia y condiciones de uso están en
-[`assets/characters/ATTRIBUTION.md`](assets/characters/ATTRIBUTION.md).
+`assets/characters/technical-student.glb` contiene la anatomía CC0 de MakeHuman,
+rig propio, guardapolvo y accesorios modelados para este juego. No es el modelo
+militar recoloreado ni una reproducción exacta del rostro de la referencia.
+Alumno y profesor tienen huesos y materiales independientes. La procedencia y
+licencias están en [`assets/characters/ATTRIBUTION.md`](assets/characters/ATTRIBUTION.md).
 
-El escenario incorpora cielo atmosférico, reflejos de exterior, microrelieve,
-volumen en alféizares y cornisas y sombra de contacto. El skyline y los bajos de
-los trenes agrupan geometrías. El detalle lejano se oculta antes que el cercano.
-Las texturas del entorno siguen siendo procedurales: esto es una mejora hacia
-un estilo realista, no un escenario fotogramétrico ni un acabado equivalente a GTA.
+Para reconstruir el GLB (opcional, no hace falta para jugar):
 
-El selector **Calidad** ofrece Automática, Alta y Equilibrada. Automática reduce
-la resolución interna si los tiempos de cuadro empeoran; conserva las reglas y
-los controles. Alta extiende la distancia de dibujo y aumenta el límite de
-resolución. No se garantizan 60 FPS: dependen de GPU, resolución y uso de cámara.
+```bash
+python3 -m pip install -r tools/requirements.txt
+python3 tools/build_student.py
+```
 
-Three.js 0.160.0 y los módulos usados se sirven desde `vendor/three`, con su licencia
-MIT. El juego con teclado y el personaje no necesitan red externa durante la
-partida. El control corporal todavía requiere MediaPipe y su modelo remoto.
+La fuente CC0 comprimida está incluida; la reconstrucción no descarga recursos.
+El antiguo `runner.glb` se conserva para compatibilidad con versiones cacheadas,
+pero la versión actual no lo carga. Three.js 0.160.0 está en `vendor/three` con su
+licencia MIT. Las texturas urbanas siguen siendo procedurales.
 
-## Verificar los cambios
+## Pruebas
 
-Para jugar sigue bastando `python3 -m http.server 8000`; Node solo es necesario
-para las pruebas de desarrollo (Node 20 o superior):
+Node 20 o superior, solo para desarrollo:
 
 ```bash
 npm ci
@@ -116,40 +82,16 @@ npm test
 npm run benchmark
 ```
 
-Si ya tienes Chromium, puedes indicar `CHROMIUM_PATH=/ruta/a/chromium`.
-Las pruebas arrancan y cierran su propio servidor local. La captura se guarda en
-`test-results/realism.png`. El benchmark espera una lectura de píxel por cuadro
-para no confundir comandos enviados a WebGL con trabajo gráfico terminado.
-Los resultados corresponden al dispositivo y al escenario medidos; no garantizan
-el rendimiento con cámara activa o durante una partida completa.
-
-En el contenedor de desarrollo sin sandbox de navegador disponible, se ejecutó:
+Puede usarse Chromium instalado mediante `CHROMIUM_PATH`. En el contenedor de
+preparación, sin sandbox de Chromium y sin GPU física:
 
 ```bash
 CHROMIUM_NO_SANDBOX=1 SOFTWARE_WEBGL=1 npm test
 CHROMIUM_NO_SANDBOX=1 SOFTWARE_WEBGL=1 npm run benchmark
 ```
 
-Ver [`docs/validation.md`](docs/validation.md) para resultados y límites.
-
-## Respaldo de main
-
-La integración visual conserva las funciones de `main` y tiene un respaldo en
-`backup/main-before-realism-c10fb4a`. Para deshacerla sin reescribir el historial,
-ver [`docs/rollback.md`](docs/rollback.md).
-
-## Policía, monedas y objetos
-
-El policía usa un esqueleto y un mezclador de animaciones propios, con uniforme
-azul táctico, identificación, placa, radio y cinturón. Comparte el archivo base
-Vanguard con el corredor, pero no sus huesos ni materiales. Si no carga, se
-conserva el guardia procedural. La persecución y la captura mantienen sus reglas.
-
-Las monedas tienen bisel, canto estriado, denominación en relieve y pátina sobre
-metal con reflejos; no usan emisión de luz para parecer doradas. Se dibujan en
-lotes con `InstancedMesh`: detalle completo de cerca y volumen simplificado a
-más de 28 m. La recogida y el contador usan las mismas posiciones de juego.
-
-El perro tiene cuerpo, hocico, patas y cola de formas suaves; las barreras y los
-vagones incorporan bordes redondeados. Son mejoras de modelado y materiales, no
-escaneos fotográficos ni modelos policiales civiles a medida.
+Las pruebas arrancan su propio servidor. Las capturas van en `test-results/`.
+El benchmark espera trabajo gráfico terminado mediante lectura de píxel, en lugar
+de contar solo comandos enviados al renderizador. Ver
+[`docs/animation-fixes.md`](docs/animation-fixes.md) para la validación actual y
+[`docs/rollback.md`](docs/rollback.md) para volver a una versión anterior.

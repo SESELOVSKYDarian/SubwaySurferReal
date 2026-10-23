@@ -18,7 +18,7 @@ const START_SPEED = 14;
 const MAX_SPEED = 34;
 const PLAYER_HALF_DEPTH = 0.3;
 const STAND_HEIGHT = 2.1;
-const ROLL_HEIGHT = 0.9;
+const ROLL_HEIGHT = 1.2;
 const TRAIN_TOP = 3.3;      // techo de los vagones: se puede correr encima
 const RAMP_LEN = 6;
 const FLY_Y = 9;            // altura de vuelo con jetpack (por encima de las catenarias)
@@ -300,17 +300,14 @@ export class Game {
   buildCharacters() {
     const P = {
       skin: std({ color: 0xd9a27c }),
-      top: std({ color: 0x555c51, roughness: 0.96, ...surface('fabric') }),
+      top: std({ color: 0x1c3c70, roughness: 0.96, ...surface('fabric') }),
       pants: std({ color: 0x252c36, roughness: 0.95, ...surface('fabric') }),
       shoe: std({ color: 0xf4f4f4 }),
       hair: std({ color: 0x3e2717 }),
     };
-    const cap = std({ color: 0xc8202a, roughness: 0.7 });
     this.rig = this.buildRunner(P, {
       hat: (head, add, torso) => {
-        add(torso, new THREE.SphereGeometry(0.2, 12, 8), P.top, 0, 0.7, 0.14).scale.set(1.25, 0.75, 0.8); // capucha
-        add(head, new THREE.SphereGeometry(0.205, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), cap, 0, 0.15, 0);
-        add(head, box(0.3, 0.03, 0.2), cap, 0, 0.16, -0.22);
+        add(torso, new RoundedBoxGeometry(.47,.75,.32,2,.04), P.top, 0,-.04,0);
       },
     });
     this.jetpack = this.makeJetpack();
@@ -318,25 +315,12 @@ export class Game {
     this.jetpack.visible = false;
     this.rig.torso.add(this.jetpack);
 
-    // Guardia del metro: uniforme azul marino, gorra de plato y barriga
+    // Profesor genérico de respaldo; se reemplaza por el rig humano al cargar.
     const G = {
-      skin: std({ color: 0xc98d6a }),
-      top: std({ color: 0x24355a, roughness: 0.9 }),
-      pants: std({ color: 0x1b2640, roughness: 0.9 }),
-      shoe: std({ color: 0x151515 }),
-      hair: std({ color: 0x8a8a8a }),
+      skin: std({ color: 0xc98d6a }), top: std({ color: 0x77776d }),
+      pants: std({ color: 0x29313c }), shoe: std({ color: 0x202020 }), hair: std({ color: 0x514a43 }),
     };
-    const badge = std({ color: 0xffd23a, metalness: 0.8, roughness: 0.3 });
-    this.guard = this.buildRunner(G, {
-      wide: 1.25,
-      hat: (head, add, torso) => {
-        add(head, new THREE.CylinderGeometry(0.24, 0.2, 0.12, 16), G.top, 0, 0.3, 0);
-        add(head, new THREE.CylinderGeometry(0.2, 0.2, 0.02, 16), G.shoe, 0, 0.23, -0.1).scale.z = 0.7;
-        add(head, box(0.08, 0.06, 0.02), badge, 0, 0.3, -0.24);
-        add(torso, new THREE.SphereGeometry(0.3, 14, 10), G.top, 0, 0.2, -0.12).scale.set(1.1, 1, 0.9); // barriga
-        add(head, box(0.18, 0.04, 0.04), G.hair, 0, 0.02, -0.19); // bigote
-      },
-    });
+    this.guard = this.buildRunner(G, { hat: () => {} });
 
     this.dog = buildShepherd();
     this.scene.add(this.dog.root);
@@ -423,6 +407,7 @@ export class Game {
     this.y = 0;
     this.vy = 0;
     this.grounded = true;
+    this.jumpBuffer = 0;
     this.rollTimer = 0;
     this.flyTimer = 0;
     this.invuln = 0;
@@ -434,6 +419,8 @@ export class Game {
     this.camY = 2.9;
     this.guardZ = 2.6;
     this.guardX = 0;
+    this.runner?.reset();
+    this.officer?.reset();
     this.rig.root.rotation.set(0, 0, 0);
     this.rig.root.visible = true;
     this.jetpack.visible = false;
@@ -463,6 +450,11 @@ export class Game {
     this.cb.onScore?.(this.score, this.coinCount);
   }
 
+  get playerHeight() {
+    const crouch = this.runner ? this.runner.poseState.crouch : (this.rollTimer > 0 ? 1 : 0);
+    return THREE.MathUtils.lerp(STAND_HEIGHT, ROLL_HEIGHT, crouch);
+  }
+
   // --- Controles ---
   setLane(lane) {
     if (this.state !== 'playing') return;
@@ -488,13 +480,18 @@ export class Game {
   roll() {
     if (this.state !== 'playing' || this.flyTimer > 0) return;
     this.jumpBuffer = 0;
-    this.rollTimer = ROLL_TIME;
-    if (!this.grounded && this.vy > -25) this.vy = -25; // en el aire: bajar de golpe
+    const entering = this.rollTimer <= 0;
+    this.rollTimer = Math.max(this.rollTimer, ROLL_TIME);
+    if (!this.grounded && entering) this.vy = Math.min(this.vy, -14); // en el aire: bajar de golpe
   }
   // Mientras sigas agachado delante de la cámara, el corredor sigue rodando
   holdRoll() {
     if (this.state !== 'playing' || this.flyTimer > 0) return;
     this.rollTimer = Math.max(this.rollTimer, 0.25);
+  }
+
+  releaseRoll() {
+    this.rollTimer = Math.min(this.rollTimer, 0.12);
   }
 
   // --- Generación de obstáculos ---
@@ -639,7 +636,11 @@ export class Game {
   // --- Bucle principal ---
   update(dt) {
     this.adaptQuality(dt);
-    dt = Math.min(dt, 0.05);
+    if (this.state === 'paused') {
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
+    dt = Math.min(Math.max(dt, 0), 0.05);
     this.time += dt;
     const playing = this.state === 'playing';
     const move = playing ? this.speed * dt : 0;
@@ -669,7 +670,7 @@ export class Game {
 
     if (playing) this.updatePhysics(dt, move);
     const rolling = this.rollTimer > 0;
-    const height = rolling ? ROLL_HEIGHT : STAND_HEIGHT;
+    const height = this.playerHeight;
 
     for (let i = this.coins.length - 1; i >= 0; i--) {
       const c = this.coins[i];
@@ -683,7 +684,7 @@ export class Game {
         this.coinCount++;
         this.cb.onCoin?.();
       }
-      if (near || c.mesh.position.z > NEAR_Z) {
+      if ((playing && near) || c.mesh.position.z > NEAR_Z) {
         this.scene.remove(c.mesh);
         this.coins.splice(i, 1);
       }
@@ -701,7 +702,7 @@ export class Game {
         Math.abs(p.mesh.position.x - this.x) < 1 &&
         Math.abs(p.mesh.position.y - (this.y + height / 2)) < 1.6;
       if (playing && near) this.startJetpack();
-      if (near || p.mesh.position.z > NEAR_Z) {
+      if ((playing && near) || p.mesh.position.z > NEAR_Z) {
         this.scene.remove(p.mesh);
         this.pickups.splice(i, 1);
       }
@@ -714,17 +715,8 @@ export class Game {
     this.characterAnchor.rotation.z = this.rig.root.rotation.z;
     this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
     if (this.runner) {
-      if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, rolling, speed: this.speed });
-      // Rodada física de cuerpo entero; conserva las proporciones humanas.
-      const progress = rolling ? 1 - this.rollTimer / ROLL_TIME : 0;
-      this.runner.model.rotation.x = rolling ? -progress * Math.PI * 2 : 0;
-      this.runner.model.position.y = rolling ? 1.025 + Math.sin(progress * Math.PI) * 0.1 : 0;
-      this.runner.model.position.z = 0;
-      // Girar alrededor de la cadera, no alrededor de los pies.
-      if (rolling) {
-        this.runner.model.position.y -= Math.cos(progress * Math.PI * 2) * 1.025;
-        this.runner.model.position.z = -Math.sin(progress * Math.PI * 2) * 1.025;
-      }
+      if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed });
+
     }
     const floor = this.surfaceAt(this.x).h;
     this.contact.position.set(this.x, floor + 0.025, 0);
@@ -756,7 +748,7 @@ export class Game {
   }
 
   updatePhysics(dt, move) {
-    this.x += (LANE_X[this.lane] - this.x) * Math.min(1, dt * 18);
+    this.x = THREE.MathUtils.damp(this.x, LANE_X[this.lane], 18, dt);
 
     if (this.flyTimer > 0) {
       this.flyTimer = Math.max(0, this.flyTimer - dt);
@@ -769,8 +761,8 @@ export class Game {
         this.invuln = 1.5; // margen para aterrizar tranquilo
       }
     } else {
+      this.y += this.vy * dt - 0.5 * GRAVITY * dt * dt;
       this.vy -= GRAVITY * dt;
-      this.y += this.vy * dt;
       const g = this.surfaceAt(this.x);
       // Se puede "pisar" una superficie si estamos justo encima o un poco por debajo
       const reach = g.ramp ? 2.5 : Math.max(0.7, -this.vy * dt + 0.15);
@@ -791,7 +783,7 @@ export class Game {
     if (this.jumpBuffer > 0 && this.grounded) this.jump();
 
     if (this.invuln > 0 || this.flyTimer > 0) return;
-    const height = this.rollTimer > 0 ? ROLL_HEIGHT : STAND_HEIGHT;
+    const height = this.playerHeight;
     for (const o of this.obstacles) {
       const oz = o.mesh.position.z;
       const front = oz + o.depth / 2;
@@ -874,17 +866,11 @@ export class Game {
       mode = this.flyTimer > 0 ? 'fly' : rolling ? 'roll' : !this.grounded ? 'air' : 'run';
     }
 
-    if (rolling) {
-      r.ball.position.y = 0.55;
-      r.ball.scale.setScalar(0.7);
-      r.ball.rotation.x -= dt * 13;
-    } else {
-      r.ball.position.y = 0;
-      r.ball.rotation.x = 0;
-      r.ball.scale.setScalar(1);
-    }
+    r.ball.position.y = rolling ? -0.5 : 0;
+    r.ball.rotation.x = 0;
+    r.ball.scale.setScalar(1);
     this.pose(r, t, mode);
-    if (rolling) r.body.position.y = -0.85;
+    if (rolling) r.body.position.y = -0.12;
   }
 
   // El guardia y su perro: se acercan cuando tropiezas y te atrapan si caes

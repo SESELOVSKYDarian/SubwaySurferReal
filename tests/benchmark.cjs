@@ -8,7 +8,7 @@ const {harness}=require('./harness.cjs');
   const result=await page.evaluate(async()=>{
    let seed=77;Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
    const {Game}=await import('./game.js');const game=new Game(document.querySelector('#game'));
-   await game.characterReady;game.start();
+   await Promise.all([game.characterReady,game.officerReady]);game.start();
    const gl=game.renderer.getContext();const debug=gl.getExtension('WEBGL_debug_renderer_info');
    const renderer=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):'unavailable';
    const pixel=new Uint8Array(4),renders=[],intervals=[];let previous;

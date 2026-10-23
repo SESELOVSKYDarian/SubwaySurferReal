@@ -109,7 +109,7 @@ export function concrete() {
   return toTexture(c);
 }
 
-const WORDS = ['SURF', 'RUN', 'REAL', 'WILD', 'ZOOM', 'DASH', 'CREW', 'JUMP', 'YO!', 'FLOW', 'KING', 'GO'];
+const WORDS = ['TÉCNICA', 'TALLER', 'ELECTRO', 'MECÁNICA', 'PROMO', 'DISEÑO', 'ROBOT', 'ET', 'TORNO', 'LAB'];
 const PALETTES = [
   ['#2fb8ff', '#1b4fd8', '#bff3ff'],
   ['#ff4fa3', '#8a1fd1', '#ffd1ec'],
@@ -339,11 +339,13 @@ export function billboard() {
   g.fillStyle = '#ffd84a';
   g.font = '900 64px "Arial Black", Impact, sans-serif';
   g.textAlign = 'center';
-  g.fillText('SUBWAY', 256, 100);
+  g.font = '900 48px Arial';
+  g.fillText('ESCUELA', 256, 90);
   g.fillStyle = '#fff';
-  g.fillText('SURFER REAL', 256, 175);
+  g.fillText('TÉCNICA', 256, 155);
   g.font = 'bold 26px sans-serif';
-  g.fillText('¡corre con tu cuerpo!', 256, 225);
+  g.font = 'bold 24px sans-serif';
+  g.fillText('TALLERES · LABORATORIOS', 256, 218);
   g.strokeStyle = '#222';
   g.lineWidth = 14;
   g.strokeRect(0, 0, 512, 256);
@@ -458,7 +460,7 @@ export function trainFront(color) {
   g.fillStyle = '#ffb42e';
   g.font = 'bold 20px monospace';
   g.textAlign = 'center';
-  g.fillText('EXPRESS', 128, 28);
+  g.fillText('TALLERES', 128, 28);
   g.fillStyle = '#e8e2cf';
   g.fillRect(0, 168, S, 10);
   g.fillStyle = '#2b2b2b';

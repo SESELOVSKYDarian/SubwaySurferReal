@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "python3 -m http.server 8000 --bind 127.0.0.1",
     "test": "node --test tests/browser.test.cjs",
-    "benchmark": "node tests/benchmark.cjs"
+    "benchmark": "node tests/benchmark.cjs",
+    "capture": "node tests/capture-poses.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

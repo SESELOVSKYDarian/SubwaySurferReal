@@ -185,6 +185,7 @@ export class PoseController {
   }
 
   recalibrate() {
+    if (this.ducking) this.h.onDuckEnd?.();
     this.base = null;
     this.samples = [];
     this.lane = 0;
@@ -420,6 +421,7 @@ export class PoseController {
         }
       } else if (duck < DUCK_EXIT / sens) {
         this.ducking = false;
+        this.h.onDuckEnd?.();
         this.duckFrames = 0;
         this.lastDuckEnd = now;
       } else {

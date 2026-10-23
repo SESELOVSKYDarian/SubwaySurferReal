@@ -1,115 +1,143 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { surface } from './materials.js';
 
 let source;
-const getSource = () => source || (source = new GLTFLoader().loadAsync(new URL('./assets/characters/runner.glb', import.meta.url).href).catch(error => { source = null; throw error; }));
+const getSource = () => source || (source = new GLTFLoader().loadAsync(
+  new URL('./assets/characters/technical-student.glb', import.meta.url).href,
+).catch(error => { source = null; throw error; }));
 
-// Modelo y texturas locales; la partida sigue disponible si falla la carga.
-export async function loadRunner(parent, { officer = false } = {}) {
+// Rig de alumno/taller: cabeza descubierta, ropa y guardapolvo modelados como
+// geometría propia. Las posturas se calculan desde cero, sin sumar giros de una
+// carrera a un salto ni usar el temporizador de colisión como ángulo del cuerpo.
+export async function loadRunner(parent, { teacher = false } = {}) {
   const gltf = await getSource();
   const model = clone(gltf.scene);
-  model.name = officer ? 'Officer' : 'Runner';
-  // Los huesos son hermanos de las mallas en este GLB. Actualizar primero toda
-  // la jerarquía evita medir la piel con matrices de huesos sin inicializar.
+  model.name = teacher ? 'Teacher' : 'TechnicalStudent';
   model.updateMatrixWorld(true);
-  model.traverse(object => {
-    if (object.isSkinnedMesh) {
-      object.skeleton.update();
-      object.computeBoundingBox();
-      object.computeBoundingSphere();
-    }
-  });
-  const bounds = new THREE.Box3().setFromObject(model);
-  const scale = 2.05 / bounds.getSize(new THREE.Vector3()).y;
-  model.scale.setScalar(scale);
-  model.position.y = -bounds.min.y * scale;
-  // El modelo ya mira hacia -Z, en el sentido del recorrido.
-  model.rotation.y = 0;
   const bones = {};
   model.traverse(object => {
     if (object.isBone) bones[object.name.replace(/^mixamorig:?/, '')] = object;
     if (!object.isMesh) return;
     object.castShadow = object.receiveShadow = true;
-    object.material = Array.isArray(object.material) ? object.material.map(material => material.clone()) : object.material.clone();
-    for (const material of [object.material].flat()) {
-      material.envMapIntensity = 0.35;
-      if (material.map) material.map.anisotropy = 4;
-      if (officer) {
-        material.name = 'PoliceUniform';
-        material.roughness = 0.78;
-        // Conservar el desgaste y los detalles del albedo bajo el uniforme azul.
-        material.onBeforeCompile = shader => {
-          shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
-            #include <map_fragment>
-            float cloth = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-            diffuseColor.rgb = mix(vec3(0.009, 0.014, 0.024), vec3(0.09, 0.14, 0.23), smoothstep(0.015, 0.62, cloth));
-          `);
-        };
-        material.customProgramCacheKey = () => 'police-uniform-v1';
+    object.material = [object.material].flat().map(material => {
+      const copy = material.clone();
+      if (['StudentCoat', 'Shirt', 'Trousers'].includes(copy.name)) {
+        Object.assign(copy, surface('fabric'));
+        copy.roughness = 0.92;
       }
+      if (teacher && copy.name === 'StudentCoat') {
+        copy.color.setHex(0x77776d);
+        copy.name = 'TeacherCoat';
+      }
+      if (teacher && copy.name === 'Hair') copy.color.setHex(0x514a43);
+      return copy;
+    });
+    if (object.material.length === 1) object.material = object.material[0];
+    if (object.isSkinnedMesh) {
+      object.skeleton.update();
+      object.computeBoundingBox();
+      object.computeBoundingSphere();
+      // Rodillas y faldones salen de la caja de reposo al agacharse. No usar esa
+      // caja estática para hacer desaparecer una parte del personaje animado.
+      object.frustumCulled = false;
     }
   });
-  const mixer = new THREE.AnimationMixer(model);
-  const actions = Object.fromEntries(gltf.animations.map(clip => [clip.name, mixer.clipAction(clip)]));
-  if (!actions.Idle || !actions.Run) throw new Error('El corredor no contiene Idle y Run');
+  const bounds = new THREE.Box3().setFromObject(model);
+  model.scale.setScalar(2.05 / bounds.getSize(new THREE.Vector3()).y);
   parent.add(model);
-  if (officer) addPoliceEquipment(parent, bones);
-  let active = actions.Idle;
-  active.play();
-  let tuck = 0;
-  return {
-    model,
-    update(dt, { running, airborne, rolling, speed, grabbing = false }) {
-      const next = running ? actions.Run : actions.Idle;
-      if (next !== active) {
-        next.reset().setEffectiveWeight(1).play();
-        active.crossFadeTo(next, 0.18, false);
-        active = next;
+  addSchoolBadge(parent, bones, teacher);
+
+  const rest = Object.fromEntries(Object.entries(bones).map(([name, bone]) => [name, bone.quaternion.clone()]));
+  const target = new THREE.Quaternion();
+  const euler = new THREE.Euler();
+  const poseState = { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0 };
+  const restPosition = Object.fromEntries(Object.entries(bones).map(([name, bone]) => {
+    const p = bone.getWorldPosition(new THREE.Vector3());
+    return [name, model.worldToLocal(p)];
+  }));
+  const move = (name, x = 0, y = 0, z = 0, alpha = 1) => {
+    if (!bones[name]) return;
+    target.setFromEuler(euler.set(x, y, z)).premultiply(rest[name]);
+    bones[name].quaternion.slerp(target, alpha);
+  };
+  const legPose = (side, phase, alpha) => {
+    const up = bones[`${side}UpLeg`];
+    const knee = bones[`${side}Leg`];
+    const foot = bones[`${side}Foot`];
+    const l1 = Math.hypot(knee.position.y, knee.position.z);
+    const l2 = Math.hypot(foot.position.y, foot.position.z);
+    const a0 = Math.atan2(-knee.position.z, -knee.position.y);
+    const b0 = Math.atan2(-foot.position.z, -foot.position.y);
+    const stride = Math.cos(phase) * 0.24 * poseState.run * (1 - poseState.crouch);
+    const lift = Math.max(0, Math.sin(phase)) * 0.14 * poseState.run * (1 - poseState.crouch);
+    const hip = restPosition[`${side}UpLeg`];
+    const ankle = restPosition[`${side}Foot`];
+    const dz = ankle.z - hip.z + stride - poseState.air * 0.11;
+    const dy = ankle.y - hip.y + poseState.rootDrop + lift + poseState.air * 0.17;
+    const d = THREE.MathUtils.clamp(Math.hypot(dy, dz), Math.abs(l1-l2)+0.001, l1+l2-0.001);
+    const bend = -Math.acos(THREE.MathUtils.clamp((d*d-l1*l1-l2*l2)/(2*l1*l2),-1,1));
+    const thigh = Math.atan2(-dz,-dy)-Math.atan2(l2*Math.sin(bend),l1+l2*Math.cos(bend))-a0;
+    const shin = bend-(b0-a0);
+    move(`${side}UpLeg`, thigh, 0, 0, alpha);
+    move(`${side}Leg`, shin, 0, 0, alpha);
+    move(`${side}Foot`, -(thigh+shin), 0, 0, alpha);
+  };
+  const controller = {
+    model, bones, poseState,
+    reset() {
+      Object.values(bones).forEach(bone => bone.quaternion.copy(rest[bone.name.replace(/^mixamorig:?/, '')]));
+      Object.assign(poseState, { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0 });
+      model.position.set(0,0,0);
+      model.rotation.set(0,0,0);
+      controller.update(0.1, {});
+    },
+    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false } = {}) {
+      dt = THREE.MathUtils.clamp(dt,0,0.1);
+      const crouching = rolling && !airborne && !flying;
+      const blend = 1 - Math.exp(-22 * dt);
+      poseState.crouch = THREE.MathUtils.damp(poseState.crouch, crouching ? 1 : 0, 22, dt);
+      poseState.air = THREE.MathUtils.damp(poseState.air, airborne ? 1 : 0, 14, dt);
+      poseState.flight = THREE.MathUtils.damp(poseState.flight, flying ? 1 : 0, 14, dt);
+      poseState.run = THREE.MathUtils.damp(poseState.run, running && !airborne && !crouching && !flying ? 1 : 0, 16, dt);
+      poseState.phase += dt * THREE.MathUtils.clamp(speed * 0.65, 7, 14) * poseState.run;
+      poseState.rootDrop = poseState.crouch * 0.68;
+      model.position.y = -poseState.rootDrop;
+      // Los pies se resuelven como dos eslabones; el torso se inclina sin girar
+      // todo el personaje. Mantener agachado no reinicia ninguna animación.
+      legPose('Left', poseState.phase, blend);
+      legPose('Right', poseState.phase + Math.PI, blend);
+      move('Spine', -0.12*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight, 0, 0, blend);
+      move('Spine2', -0.35*poseState.crouch, Math.sin(poseState.phase)*0.04*poseState.run, 0, blend);
+      move('Neck', 0.12*poseState.crouch, 0, 0, blend);
+      move('Head', 0.02, 0, 0, blend);
+      for (const [side, sign] of [['Left',1],['Right',-1]]) {
+        const swing = -sign*Math.sin(poseState.phase)*0.65*poseState.run;
+        const reach = grabbing ? 1.1 : 0;
+        move(`${side}Arm`, swing + 0.6*poseState.air + 0.8*poseState.crouch + reach,
+          0, -sign*(0.36 + 0.08*poseState.crouch), blend);
+        move(`${side}ForeArm`, 0.2*poseState.run + 0.45*poseState.crouch, 0, 0, blend);
+        move(`${side}Hand`,0,0,0,blend);
       }
-      actions.Run.timeScale = THREE.MathUtils.clamp(speed / 15, 0.85, 1.65);
-      mixer.update(dt);
-      // Pose aditiva sobre el esqueleto, sin escalar el cuerpo al agacharse.
-      tuck = THREE.MathUtils.damp(tuck, rolling ? 1 : 0, 20, dt);
-      if (bones.Spine) bones.Spine.rotation.x -= tuck * 0.65;
-      if (bones.LeftUpLeg) bones.LeftUpLeg.rotation.x -= tuck * 0.7;
-      if (bones.RightUpLeg) bones.RightUpLeg.rotation.x -= tuck * 0.7;
-      if (bones.LeftLeg) bones.LeftLeg.rotation.x += tuck * 1.1;
-      if (bones.RightLeg) bones.RightLeg.rotation.x += tuck * 1.1;
-      if (grabbing) {
-        for (const side of ['Left', 'Right']) {
-          if (bones[`${side}Arm`]) bones[`${side}Arm`].rotation.z += side === 'Left' ? -0.9 : 0.9;
-          if (bones[`${side}ForeArm`]) bones[`${side}ForeArm`].rotation.x += 0.5;
-        }
-      }
-      if (airborne && !rolling) {
-        if (bones.LeftUpLeg) bones.LeftUpLeg.rotation.x -= 0.5;
-        if (bones.RightUpLeg) bones.RightUpLeg.rotation.x += 0.25;
-      }
+      model.updateMatrixWorld(true);
     },
   };
+  controller.update(0.1, {});
+  return controller;
 }
 
-function addPoliceEquipment(parent, bones) {
-  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
-  const ctx=canvas.getContext('2d');ctx.fillStyle='#111d31';ctx.fillRect(0,0,512,128);
-  ctx.fillStyle='#d8dfdd';ctx.font='bold 78px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('POLICÍA',256,64);
-  const patch=new THREE.CanvasTexture(canvas);patch.colorSpace=THREE.SRGBColorSpace;
-  const label=new THREE.MeshStandardMaterial({map:patch,roughness:.85});
-  const leather=new THREE.MeshStandardMaterial({color:0x14171b,roughness:.85});
-  const badge=new THREE.MeshStandardMaterial({color:0xb5aa77,metalness:.75,roughness:.4});
-  const attach=(bone,geometry,material,position,rotationY=0)=>{
-    const mesh=new THREE.Mesh(geometry,material);mesh.position.set(...position);mesh.rotation.y=rotationY;
-    mesh.castShadow=true;parent.add(mesh);parent.updateMatrixWorld(true);
-    (bones[bone]||bones.Spine2).attach(mesh);return mesh;
-  };
-  attach('Spine2',new THREE.PlaneGeometry(.56,.14),label,[0,1.56,.36]);
-  attach('Spine2',new THREE.PlaneGeometry(.28,.075),label,[.09,1.55,-.34],Math.PI);
-  attach('Hips',new THREE.TorusGeometry(.24,.025,6,28).rotateX(Math.PI/2).scale(1,1,.8),leather,[0,1.04,0]);
-  for(const side of [-1,1])attach('Hips',new RoundedBoxGeometry(.13,.19,.09,2,.015),leather,[side*.25,1.0,.01]);
-  attach('Spine2',new THREE.CylinderGeometry(.035,.03,.007,6).rotateX(Math.PI/2),badge,[-.1,1.56,-.345]);
-  attach('Spine2',new RoundedBoxGeometry(.065,.12,.035,2,.008),leather,[-.15,1.64,-.31]);
+function addSchoolBadge(parent, bones, teacher) {
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
+  const ctx=canvas.getContext('2d');ctx.fillStyle=teacher?'#41443c':'#16365c';ctx.fillRect(0,0,256,128);
+  ctx.fillStyle='#dce3e5';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`bold ${teacher?35:42}px Arial`;ctx.fillText(teacher?'PROFESOR':'TÉCNICA',128,64);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  const badge=new THREE.Mesh(new THREE.PlaneGeometry(.15,.065),new THREE.MeshStandardMaterial({map:texture,roughness:.9}));
+  badge.name=teacher?'TeacherBadge':'SchoolBadge';
+  badge.position.set(.10,1.49,-.184);badge.rotation.y=Math.PI;
+  parent.add(badge);parent.updateMatrixWorld(true);bones.Spine2.attach(badge);
 }
 
-export const loadOfficer = parent => loadRunner(parent, { officer: true });
+// Alias mantenido para las reglas de persecución del juego; visualmente es profesor.
+export const loadOfficer = parent => loadRunner(parent, { teacher: true });
