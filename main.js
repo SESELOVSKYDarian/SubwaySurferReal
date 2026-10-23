@@ -57,6 +57,7 @@ function play() {
 }
 
 const poseHandlers = {
+  onArms: targets => game.setArmTargets(targets),
   onStatus: (text) => {
     $('pose-status').textContent = text;
     if (session.pending && !session.ready) $('pause-text').textContent = text;

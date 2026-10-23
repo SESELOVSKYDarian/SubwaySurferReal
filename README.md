@@ -99,3 +99,5 @@ de contar solo comandos enviados al renderizador. Ver
 [`docs/rollback.md`](docs/rollback.md) para volver a una versión anterior.
 
 Detalles de seguimiento y techo de vagones: [cámara y cuenta atrás](docs/camera-countdown.md).
+
+El alumno acompaña brazos, codos y orientación aproximada de las manos captados por la cámara. [Detalles y límites](docs/arm-tracking.md).

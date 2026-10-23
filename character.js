@@ -84,16 +84,46 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     move(`${side}Leg`, shin, 0, 0, alpha);
     move(`${side}Foot`, -(thigh+shin), 0, 0, alpha);
   };
+  const armWeights = {};
+  const armRotations = {};
+  const direction = new THREE.Vector3();
+  const parentRotation = new THREE.Quaternion();
+  const modelRotation = new THREE.Quaternion();
+  const trackedRotation = new THREE.Quaternion();
+  const restDirections = {};
+  for (const side of ['Left', 'Right']) {
+    restDirections[`${side}Arm`] = restPosition[`${side}ForeArm`].clone().sub(restPosition[`${side}Arm`]).normalize();
+    restDirections[`${side}ForeArm`] = restPosition[`${side}Hand`].clone().sub(restPosition[`${side}ForeArm`]).normalize();
+    restDirections[`${side}Hand`] = restDirections[`${side}ForeArm`];
+  }
+  const followArms = (dt, arms) => {
+    model.getWorldQuaternion(modelRotation);
+    for (const side of ['Left', 'Right']) for (const part of ['Arm', 'ForeArm', 'Hand']) {
+      const name = side + part, bone = bones[name], sample = arms?.[name];
+      armWeights[name] = THREE.MathUtils.damp(armWeights[name] || 0, sample ? 1 : 0, 12, dt);
+      if (!sample || armWeights[name] < 0.001) continue;
+      // Convertir la dirección de cámara al espacio del padre de cada hueso.
+      // Así doblar el codo no vuelve a rotar el hombro ni acumula ángulos.
+      bone.parent.getWorldQuaternion(parentRotation).invert();
+      direction.fromArray(sample).applyQuaternion(modelRotation).applyQuaternion(parentRotation).normalize();
+      trackedRotation.setFromUnitVectors(restDirections[name], direction).multiply(rest[name]);
+      armRotations[name] ??= bone.quaternion.clone();
+      armRotations[name].slerp(trackedRotation, 1 - Math.exp(-12 * dt));
+      bone.quaternion.slerp(armRotations[name], armWeights[name] * (1 - poseState.crouch));
+      bone.updateWorldMatrix(false, false);
+    }
+  };
   const controller = {
     model, bones, poseState,
     reset() {
       Object.values(bones).forEach(bone => bone.quaternion.copy(rest[bone.name.replace(/^mixamorig:?/, '')]));
+      for (const name of Object.keys(armWeights)) { armWeights[name] = 0; delete armRotations[name]; }
       Object.assign(poseState, { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0 });
       model.position.set(0,0,0);
       model.rotation.set(0,0,0);
       controller.update(0.1, {});
     },
-    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false } = {}) {
+    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false, arms = null } = {}) {
       dt = THREE.MathUtils.clamp(dt,0,0.1);
       const crouching = rolling && !airborne && !flying;
       const blend = 1 - Math.exp(-22 * dt);
@@ -121,6 +151,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
         move(`${side}ForeArm`, 0.2*poseState.run + 0.45*poseState.crouch, 0, 0, blend);
         move(`${side}Hand`,0,0,0,blend);
       }
+      followArms(dt, arms);
       model.updateMatrixWorld(true);
     },
   };

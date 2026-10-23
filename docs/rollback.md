@@ -69,3 +69,15 @@ git pull --ff-only origin main
 git revert --no-edit camera-countdown-v1
 git push origin main
 ```
+
+## Deshacer seguimiento de brazos y manos
+
+Respaldo remoto: `backup/main-before-arm-tracking-004cbca`.
+Para quitar esta actualización conservando el historial:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit arm-tracking-v1
+git push origin main
+```

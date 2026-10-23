@@ -284,3 +284,38 @@ test('techo del vagón: bordes, aterrizaje rápido y choque frontal', {timeout:1
   });
  } finally {await page.close();}
 });
+
+test('brazos de cámara: retarget, independencia, suavizado, pausa y vuelta a carrera',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();
+ await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try {
+  await page.goto(env.url);
+  await page.evaluate(async()=>{
+   const THREE=await import('three');const {Game}=await import('./game.js');
+   const game=new Game(document.querySelector('#game'));const r=await game.characterReady;
+   game.renderer.render=()=>{};game.start();game.nextSpawn=Infinity;
+   const arms={LeftArm:[1,0,0],LeftForeArm:[0,1,0],LeftHand:[0,1,0],RightArm:[0,-1,0],RightForeArm:[0,-1,0]};
+   const direction=(a,b)=>r.bones[b].getWorldPosition(new THREE.Vector3()).sub(r.bones[a].getWorldPosition(new THREE.Vector3())).normalize();
+   for(let i=0;i<120;i++){game.setArmTargets(arms);game.update(1/60);}
+   if(direction('LeftArm','LeftForeArm').x<.98)throw Error('Hombro no acompaña brazo extendido');
+   if(direction('LeftForeArm','LeftHand').y<.98)throw Error('Codo no acompaña mano levantada');
+   if(direction('RightArm','RightForeArm').y>-.98)throw Error('Se confundieron los brazos');
+   const before=r.bones.LeftArm.quaternion.clone();
+   game.setArmTargets({...arms,LeftArm:[0,1,0]});game.update(1/60);
+   const after=r.bones.LeftArm.quaternion.clone();
+   if(before.angleTo(after)>1.0)throw Error('Salto brusco de postura');
+   game.pause();const frozen=r.bones.LeftArm.quaternion.clone();
+   game.setArmTargets({...arms,LeftArm:[-1,0,0]});game.update(.05);
+   if(frozen.angleTo(r.bones.LeftArm.quaternion)>1e-7)throw Error('Brazos se movieron durante pausa');
+   game.resume();game.setArmTargets(null);
+   for(let i=0;i<120;i++)game.update(1/60);
+   const returned=r.bones.LeftArm.quaternion.clone();
+   r.update(0,{running:true,speed:game.speed});
+   if(!Number.isFinite(returned.w)||returned.angleTo(frozen)<.1)throw Error('No volvió a la animación normal');
+   game.roll();game.setArmTargets(arms);
+   for(let i=0;i<60;i++){game.holdRoll();game.setArmTargets(arms);game.update(1/60);}
+   if(r.poseState.crouch<.99||game.playerHeight>1.21)throw Error('Seguimiento interfiere con agachado');
+   game.renderer.dispose();
+  });
+ }finally{await page.close();}
+});

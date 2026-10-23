@@ -605,6 +605,11 @@ export class Game {
   }
 
   // Altura del suelo bajo el jugador: 0, el techo de un vagón o un punto de una rampa
+  setArmTargets(targets) {
+    this.armTargets = targets;
+    this.armSeenAt = performance.now();
+  }
+
   surfaceAt(x) {
     let h = 0, ramp = false;
     for (const o of this.obstacles) {
@@ -716,7 +721,8 @@ export class Game {
       THREE.MathUtils.clamp(this.rig.root.rotation.z, -0.16, 0.16), 12, dt);
     this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
     if (this.runner) {
-      if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed });
+      if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed,
+        arms: performance.now() - this.armSeenAt < 350 ? this.armTargets : null });
 
     }
     const floor = this.surfaceAt(this.x).h;

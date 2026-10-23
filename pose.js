@@ -1,3 +1,4 @@
+import { armTargets } from './arm-tracking.js';
 // Detección del esqueleto con MediaPipe Pose y traducción a gestos del juego.
 // La red neuronal corre en un Web Worker (pose-worker.js); si el navegador no lo
 // permite, se usa el hilo principal como respaldo.
@@ -195,6 +196,7 @@ export class PoseController {
   }
 
   recalibrate() {
+    this.h.onArms?.(null);
     this.h.onCalibrating?.();
     if (this.ducking) this.h.onDuckEnd?.();
     this.base = null;
@@ -328,6 +330,7 @@ export class PoseController {
       (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.01 && lm[i].x < 0.99 && lm[i].y > 0.01 && lm[i].y < 0.99)) lm = null;
     this.draw(lm, poses);
     if (!lm) {
+      this.h.onArms?.(null);
       this.missing++;
       this.prev = null;
       if (!this.base) this.samples = [];
@@ -369,6 +372,7 @@ export class PoseController {
       return;
     }
 
+    this.h.onArms?.(armTargets(lm, (this.video.videoWidth || 640) / (this.video.videoHeight || 480)));
     const b = this.base;
     const T = b.torso;
     const sens = this.sensitivity;
