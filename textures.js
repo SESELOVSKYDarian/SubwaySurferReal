@@ -354,10 +354,10 @@ export function sky() {
   const W = 1024, H = 512;
   const [c, g] = makeCanvas(W, H);
   const grd = g.createLinearGradient(0, 0, 0, H);
-  grd.addColorStop(0, '#2f73cf');
-  grd.addColorStop(0.45, '#7fb5ea');
-  grd.addColorStop(0.75, '#c3daef');
-  grd.addColorStop(1, '#e9e4d8');
+  grd.addColorStop(0, '#526d87');
+  grd.addColorStop(0.45, '#91a2ad');
+  grd.addColorStop(0.75, '#c9bba6');
+  grd.addColorStop(1, '#e5c39a');
   g.fillStyle = grd;
   g.fillRect(0, 0, W, H);
   for (let i = 0; i < 9; i++) {
@@ -496,4 +496,28 @@ export function coinFace() {
   g.lineWidth = 6;
   g.stroke();
   return toTexture(c);
+}
+
+// Racimos con huecos y nervaduras: silueta de hojas en lugar de polígonos sólidos.
+export function foliage() {
+  const [canvas, ctx] = makeCanvas(256, 256);
+  for (let i = 0; i < 150; i++) {
+    const angle = rand(0, Math.PI * 2);
+    const radius = Math.sqrt(Math.random()) * 102;
+    const x = 128 + Math.cos(angle) * radius;
+    const y = 128 + Math.sin(angle) * radius;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rand(0, Math.PI));
+    const length = rand(7, 17);
+    ctx.fillStyle = `hsl(${rand(70, 100)},${rand(18, 34)}%,${rand(20, 43)}%)`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, length * 0.42, length, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,190,117,0.3)';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();ctx.moveTo(0, -length);ctx.lineTo(0, length);ctx.stroke();
+    ctx.restore();
+  }
+  return toTexture(canvas);
 }

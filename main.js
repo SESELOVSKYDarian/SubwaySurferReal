@@ -15,6 +15,9 @@ function flash(text, color = '#fff') {
 }
 
 const game = new Game($('game'), {
+  onCharacterError() {
+    $('subtitle').textContent = 'No se pudo cargar el personaje detallado. Puedes jugar y volver a cargar la página.';
+  },
   onScore(score, coins) {
     $('score').textContent = score;
     $('coins').textContent = `🪙 ${coins}`;
@@ -34,6 +37,8 @@ const game = new Game($('game'), {
     setTimeout(() => game.state === 'over' && overlay.classList.remove('hidden'), 600);
   },
 });
+
+$('quality').addEventListener('change', event => game.setQuality(event.target.value));
 
 function play() {
   if (game.state === 'playing' || game.state === 'paused') return;
