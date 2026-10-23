@@ -1,8 +1,11 @@
 // Juego: corredor, obstáculos, monedas, colisiones y cámara.
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import { loadRunner } from './character.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { World, LANE_X, NEAR_Z } from './world.js';
 import * as T from './textures.js';
+import { surface, contactShadow } from './materials.js';
 
 const SPAWN_Z = -150;
 const GRAVITY = 38;
@@ -20,26 +23,31 @@ const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 export class Game {
   constructor(canvas, callbacks = {}) {
     this.cb = callbacks;
+    this.quality = 'auto';
+    this.pixelRatio = Math.min(window.devicePixelRatio, 1.25);
+    this.frameAverage = 1 / 60;
+    this.qualityElapsed = 0;
     const r = (this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }));
-    r.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    r.setPixelRatio(this.pixelRatio);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 1.05;
+    r.toneMappingExposure = 0.92;
+    r.outputColorSpace = THREE.SRGBColorSpace;
 
     this.scene = new THREE.Scene();
-    this.scene.background = T.sky();
-    this.scene.fog = new THREE.Fog(0xc9d8e6, 70, 430);
+    this.scene.background = new THREE.Color(0xb7b1a6);
+    this.scene.fog = new THREE.Fog(0xb7b1a6, 90, 440);
 
-    this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 700);
+    this.camera = new THREE.PerspectiveCamera(54, 1, 0.1, 700);
 
     // Luz de tarde: sol cálido y bajo + cielo azulado
-    this.scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x6a5848, 1.3));
-    const sun = new THREE.DirectionalLight(0xffdcb0, 3.0);
-    sun.position.set(10, 24, 12);
+    this.scene.add(new THREE.HemisphereLight(0xb9cce1, 0x40382f, 1.2));
+    const sun = new THREE.DirectionalLight(0xffd5a0, 3.4);
+    sun.position.set(-18, 19, -8);
     sun.target.position.set(0, 0, -8);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.03;
     Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 });
@@ -49,13 +57,33 @@ export class Game {
     this.buildAssets();
     this.buildPlayer();
 
-    // Reflejos (mapa de entorno) solo en los metales: en todo lo demás borraría las sombras
-    const env = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
-    const shine = (m) => {
-      if (m?.isMaterial && m.metalness >= 0.5) m.envMap = env;
-    };
-    this.scene.traverse((o) => [o.material].flat().forEach(shine));
-    Object.values(this.A).flat(2).forEach(shine);
+    // Cielo atmosférico y reflejos coherentes con la luz exterior.
+    const sky = new Sky();
+    sky.scale.setScalar(600);
+    const uniforms = sky.material.uniforms;
+    uniforms.turbidity.value = 5;
+    uniforms.rayleigh.value = 1.5;
+    uniforms.mieCoefficient.value = 0.005;
+    uniforms.mieDirectionalG.value = 0.8;
+    uniforms.sunPosition.value.copy(sun.position).normalize();
+    const skyScene = new THREE.Scene();
+    skyScene.add(sky);
+    const pmrem = new THREE.PMREMGenerator(r);
+    this.environmentTarget = pmrem.fromScene(skyScene, 0.03);
+    pmrem.dispose();
+    // El cielo se calcula una vez: no ejecutar la dispersión atmosférica en
+    // cada píxel de cada cuadro, especialmente en equipos modestos.
+    this.scene.background = this.environmentTarget.texture;
+    sky.geometry.dispose();
+    sky.material.dispose();
+    this.scene.traverse(object => {
+      for (const material of [object.material].flat()) {
+        if (material?.isMeshStandardMaterial && material.metalness >= 0.5) {
+          material.envMap = this.environmentTarget.texture;
+          material.envMapIntensity = 0.45;
+        }
+      }
+    });
 
     this.obstacles = [];
     this.coins = [];
@@ -63,6 +91,7 @@ export class Game {
 
     window.addEventListener('resize', () => this.resize());
     this.resize();
+    this.setQuality('auto');
   }
 
   resize() {
@@ -70,6 +99,32 @@ export class Game {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+  }
+
+  setQuality(quality) {
+    if (!['auto', 'high', 'balanced'].includes(quality)) return;
+    this.quality = quality;
+    this.pixelRatio = Math.min(window.devicePixelRatio, quality === 'high' ? 1.75 : 1.25);
+    this.renderer.setPixelRatio(this.pixelRatio);
+    this.resize();
+    this.world.viewDistance = quality === 'high' ? 340 : 230;
+    this.scene.fog.far = quality === 'high' ? 440 : 310;
+    this.qualityElapsed = 0;
+  }
+
+  adaptQuality(dt) {
+    if (!(dt > 0) || dt > 2) return; // ignorar pestañas suspendidas
+    this.frameAverage += (Math.min(dt, 0.25) - this.frameAverage) * 0.04;
+    this.qualityElapsed += dt;
+    if (this.quality !== 'auto' || this.qualityElapsed < 3) return;
+    this.qualityElapsed = 0;
+    const max = Math.min(window.devicePixelRatio, 1.25);
+    const next = THREE.MathUtils.clamp(this.pixelRatio + (this.frameAverage > 0.022 ? -0.125 : this.frameAverage < 0.017 ? 0.125 : 0), 0.75, max);
+    if (next !== this.pixelRatio) {
+      this.pixelRatio = next;
+      this.renderer.setPixelRatio(next);
+      this.resize();
+    }
   }
 
   // Geometrías y materiales compartidos por todos los obstáculos y monedas
@@ -94,6 +149,16 @@ export class Game {
       map: coinFace, metalness: 0.9, roughness: 0.25, emissive: 0xffffff, emissiveMap: coinFace, emissiveIntensity: 0.35,
     });
 
+    // Ejes y ruedas comparten una sola geometría, incluso al repetir trenes.
+    const undercarriage = [box(1.4, 0.16, 8.6).translate(0, 0.12, 0)];
+    for (const z of [-3.4, 3.4]) {
+      undercarriage.push(box(1.65, 0.25, 1.5).translate(0, 0, z));
+      for (const x of [-0.92, 0.92]) {
+        undercarriage.push(new THREE.CylinderGeometry(0.29, 0.29, 0.18, 16).rotateZ(Math.PI / 2).translate(x, 0, z));
+      }
+    }
+    const bogieGeometry = mergeGeometries(undercarriage);
+    undercarriage.forEach(geometry => geometry.dispose());
     this.A = {
       white, redWhite, yellowBlack, gray, dark, lamp, headlight, trains,
       coinGeo: new THREE.CylinderGeometry(0.38, 0.38, 0.09, 32).rotateX(Math.PI / 2),
@@ -106,7 +171,7 @@ export class Game {
       highBoard: box(2.04, 0.7, 0.1),
       trainBody: box(2.1, 2.6, 10),
       roof: new THREE.CylinderGeometry(1.05, 1.05, 10, 20, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2).scale(1, 0.22, 1),
-      bogie: box(1.8, 0.5, 8.6),
+      bogie: bogieGeometry,
       light: new THREE.SphereGeometry(0.11, 12, 8),
     };
   }
@@ -114,10 +179,10 @@ export class Game {
   buildPlayer() {
     const M = {
       skin: std({ color: 0xd9a27c }),
-      hoodie: std({ color: 0xf07a1e, roughness: 0.95 }),
-      jeans: std({ color: 0x35598f, roughness: 0.9 }),
-      shoe: std({ color: 0xf4f4f4 }),
-      cap: std({ color: 0xc8202a, roughness: 0.7 }),
+      hoodie: std({ color: 0x555c51, roughness: 0.96, ...surface('fabric') }),
+      jeans: std({ color: 0x252c36, roughness: 0.95, ...surface('fabric') }),
+      shoe: std({ color: 0x99978e, roughness: 0.85 }),
+      cap: std({ color: 0x252a2d, roughness: 0.95, ...surface('fabric') }),
       hair: std({ color: 0x3e2717 }),
     };
     const add = (parent, geo, mat, x, y, z) => {
@@ -145,9 +210,23 @@ export class Game {
     add(torso, new THREE.SphereGeometry(0.2, 14, 10), M.hoodie, 0, 0.7, 0.14).scale.set(1.25, 0.75, 0.8); // capucha
     const head = pivot(torso, 0, 0.86, 0);
     add(head, new THREE.SphereGeometry(0.19, 18, 14), M.skin, 0, 0.1, 0);
-    add(head, new THREE.SphereGeometry(0.195, 18, 14), M.hair, 0, 0.12, 0.03).scale.set(1, 0.92, 1);
+    add(head, new THREE.SphereGeometry(0.193, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.56), M.hair, 0, 0.12, 0.03);
     add(head, new THREE.SphereGeometry(0.205, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), M.cap, 0, 0.15, 0);
     add(head, box(0.3, 0.03, 0.2), M.cap, 0, 0.16, -0.22);
+
+    // Perfil humano y prendas: orejas, nariz, nuca, costuras y bolsillos.
+    for (const x of [-0.19, 0.19]) {
+      add(head, new THREE.SphereGeometry(0.042, 10, 8), M.skin, x, 0.08, 0).scale.set(0.5, 1, 0.7);
+    }
+    add(head, new THREE.SphereGeometry(0.045, 10, 8), M.skin, 0, 0.07, -0.18).scale.set(0.7, 1.2, 1);
+    add(torso, capsule(0.075, 0.07), M.skin, 0, 0.77, 0);
+    const seam = std({ color: 0x3c443b, roughness: 1 });
+    const pocket = box(0.17, 0.17, 0.015);
+    for (const x of [-0.13, 0.13]) {
+      add(body, pocket, M.jeans, x, 1.02, 0.155).rotation.z = -x * 0.3;
+      add(torso, box(0.008, 0.44, 0.008), seam, x * 1.6, 0.35, 0.17);
+    }
+    add(torso, box(0.32, 0.12, 0.025), seam, 0, 0.25, -0.19);
 
     const arm = (x) => {
       const shoulder = pivot(torso, x, 0.62, 0);
@@ -173,6 +252,24 @@ export class Game {
     this.rig = { root, ball, body, torso, head, armL, armR, elbowL, elbowR, legL, legR, kneeL, kneeR };
     this.player = root;
     this.scene.add(root);
+    this.contact = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.7), new THREE.MeshBasicMaterial({
+      map: contactShadow(), transparent: true, depthWrite: false, polygonOffset: true,
+      polygonOffsetFactor: -1, toneMapped: false,
+    }));
+    this.contact.rotation.x = -Math.PI / 2;
+    this.contact.position.y = 0.025;
+    this.scene.add(this.contact);
+    this.characterAnchor = new THREE.Group();
+    this.scene.add(this.characterAnchor);
+    this.characterReady = loadRunner(this.characterAnchor).then(runner => {
+      this.runner = runner;
+      this.player.visible = false;
+      return runner;
+    }).catch(error => {
+      console.error('No se pudo cargar el corredor detallado:', error);
+      this.cb.onCharacterError?.();
+      return null;
+    });
   }
 
   reset() {
@@ -301,6 +398,7 @@ export class Game {
 
   // --- Bucle principal ---
   update(dt) {
+    this.adaptQuality(dt);
     dt = Math.min(dt, 0.05);
     this.time += dt;
     const playing = this.state === 'playing';
@@ -318,7 +416,7 @@ export class Game {
     this.world.update(move, this.distance);
 
     // Física del jugador
-    this.x += (LANE_X[this.lane] - this.x) * Math.min(1, dt * 14);
+    this.x = THREE.MathUtils.damp(this.x, LANE_X[this.lane], 14, dt);
     if (this.y > 0 || this.vy > 0) {
       this.vy -= GRAVITY * dt;
       this.y = Math.max(0, this.y + this.vy * dt);
@@ -327,6 +425,25 @@ export class Game {
     this.rollTimer = Math.max(0, this.rollTimer - dt);
     const rolling = this.rollTimer > 0;
     this.updatePlayerMesh(dt, rolling);
+    this.characterAnchor.position.set(this.x, this.y, 0);
+    this.characterAnchor.rotation.z = this.rig.root.rotation.z;
+    this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
+    if (this.runner) {
+      this.runner.update(dt, { running: playing, airborne: this.y > 0, rolling, speed: this.speed });
+      // Rodada física de cuerpo entero; conserva las proporciones humanas.
+      const progress = rolling ? 1 - this.rollTimer / ROLL_TIME : 0;
+      this.runner.model.rotation.x = rolling ? -progress * Math.PI * 2 : 0;
+      this.runner.model.position.y = rolling ? 1.025 + Math.sin(progress * Math.PI) * 0.1 : 0;
+      this.runner.model.position.z = 0;
+      // Girar alrededor de la cadera, no alrededor de los pies.
+      if (rolling) {
+        this.runner.model.position.y -= Math.cos(progress * Math.PI * 2) * 1.025;
+        this.runner.model.position.z = -Math.sin(progress * Math.PI * 2) * 1.025;
+      }
+    }
+    this.contact.position.x = this.x;
+    this.contact.material.opacity = 1 / (1 + this.y * 1.5);
+    this.contact.scale.setScalar(1 + this.y * 0.25);
 
     // Obstáculos y colisiones
     const height = rolling ? ROLL_HEIGHT : STAND_HEIGHT;
@@ -365,15 +482,17 @@ export class Game {
 
     if (playing) this.emitScore();
 
-    // Cámara detrás y por encima del corredor
+    // Tercera persona: cámara detrás del corredor y vista abierta de los tres
+    // carriles. En pantalla vertical se aleja para conservar el ancho de juego.
     this.shake = Math.max(0, this.shake - dt * 2);
     const s = this.shake;
+    const distance = Math.max(6.4, 3.6 / (Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect));
     this.camera.position.set(
-      this.x * 0.65 + (Math.random() - 0.5) * s,
-      2.9 + this.y * 0.3 + (Math.random() - 0.5) * s,
-      5.3,
+      THREE.MathUtils.damp(this.camera.position.x, this.x * 0.12 * Math.min(1, this.camera.aspect), 7, dt) + (Math.random() - 0.5) * s,
+      3.1 + (distance - 6.4) * 0.08 + this.y * 0.25 + (Math.random() - 0.5) * s,
+      distance,
     );
-    this.camera.lookAt(this.x * 0.65, 1.5 + this.y * 0.25, -12);
+    this.camera.lookAt(this.camera.position.x, 1.35 + this.y * 0.15, -14);
 
     this.renderer.render(this.scene, this.camera);
   }

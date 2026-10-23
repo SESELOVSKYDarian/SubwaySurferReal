@@ -1,0 +1,13 @@
+{
+  "name": "subway-surfer-real",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8000 --bind 127.0.0.1",
+    "test": "node --test tests/browser.test.cjs",
+    "benchmark": "node tests/benchmark.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

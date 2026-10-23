@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as T from './textures.js';
+import { surface } from './materials.js';
 
 export const LANE_X = [-2.2, 0, 2.2];
 export const NEAR_Z = 24;     // un poco por detrás de la cámara
@@ -37,8 +38,9 @@ function mesh(geo, mat, { cast = true, receive = true } = {}) {
 export class World {
   constructor(scene) {
     this.scene = scene;
+    this.viewDistance = 230;
     this.metal = std({ color: 0x3d4247, metalness: 0.7, roughness: 0.5 });
-    this.concrete = std({ map: T.concrete(), color: 0xd8d2c6 });
+    this.concrete = std({ map: T.concrete(), color: 0xb6b0a4, ...surface('concrete') });
     this.buildTrack();
     this.buildSides();
     this.buildBuildings();
@@ -52,7 +54,7 @@ export class World {
 
     const gravelTex = T.gravel();
     gravelTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
-    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), std({ map: gravelTex }), { cast: false });
+    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), std({ map: gravelTex, ...surface('stone') }), { cast: false });
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = NEAR_Z - len / 2;
     this.track.add(ground);
@@ -111,15 +113,17 @@ export class World {
   }
 
   buildSides() {
-    const graffitiMats = Array.from({ length: 6 }, () => std({ map: T.graffitiWall() }));
+    const graffitiMats = Array.from({ length: 6 }, (_, i) => i < 2
+      ? this.concrete : std({ map: T.graffitiWall(), ...surface('concrete') }));
     const chain = T.chainLink();
     chain.repeat.set(SEG / 1.2, 2.2 / 1.2);
     const fenceMat = std({
-      map: chain, transparent: true, depthWrite: false, side: THREE.DoubleSide, metalness: 0.5, roughness: 0.5,
+      map: chain, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.5, roughness: 0.5,
     });
 
     const wallGeo = new THREE.BoxGeometry(0.7, WALL_H, SEG);
     const capGeo = new THREE.BoxGeometry(0.95, 0.18, SEG);
+    const graffitiGeo = new THREE.PlaneGeometry(SEG, WALL_H);
     const walkGeo = new THREE.BoxGeometry(BUILD_X - WALL_X, 0.2, SEG);
     const fenceGeo = new THREE.PlaneGeometry(SEG, 2.2).rotateY(Math.PI / 2);
 
@@ -138,27 +142,39 @@ export class World {
     const lampHeadMat = std({ color: 0xffe6b0, emissive: 0xffc070, emissiveIntensity: 1.5 });
     const lampMat = std({ color: 0x24302a, metalness: 0.6, roughness: 0.5 });
 
-    // Árbol estilizado
-    const trunkGeo = new THREE.CylinderGeometry(0.12, 0.18, 2.4, 7).translate(0, 1.2, 0);
-    const blob = new THREE.IcosahedronGeometry(1, 1);
-    const foliageGeo = mergeGeometries([
-      placed(blob.clone().scale(1.4, 1.2, 1.4), 0, 3.2, 0),
-      placed(blob.clone().scale(1.1, 1, 1.1), 0.8, 3.9, 0.4),
-      placed(blob.clone().scale(1.0, 0.9, 1.0), -0.7, 3.8, -0.5),
-      placed(blob.clone().scale(0.9, 0.9, 0.9), 0.1, 4.5, 0),
+    const trunkGeo = mergeGeometries([
+      new THREE.CylinderGeometry(0.10, 0.2, 2.8, 9).translate(0, 1.4, 0),
+      new THREE.CylinderGeometry(0.035, 0.08, 1.7, 6).rotateZ(0.55).translate(-0.45, 2.5, 0),
+      new THREE.CylinderGeometry(0.035, 0.07, 1.6, 6).rotateZ(-0.65).translate(0.45, 2.5, 0),
     ]);
-    const trunkMat = std({ color: 0x5a4130 });
-    const foliageMats = [0x4f7f2e, 0x3f6e2a, 0x6a8f35].map((c) => std({ color: c, flatShading: true }));
+    const leafParts = [];
+    for (let i = 0; i < 40; i++) {
+      const angle = i * 2.39996;
+      const radius = Math.sqrt((i + 0.5) / 40) * 1.4;
+      leafParts.push(placed(new THREE.PlaneGeometry(1.6, 1.6),
+        Math.cos(angle) * radius, 3.4 + Math.sin(i * 1.7) * 0.65,
+        Math.sin(angle) * radius, Math.sin(i * 0.9) * 0.7, angle));
+    }
+    const foliageGeo = mergeGeometries(leafParts);
+    leafParts.forEach(part => part.dispose());
+    const trunkMat = std({ color: 0x554c3d, ...surface('concrete') });
+    const leafTexture = T.foliage();
+    const foliageMats = [0xa2aa8e, 0x8e9a80, 0xb0ad8c].map(color => std({
+      color, map: leafTexture, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1,
+    }));
 
     this.segments = [];
     this.segCount = Math.ceil((NEAR_Z - FAR_Z) / SEG) + 1;
     for (const s of [-1, 1]) {
       for (let i = 0; i < this.segCount; i++) {
         const g = new THREE.Group();
-        const wallMats = Array(6).fill(this.concrete);
-        const wall = mesh(wallGeo, wallMats);
+        const wall = mesh(wallGeo, this.concrete);
         wall.position.set(s * WALL_X, WALL_H / 2, 0);
         g.add(wall);
+        const graffiti = mesh(graffitiGeo, graffitiMats[0], { cast: false });
+        graffiti.rotation.y = -s * Math.PI / 2;
+        graffiti.position.set(s * (WALL_X - 0.356), WALL_H / 2, 0);
+        g.add(graffiti);
         const cap = mesh(capGeo, this.concrete);
         cap.position.set(s * WALL_X, WALL_H + 0.09, 0);
         g.add(cap);
@@ -184,7 +200,7 @@ export class World {
         tree.position.set(s * (WALL_X + 2.2), WALL_H, 0);
         g.add(tree);
 
-        const seg = { group: g, wall, inner: s > 0 ? 1 : 0, lamp, tree, foliage, foliageMats, graffitiMats };
+        const seg = { group: g, wall, graffiti, lamp, tree, foliage, foliageMats, graffitiMats };
         g.position.z = NEAR_Z - SEG / 2 - i * SEG;
         this.randomizeSegment(seg);
         this.scene.add(g);
@@ -194,9 +210,7 @@ export class World {
   }
 
   randomizeSegment(seg) {
-    const mats = [...seg.wall.material];
-    mats[seg.inner] = seg.graffitiMats[Math.floor(Math.random() * seg.graffitiMats.length)];
-    seg.wall.material = mats;
+    seg.graffiti.material = seg.graffitiMats[Math.floor(Math.random() * seg.graffitiMats.length)];
     seg.lamp.visible = Math.random() < 0.6;
     seg.lamp.position.z = (Math.random() - 0.5) * SEG * 0.8;
     seg.tree.visible = Math.random() < 0.65;
@@ -211,6 +225,9 @@ export class World {
     const roofMat = std({ color: 0x5b5752 });
     const billboardMat = std({ map: T.billboard(), emissive: 0x330000, roughness: 0.6 });
     const unit = new THREE.BoxGeometry(1, 1, 1);
+    // Caché por dimensiones: crear una vez y reutilizar al reciclar edificios.
+    this.windowDetails = new Map();
+    const trimMat = std({ color: 0x8d8981, roughness: 0.92 });
 
     // Escalera de incendios (6 pisos), hacia -x desde la fachada
     const parts = [];
@@ -234,20 +251,23 @@ export class World {
       while (z > FAR_Z) {
         const front = this.facades[0].clone();
         const ends = this.facades[0].clone();
-        const frontMat = std({ map: front });
-        const endMat = std({ map: ends });
-        const mats = [endMat, endMat, roofMat, roofMat, endMat, endMat];
-        mats[s > 0 ? 1 : 0] = frontMat;
-        // Los edificios no proyectan sombra: taparían toda la vía
-        const box = mesh(unit, mats, { cast: false });
+        const frontMat = std({ map: front, ...surface('concrete') });
+        const endMat = std({ map: ends, ...surface('concrete') });
+        // El volumen usa un material; la fachada interior y la cornisa son piezas separadas.
+        const box = mesh(unit, endMat, { cast: false });
+        const facade = mesh(new THREE.PlaneGeometry(1, 1), frontMat, { cast: false });
+        facade.rotation.y = -s * Math.PI / 2;
+        const cornice = mesh(unit, roofMat, { cast: false });
+        const windows = mesh(unit, trimMat, { cast: false });
+        windows.scale.x = s;
         const fire = mesh(fireGeo, fireMat, { cast: false });
         fire.scale.x = s;
         const board = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), billboardMat);
         board.rotation.y = -s * Math.PI / 2;
         const g = new THREE.Group();
-        g.add(box, fire, board);
+        g.add(box, facade, cornice, windows, fire, board);
         this.scene.add(g);
-        const b = { s, group: g, box, fire, board, front, ends, w: 0 };
+        const b = { s, group: g, box, facade, cornice, windows, fire, board, front, ends, w: 0 };
         this.randomizeBuilding(b);
         g.position.z = z - b.w / 2;
         z -= b.w;
@@ -271,6 +291,26 @@ export class World {
     const x = b.s * (BUILD_X + depth / 2);
     b.box.scale.set(depth, h, w);
     b.box.position.set(x, WALL_H + h / 2, 0);
+    b.facade.scale.set(w, h, 1);
+    b.facade.position.set(b.s * (BUILD_X - 0.012), WALL_H + h / 2, 0);
+    b.cornice.scale.set(depth + 0.35, 0.25, w + 0.25);
+    b.cornice.position.set(x, WALL_H + h, 0);
+    b.windows.position.set(b.s * BUILD_X, WALL_H, 0);
+    const key = `${w}:${h}`;
+    if (!this.windowDetails.has(key)) {
+      const parts = [];
+      for (let floor = 0; floor < h / 3.2; floor++) {
+        for (let column = 0; column < w / 4; column++) {
+          const y = (floor + 0.5) * 3.2;
+          const z = (column + 0.5) * 4 - w / 2;
+          parts.push(placed(new THREE.BoxGeometry(0.28, 0.12, 2.2), -0.08, y - 0.95, z));
+          parts.push(placed(new THREE.BoxGeometry(0.2, 0.13, 2.1), -0.05, y + 0.95, z));
+        }
+      }
+      this.windowDetails.set(key, mergeGeometries(parts));
+      parts.forEach(part => part.dispose());
+    }
+    b.windows.geometry = this.windowDetails.get(key);
     b.fire.visible = style < 2 && h > 20;
     b.fire.position.set(b.s * BUILD_X, WALL_H, (Math.random() - 0.5) * (w - 4));
     b.board.visible = Math.random() < 0.18 && h > 16;
@@ -294,22 +334,18 @@ export class World {
     }
   }
 
-  // Rascacielos lejanos (fijos: están tan lejos que no se nota que no se mueven)
+  // Skyline unido en una sola geometría: la bruma oculta el detalle lejano.
   buildSkyline() {
-    const unit = new THREE.BoxGeometry(1, 1, 1);
+    const parts = [];
     for (let i = 0; i < 34; i++) {
       const w = 10 + Math.random() * 18;
       const h = 40 + Math.random() * 110;
-      const x = (Math.random() - 0.5) * 170;
-      const z = FAR_Z - 20 - Math.random() * 140;
-      const tex = this.facades[Math.random() < 0.7 ? 3 : 2].clone();
-      tex.repeat.set(w / 8, h / 6.4);
-      tex.needsUpdate = true;
-      const b = new THREE.Mesh(unit, std({ map: tex, color: 0xb6c8de }));
-      b.scale.set(w, h, w);
-      b.position.set(x, h / 2, z);
-      this.scene.add(b);
+      parts.push(placed(new THREE.BoxGeometry(w, h, w), (Math.random() - 0.5) * 170,
+        h / 2, FAR_Z - 20 - Math.random() * 140));
     }
+    const geometry = mergeGeometries(parts);
+    parts.forEach(part => part.dispose());
+    this.scene.add(new THREE.Mesh(geometry, std({ color: 0x84909a, roughness: 0.95 })));
   }
 
   update(move, distance) {
@@ -317,6 +353,8 @@ export class World {
 
     for (const seg of this.segments) {
       seg.group.position.z += move;
+      seg.group.visible = seg.group.position.z > -this.viewDistance;
+      seg.wall.castShadow = seg.group.position.z > -45;
       if (seg.group.position.z - SEG / 2 > NEAR_Z) {
         seg.group.position.z -= this.segCount * SEG;
         this.randomizeSegment(seg);
@@ -327,6 +365,8 @@ export class World {
     this.buildingEdge[1] += move;
     for (const b of this.buildings) {
       b.group.position.z += move;
+      b.group.visible = b.group.position.z > -this.viewDistance;
+      b.windows.visible = b.group.position.z > -90;
       if (b.group.position.z - b.w / 2 > NEAR_Z) {
         this.randomizeBuilding(b);
         b.group.position.z = this.buildingEdge[b.s] - b.w / 2;
@@ -336,6 +376,8 @@ export class World {
 
     for (const g of this.gantries) {
       g.position.z += move;
+      g.visible = g.position.z > -this.viewDistance;
+      g.castShadow = g.position.z > -45;
       if (g.position.z > NEAR_Z) g.position.z -= this.gantryCount * GANTRY_GAP;
     }
   }

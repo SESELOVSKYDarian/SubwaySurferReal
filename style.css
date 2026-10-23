@@ -115,3 +115,26 @@ button:disabled { opacity: .5; cursor: default; }
   #cam { width: 160px; }
   .panel h1 { font-size: 28px; }
 }
+
+#quality-control {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(12, 17, 21, .72);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 6px;
+  font-size: 12px;
+}
+#quality {
+  color: #eee;
+  background: #242b2e;
+  border: 1px solid #60676a;
+  border-radius: 3px;
+  padding: 5px;
+  font: inherit;
+}
+#quality:focus-visible { outline: 2px solid #ffd84a; outline-offset: 3px; }

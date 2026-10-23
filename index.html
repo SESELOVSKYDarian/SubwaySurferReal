@@ -8,8 +8,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
       }
     }
   </script>
@@ -22,6 +22,13 @@
     <div id="coins">🪙 0</div>
   </div>
 
+  <label id="quality-control">Calidad
+    <select id="quality" aria-label="Calidad gráfica">
+      <option value="auto">Automática</option>
+      <option value="high">Alta</option>
+      <option value="balanced">Equilibrada</option>
+    </select>
+  </label>
   <div id="action"></div>
 
   <div id="cam">

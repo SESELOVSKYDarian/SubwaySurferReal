@@ -51,3 +51,59 @@ También se puede jugar con teclado: ← → / A D, ↑ / Espacio, ↓ / S.
 - **`main.js`** – conecta los gestos y el teclado con el juego.
 
 Todo corre en tu navegador; la imagen de la cámara no se envía a ningún sitio.
+
+## Apariencia y rendimiento
+
+La cámara permanece en tercera persona, detrás del corredor. Mantiene a la vista
+el cuerpo completo y los tres carriles, y se aleja en pantallas verticales para
+conservar el encuadre.
+
+El corredor detallado es un modelo humano con texturas y animaciones esqueléticas
+locales (`assets/characters/runner.glb`). Cambia entre reposo y carrera con una
+transición; salto y rodada combinan la física del juego y poses aditivas. Si el
+modelo no se puede cargar, el personaje procedural permite seguir jugando.
+La procedencia y condiciones de uso están en
+[`assets/characters/ATTRIBUTION.md`](assets/characters/ATTRIBUTION.md).
+
+El escenario incorpora cielo atmosférico, reflejos de exterior, microrelieve,
+volumen en alféizares y cornisas y sombra de contacto. El skyline y los bajos de
+los trenes agrupan geometrías. El detalle lejano se oculta antes que el cercano.
+Las texturas del entorno siguen siendo procedurales: esto es una mejora hacia
+un estilo realista, no un escenario fotogramétrico ni un acabado equivalente a GTA.
+
+El selector **Calidad** ofrece Automática, Alta y Equilibrada. Automática reduce
+la resolución interna si los tiempos de cuadro empeoran; conserva las reglas y
+los controles. Alta extiende la distancia de dibujo y aumenta el límite de
+resolución. No se garantizan 60 FPS: dependen de GPU, resolución y uso de cámara.
+
+Three.js 0.160.0 y los módulos usados se sirven desde `vendor/three`, con su licencia
+MIT. El juego con teclado y el personaje no necesitan red externa durante la
+partida. El control corporal todavía requiere MediaPipe y su modelo remoto.
+
+## Verificar los cambios
+
+Para jugar sigue bastando `python3 -m http.server 8000`; Node solo es necesario
+para las pruebas de desarrollo (Node 20 o superior):
+
+```bash
+npm ci
+npx playwright install chromium
+npm test
+npm run benchmark
+```
+
+Si ya tienes Chromium, puedes indicar `CHROMIUM_PATH=/ruta/a/chromium`.
+Las pruebas arrancan y cierran su propio servidor local. La captura se guarda en
+`test-results/realism.png`. El benchmark espera una lectura de píxel por cuadro
+para no confundir comandos enviados a WebGL con trabajo gráfico terminado.
+Los resultados corresponden al dispositivo y al escenario medidos; no garantizan
+el rendimiento con cámara activa o durante una partida completa.
+
+En el contenedor de desarrollo sin sandbox de navegador disponible, se ejecutó:
+
+```bash
+CHROMIUM_NO_SANDBOX=1 SOFTWARE_WEBGL=1 npm test
+CHROMIUM_NO_SANDBOX=1 SOFTWARE_WEBGL=1 npm run benchmark
+```
+
+Ver [`docs/validation.md`](docs/validation.md) para resultados y límites.
