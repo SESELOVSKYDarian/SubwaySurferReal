@@ -25,7 +25,7 @@ export function surface(kind = 'concrete') {
   bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
   bump.anisotropy = 4;
   // Datos de relieve y rugosidad: espacio lineal, no sRGB.
-  const result = { bumpMap: bump, bumpScale: kind === 'fabric' ? 0.012 : 0.035, roughnessMap: bump };
+  const result = { bumpMap: bump, bumpScale: kind === 'fabric' ? 0.012 : kind === 'metal' ? 0.0015 : kind === 'fur' ? 0.004 : 0.035, roughnessMap: bump };
   cache.set(kind, result);
   return result;
 }

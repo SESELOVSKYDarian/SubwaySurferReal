@@ -2,7 +2,9 @@
 // monedas, colisiones y cámara.
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { loadRunner } from './character.js';
+import { loadRunner, loadOfficer } from './character.js';
+import { mintCoin, buildShepherd } from './props.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { World, LANE_X, NEAR_Z } from './world.js';
 import * as T from './textures.js';
@@ -91,6 +93,8 @@ export class Game {
       }
     });
 
+    this.A.coinMat.envMapIntensity = 1.15;
+
     this.obstacles = [];
     this.coins = [];
     this.pickups = [];
@@ -152,11 +156,7 @@ export class Game {
       return [side, side, gray, dark, front, front];
     });
 
-    const coinFace = T.coinFace();
-    const coinEdge = std({ color: 0xe0a21a, metalness: 1, roughness: 0.3 });
-    const coinFaceMat = std({
-      map: coinFace, metalness: 0.9, roughness: 0.25, emissive: 0xffffff, emissiveMap: coinFace, emissiveIntensity: 0.35,
-    });
+    const minted = mintCoin();
 
     // Rampa: un prisma triangular delante del vagón (sube hasta el techo)
     const shape = new THREE.Shape([
@@ -180,21 +180,24 @@ export class Game {
       white, redWhite, yellowBlack, gray, dark, lamp, headlight, trains,
       rampMats: [dark, yellowBlack],
       rampGeo,
-      coinGeo: new THREE.CylinderGeometry(0.38, 0.38, 0.09, 24).rotateX(Math.PI / 2),
-      coinMats: [coinEdge, coinFaceMat, coinFaceMat],
-      board: box(1.9, 0.42, 0.1),
+      coinGeo: minted.geometry,
+      coinFarGeo: minted.farGeometry,
+      coinMat: minted.material,
+      board: new RoundedBoxGeometry(1.9, 0.42, 0.1, 2, 0.025),
       leg: box(0.07, 1.0, 0.07),
       foot: box(0.1, 0.05, 0.7),
       lampGeo: new THREE.SphereGeometry(0.08, 10, 6),
-      post: box(0.14, 2.5, 0.14),
-      highBoard: box(2.04, 0.7, 0.1),
-      trainBody: box(2.1, 2.6, 10),
+      post: new THREE.CylinderGeometry(0.07, 0.07, 2.5, 12),
+      highBoard: new RoundedBoxGeometry(2.04, 0.7, 0.1, 2, 0.025),
+      trainBody: new RoundedBoxGeometry(2.1, 2.6, 10, 2, 0.08),
       roof: new THREE.CylinderGeometry(1.05, 1.05, 10, 16, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2).scale(1, 0.22, 1),
       bogie: bogieGeometry,
       light: new THREE.SphereGeometry(0.11, 10, 6),
       halo: new THREE.TorusGeometry(0.75, 0.06, 8, 32),
       haloMat: new THREE.MeshBasicMaterial({ color: 0x7df9ff, transparent: true, opacity: 0.8 }),
     };
+    this.coinInstances = this.createCoinInstances(256);
+    this.coinFarInstances = this.createCoinInstances(256, true);
   }
 
   // Muñeco articulado (lo usan el corredor y el guardia)
@@ -335,29 +338,17 @@ export class Game {
       },
     });
 
-    // Perro del guardia
-    const fur = std({ color: 0x8b5a2b });
-    const dog = new THREE.Group();
-    const dogBody = new THREE.Mesh(box(0.32, 0.32, 0.75), fur);
-    dogBody.position.y = 0.55;
-    const dogHead = new THREE.Mesh(box(0.28, 0.28, 0.32), fur);
-    dogHead.position.set(0, 0.8, -0.45);
-    const snout = new THREE.Mesh(box(0.16, 0.12, 0.16), std({ color: 0x3a2412 }));
-    snout.position.set(0, 0.74, -0.66);
-    dog.add(dogBody, dogHead, snout);
-    const dogLegs = [];
-    for (const [x, z] of [[-0.11, -0.28], [0.11, -0.28], [-0.11, 0.28], [0.11, 0.28]]) {
-      const p = new THREE.Group();
-      p.position.set(x, 0.42, z);
-      const l = new THREE.Mesh(box(0.08, 0.42, 0.08), fur);
-      l.position.y = -0.21;
-      p.add(l);
-      dog.add(p);
-      dogLegs.push(p);
-    }
-    dog.traverse((m) => (m.castShadow = true));
-    this.dog = { root: dog, legs: dogLegs };
-    this.scene.add(dog);
+    this.dog = buildShepherd();
+    this.scene.add(this.dog.root);
+    this.officerAnchor = new THREE.Group();
+    this.scene.add(this.officerAnchor);
+    this.officerReady = loadOfficer(this.officerAnchor).then(officer => {
+      this.officer = officer;
+      return officer;
+    }).catch(error => {
+      console.warn('Se usa el guardia de respaldo:', error);
+      return null;
+    });
 
     this.player = this.rig.root;
     this.contact = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.7), new THREE.MeshBasicMaterial({
@@ -382,7 +373,40 @@ export class Game {
     });
   }
 
+  createCoinInstances(capacity, distant = false) {
+    const instances = new THREE.InstancedMesh(distant ? this.A.coinFarGeo : this.A.coinGeo, this.A.coinMat, capacity);
+    instances.name = 'MintedCoins';
+    instances.count = 0;
+    instances.frustumCulled = false;
+    instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.scene.add(instances);
+    return instances;
+  }
+
+  syncCoins() {
+    if (this.coins.length > this.coinInstances.instanceMatrix.count) {
+      const capacity = Math.max(this.coins.length, this.coinInstances.instanceMatrix.count * 2);
+      for (const key of ['coinInstances', 'coinFarInstances']) {
+        const previous = this[key];
+        this[key] = this.createCoinInstances(capacity, key === 'coinFarInstances');
+        this.scene.remove(previous);
+        previous.dispose();
+      }
+    }
+    this.coinInstances.count = this.coinFarInstances.count = 0;
+    this.coins.forEach(coin => {
+      coin.mesh.updateMatrix();
+      // A esta distancia el grabado ocupa menos de un píxel; conservar el
+      // volumen metálico y reservar el detalle geométrico para el primer plano.
+      const instances = coin.mesh.position.z < -28 ? this.coinFarInstances : this.coinInstances;
+      instances.setMatrixAt(instances.count++, coin.mesh.matrix);
+    });
+    this.coinInstances.instanceMatrix.needsUpdate = true;
+    this.coinFarInstances.instanceMatrix.needsUpdate = true;
+  }
+
   reset() {
+    this.coinInstances.count = this.coinFarInstances.count = 0;
     for (const list of [this.obstacles, this.coins, this.pickups]) {
       for (const o of list) this.scene.remove(o.mesh);
       list.length = 0;
@@ -550,9 +574,9 @@ export class Game {
   }
 
   addCoin(lane, z, y = 0.95) {
-    const mesh = new THREE.Mesh(this.A.coinGeo, this.A.coinMats);
+    const mesh = new THREE.Object3D();
     mesh.position.set(LANE_X[lane], y, z);
-    this.scene.add(mesh);
+    mesh.rotation.y = Math.random() * Math.PI * 2;
     this.coins.push({ mesh });
   }
 
@@ -664,6 +688,8 @@ export class Game {
         this.coins.splice(i, 1);
       }
     }
+
+    this.syncCoins();
 
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
@@ -880,6 +906,18 @@ export class Game {
     d.root.position.set(this.guardX + 1.2, 0, this.guardZ - 0.4);
     d.root.visible = g.root.visible;
     d.legs.forEach((l, i) => (l.rotation.x = reached || still ? 0 : Math.sin(t * 1.3 + (i % 2) * Math.PI) * 0.7));
+    d.tail.rotation.z = Math.sin(this.time * 5) * 0.15;
+    this.officerAnchor.position.copy(g.root.position);
+    this.officerAnchor.visible = g.root.visible;
+    if (this.officer) {
+      if (this.state !== 'paused') this.officer.update(dt, {
+        running: !still && !reached, airborne: false, rolling: false,
+        speed: this.speed, grabbing: reached,
+      });
+      g.root.visible = false;
+    } else {
+      this.officerAnchor.visible = false;
+    }
   }
 
   gameOver(reason) {

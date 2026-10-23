@@ -137,3 +137,19 @@ Ver [`docs/validation.md`](docs/validation.md) para resultados y límites.
 La integración visual conserva las funciones de `main` y tiene un respaldo en
 `backup/main-before-realism-c10fb4a`. Para deshacerla sin reescribir el historial,
 ver [`docs/rollback.md`](docs/rollback.md).
+
+## Policía, monedas y objetos
+
+El policía usa un esqueleto y un mezclador de animaciones propios, con uniforme
+azul táctico, identificación, placa, radio y cinturón. Comparte el archivo base
+Vanguard con el corredor, pero no sus huesos ni materiales. Si no carga, se
+conserva el guardia procedural. La persecución y la captura mantienen sus reglas.
+
+Las monedas tienen bisel, canto estriado, denominación en relieve y pátina sobre
+metal con reflejos; no usan emisión de luz para parecer doradas. Se dibujan en
+lotes con `InstancedMesh`: detalle completo de cerca y volumen simplificado a
+más de 28 m. La recogida y el contador usan las mismas posiciones de juego.
+
+El perro tiene cuerpo, hocico, patas y cola de formas suaves; las barreras y los
+vagones incorporan bordes redondeados. Son mejoras de modelado y materiales, no
+escaneos fotográficos ni modelos policiales civiles a medida.

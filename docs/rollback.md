@@ -24,3 +24,19 @@ líneas, el revert puede requerir resolver conflictos antes de continuar.
 La rama `work` conserva el desarrollo visual previo a esta integración. El
 respaldo anterior también se verificó como bundle completo en la máquina de
 preparación (`/workspace/SubwaySurferReal-main-c10fb4a.bundle`).
+
+## Deshacer solamente la actualización del policía y las monedas
+
+Respaldo remoto: `backup/main-before-police-coins-9441e92`, commit
+`9441e923c35b416f24c2fb1b68b34254643aa650`. La etiqueta `police-coins-v1`
+identifica un commit normal (no un merge), por lo que se revierte sin `-m`:
+
+```bash
+git fetch origin --tags
+git switch main
+git pull --ff-only origin main
+git revert --no-edit police-coins-v1
+git push origin main
+```
+
+Esto conserva la primera mejora visual y la cámara en tercera persona.

@@ -2,7 +2,7 @@
 
 ## Comportamiento comprobado
 
-`npm test` sobre el main integrado: 4 pruebas pasaron, 0 fallaron, 0 omitidas.
+`npm test` sobre el main integrado: 5 pruebas pasaron, 0 fallaron, 0 omitidas.
 
 1. Aplicación real: arranque, puntuación, teclado, selector de calidad y captura;
    sin peticiones a CDN para el modo de teclado.
@@ -65,3 +65,28 @@ la etiqueta `realism-third-person-v1`. El respaldo y los comandos para volver
 están en [`rollback.md`](rollback.md). Los resultados de rendimiento de arriba
 pertenecen a la versión visual anterior a esta integración, no a una nueva
 medición del main combinado.
+
+## Actualización de policía y monedas
+
+La batería ampliada verifica que el policía tenga su propio esqueleto y que
+animarlo no cambie al corredor, que el guardia provisional deje de dibujarse al
+cargar el modelo detallado y que ambos perseguidores se retiren al terminar
+la persecución. También comprueba 300 monedas, ampliación de capacidad,
+recogida, reinicio y un material metálico sin emisión de luz.
+
+La simulación de colisiones usa obstáculos explícitos sin filas aleatorias para
+que un tropiezo ajeno al caso no active invulnerabilidad durante la comprobación.
+La aplicación real se sigue probando con la generación normal de obstáculos.
+La captura de esta revisión se guarda en `test-results/police-coins.png`.
+
+El main previo a esta actualización es `9441e923c35b416f24c2fb1b68b34254643aa650`,
+con respaldo remoto `backup/main-before-police-coins-9441e92`. La revisión se
+identifica con la etiqueta `police-coins-v1`.
+
+Medición de esta actualización (misma máquina SwiftShader, 960×540, resolución
+interna ×1, 30 muestras tras calentamiento y lectura de píxel por cuadro):
+410,54 ms por cuadro, 2,44 FPS, renderizado medio 410,49 ms, percentil 95
+451,90 ms, 379 llamadas de dibujo y 73.820 triángulos. La actualización anterior
+integrada registró 484 llamadas y 2,56 FPS en este backend. Las monedas usan dos
+niveles de detalle para limitar el aumento de geometría cercano. Esta medición
+no confirma fluidez en una GPU física ni con detección corporal activa.

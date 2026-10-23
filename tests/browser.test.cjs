@@ -57,7 +57,7 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    };
    // Separar las pruebas de simulación del coste de dibujar cientos de cuadros.
    const render=game.renderer.render.bind(game.renderer);game.renderer.render=()=>{};
-   game.start();
+   game.start();game.nextSpawn=Infinity;
    for(const aspect of [16/9,9/16]){
     game.camera.aspect=aspect;game.camera.updateProjectionMatrix();
     for(const height of [0,2.23]){game.y=height;game.vy=0;game.update(0);checkFraming();}
@@ -104,10 +104,10 @@ test('se conservan guardia, perro, rampas, jetpack y pausa de main',{timeout:120
   await page.goto(env.url);
   await page.evaluate(async()=>{
    const THREE=await import('three');const {Game}=await import('./game.js');
-   const game=new Game(document.querySelector('#game'));await game.characterReady;
+   const game=new Game(document.querySelector('#game'));await Promise.all([game.characterReady,game.officerReady]);
    const render=game.renderer.render.bind(game.renderer);game.renderer.render=()=>{};
    game.start();game.update(1/60);
-   if(!game.guard.root.visible||!game.dog.root.visible)throw Error('Falta la persecución inicial');
+   if(!(game.officerAnchor.visible||game.guard.root.visible)||!game.dog.root.visible)throw Error('Falta la persecución inicial');
    game.pause();const saved=[game.x,game.y,game.distance,game.flyTimer];game.update(1/60);
    if(game.state!=='paused'||JSON.stringify(saved)!==JSON.stringify([game.x,game.y,game.distance,game.flyTimer]))throw Error('La pausa no congela la partida');
    game.resume();if(game.state!=='playing')throw Error('No reanuda');
@@ -135,5 +135,50 @@ test('se conservan guardia, perro, rampas, jetpack y pausa de main',{timeout:120
    game.resume();game.updatePhysics(7,0);if(game.flyTimer!==0||game.jetpack.visible)throw Error('Jetpack no termina');
    game.renderer.render=render;game.update(1/60);game.renderer.dispose();
   });
+ }finally{await page.close();}
+});
+
+test('policía esquelético independiente y monedas metálicas instanciadas',{timeout:120000},async()=>{
+ const page=await env.browser.newPage({viewport:{width:960,height:540}});
+ await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ try{
+  await page.goto(env.url);
+  const result=await page.evaluate(async()=>{
+   const {Game}=await import('./game.js');const game=new Game(document.querySelector('#game'));
+   const [runner,officer]=await Promise.all([game.characterReady,game.officerReady]);
+   if(!officer)throw Error('Falta el policía detallado');
+   const runnerLeg=runner.model.getObjectByName('mixamorigLeftUpLeg');
+   const officerLeg=officer.model.getObjectByName('mixamorigLeftUpLeg');
+   if(runnerLeg===officerLeg)throw Error('El policía comparte huesos con el jugador');
+   const previous=runnerLeg.quaternion.clone();
+   officer.update(.25,{running:true,airborne:false,rolling:false,speed:14});
+   if(previous.angleTo(runnerLeg.quaternion)>0.000001)throw Error('Animar el policía mueve al jugador');
+   let policeMaterials=0;officer.model.traverse(object=>{
+    for(const material of [object.material].flat())if(material?.name==='PoliceUniform')policeMaterials++;
+   });
+   if(policeMaterials!==2)throw Error('Falta el uniforme');
+   game.start();game.update(1/60);
+   if(!game.officerAnchor.visible||game.guard.root.visible)throw Error('No reemplaza al guardia provisional');
+   game.guardZ=16;game.chase=0;game.updateGuard(0);
+   if(game.officerAnchor.visible||game.dog.root.visible)throw Error('El perseguidor no se retira');
+   game.reset();game.start();
+   const render=game.renderer.render.bind(game.renderer);game.renderer.render=()=>{};
+   for(let i=0;i<300;i++)game.addCoin(i%3,-4-i*2);
+   game.syncCoins();
+   if(game.coinInstances.count+game.coinFarInstances.count!==300||game.coinInstances.instanceMatrix.count<300)throw Error('Fallo al ampliar las instancias de monedas');
+   if(game.A.coinMat.metalness!==1||game.A.coinMat.emissive.getHex()!==0||!game.A.coinMat.envMap)throw Error('Material de la moneda incorrecto');
+   if(game.A.coinGeo.attributes.position.count<1000)throw Error('Falta relieve geométrico en la moneda');
+   game.reset();game.start();game.nextSpawn=Infinity;game.addCoin(1,0);game.update(0);
+   if(game.coinCount!==1||game.coinInstances.count+game.coinFarInstances.count!==0)throw Error('La recogida no actualiza monedas');
+   game.reset();if(game.coinInstances.count+game.coinFarInstances.count!==0||game.coinCount!==0)throw Error('Reinicio conserva monedas viejas');
+   document.querySelector('#overlay').classList.add('hidden');
+   game.start();game.addCoin(1,-4);game.addCoin(0,-5);game.addCoin(2,-5);
+   game.renderer.render=render;game.update(1/60);
+   window.assetGame=game;
+   return {policeMaterials,coinVertices:game.A.coinGeo.attributes.position.count};
+  });
+  await page.screenshot({path:'test-results/police-coins.png',timeout:60000});
+  assert.equal(result.policeMaterials,2);assert.deepEqual(errors,[]);
  }finally{await page.close();}
 });
