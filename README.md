@@ -114,3 +114,7 @@ Carrera, salto y aterrizaje tienen posturas y apoyos diferenciados.
 [Visibilidad, animaciones y capturas](docs/visibility-animation.md).
 
 Perfil del profesor con gorra de policía: [modelo, referencias y comprobaciones](docs/photo-professor.md).
+
+Profesor modelado en Blender: [modelo editable, materiales y reconstrucción](docs/realism-materials.md).
+Incluye piel UV, barba, ropa y dos niveles de detalle animados. El rostro es una
+aproximación con piel CC0; el parecido fotográfico exacto sigue pendiente.

@@ -7,13 +7,23 @@ HIGH = '--low' not in sys.argv
 TEACHER = '--professor' in sys.argv
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-verts=[];groups={};name=''
+verts=[];texcoords=[];groups={};uv_groups={};name=''
 with gzip.open(ROOT/'assets/characters/source/makehuman-base.obj.gz','rt') as file:
  for line in file:
   if line.startswith('v '):verts.append(list(map(float,line.split()[1:4])))
-  elif line.startswith('g '):name=line[2:].strip();groups.setdefault(name,[])
-  elif line.startswith('f '):groups[name].append([int(x.split('/')[0])-1 for x in line.split()[1:]])
-V=np.array(verts);minimum=min(V[i,1] for face in groups['body'] for i in face)
+  elif line.startswith('vt '):texcoords.append(list(map(float,line.split()[1:3])))
+  elif line.startswith('g '):name=line[2:].strip();groups.setdefault(name,[]);uv_groups.setdefault(name,[])
+  elif line.startswith('f '):
+   groups[name].append([int(x.split('/')[0])-1 for x in line.split()[1:]])
+   uv_groups[name].append([texcoords[int(x.split('/')[1])-1] for x in line.split()[1:]])
+V=np.array(verts)
+if TEACHER:
+ for target,weight in [('caucasian-male-old',.65),('caucasian-male-young',.35),('universal-male-old-averagemuscle-maxweight',.18),('universal-male-young-averagemuscle-maxweight',.10)]:
+  with gzip.open(ROOT/'assets/characters/source/realism'/(target+'.target.gz'),'rt') as f:
+   for line in f:
+    tokens=line.split()
+    if len(tokens)==4 and tokens[0].isdigit():V[int(tokens[0])]+=np.array(list(map(float,tokens[1:])))*weight
+minimum=min(V[i,1] for face in groups['body'] for i in face)
 S=2.03/(max(V[i,1] for face in groups['body'] for i in face)-minimum)
 def convert(p):
  q=np.array([p[0]*S,(p[1]-minimum)*S,-p[2]*S])
@@ -21,11 +31,11 @@ def convert(p):
   y=q[1]
   if y>1.72:
    jaw=math.exp(-((y-1.84)/.09)**2)
-   q[0]*=1.12+.10*jaw
+   q[0]*=1.03+.025*jaw
    # Nariz y mentón más definidos, con mejillas y mandíbula más anchas.
    if q[2]<-.055:
     q[2]-=.013*math.exp(-(q[0]/.038)**2)*math.exp(-((y-1.845)/.035)**2)
-  else:q[0]*=1.12 if y>1.05 else 1.10
+  else:q[0]*=1.02 if y>1.05 else 1.02
  return q
 def joint(name):
  ids={i for face in groups[name] for i in face};return convert(V[list(ids)].mean(axis=0))
@@ -69,12 +79,13 @@ if TEACHER:
  visor=mat('PoliceVisor',[.008,.011,.014],.42,True)
  gold=mat('PoliceBadge',[.55,.35,.075],.4,True)
  materials[gold]['pbrMetallicRoughness']['metallicFactor']=.65
- rib=mat('SweaterRib',[.032,.048,.026],.95)
+ rib=mat('SweaterRib',[.032,.048,.026],.95,True)
  lens=mat('GlassesLenses',[.65,.73,.78],.18,True)
  materials[lens]['pbrMetallicRoughness']['baseColorFactor'][3]=.075
  materials[lens]['alphaMode']='BLEND'
 # Each primitive owns topology and UVs; bones use model axes and local translations.
 primitives={}
+if TEACHER:exec((ROOT/'tools/professor_realism.py').read_text(),globals())
 def refine_skin(points, faces):
  # Una pasada Catmull-Clark conserva la anatomía y suaviza cara/manos.
  P=np.asarray(points,dtype=np.float64);centers=np.array([P[f].mean(axis=0) for f in faces])
@@ -106,12 +117,17 @@ def refine_skin(points, faces):
    prev=f[(i-1)%len(f)];nxt=f[(i+1)%len(f)]
    result.append([a,edge_ids[tuple(sorted((a,nxt)))],face_ids[fi],edge_ids[tuple(sorted((prev,a)))]])
  return points,result
-def addmesh(label,points,faces,material,weights):
+def addmesh(label,points,faces,material,weights,uvs=None):
  if HIGH and label=='Human' and material==skin:
   if TEACHER:
-   head=[f for f in faces if min(points[i][1] for i in f)>1.72]
-   rest=[f for f in faces if min(points[i][1] for i in f)<=1.72]
-   points,head=refine_skin(points,head);faces=head+rest
+   head_ids=[i for i,f in enumerate(faces) if min(points[k][1] for k in f)>1.55]
+   rest_ids=[i for i in range(len(faces)) if i not in set(head_ids)]
+   head=[faces[i] for i in head_ids];rest=[faces[i] for i in rest_ids]
+   if isinstance(weights,np.ndarray):weights=refined_weights(weights,head)
+   if uvs is not None:
+    points,head,huv=refine_uv(points,head,[uvs[i] for i in head_ids]);uvs=huv+[uvs[i] for i in rest_ids]
+   else:points,head=refine_skin(points,head)
+   faces=head+rest
   else:points,faces=refine_skin(points,faces)
  P=np.array(points,dtype=np.float32);F=[]
  for f in faces:
@@ -121,14 +137,19 @@ def addmesh(label,points,faces,material,weights):
   n=np.cross(P[tri[1]]-P[tri[0]],P[tri[2]]-P[tri[0]])
   for i in tri:N[i]+=n
  N/=np.maximum(np.linalg.norm(N,axis=1,keepdims=True),1e-8)
+ if uvs is not None:
+  P,N,F,custom_uv,split_indices=split_uv(P,N,faces,uvs)
+  if isinstance(weights,np.ndarray):weights=weights[split_indices]
  J=np.zeros((len(P),4),np.uint16);W=np.zeros((len(P),4),np.float32)
  for i,p in enumerate(P):
-  ws=weights(p) if callable(weights) else weights
+  ws={name:float(w) for name,w in zip(bones,weights[i]) if w>1e-7} if isinstance(weights,np.ndarray) else weights(p) if callable(weights) else weights
   total=sum(ws.values())
   for k,(bn,w) in enumerate(sorted(ws.items(),key=lambda x:-x[1])[:4]):J[i,k]=B[bn];W[i,k]=w/total
   W[i]/=max(W[i].sum(),1e-8)
- UV=np.stack([P[:,0]*4,P[:,1]*4],axis=1).astype(np.float32)
- if TEACHER and material==beard:UV=np.stack([(P[:,0]+.12)/.24,(P[:,1]-1.72)/.16],axis=1).astype(np.float32)
+ UV=custom_uv if uvs is not None else np.stack([P[:,0]*4,P[:,1]*4],axis=1).astype(np.float32)
+ if TEACHER and material==beard:
+  shift=joint('joint-mouth')[1]-1.8342309816374425
+  UV=np.stack([(P[:,0]+.12)/.24,(P[:,1]-1.72-shift)/.16],axis=1).astype(np.float32)
  primitives.setdefault(label,[]).append((P,N,F,J,W,UV,material))
  if TEACHER and label=='Human' and material==skin:
   mouth=joint('joint-mouth').copy();mouth[1]-=.040; jaw=joint('joint-jaw')
@@ -138,7 +159,8 @@ def addmesh(label,points,faces,material,weights):
    beard_top=mouth[1]+.008+.040*min(abs(c[0])/.10,1)
    in_beard=(jaw[1]-.012<c[1]<beard_top and abs(c[0])<.108 and c[2]<-.07 and n[2]<.30)
    leave_lips=abs(c[0])<.035 and mouth[1]-.012<c[1]<mouth[1]+.012
-   if in_beard and not leave_lips:chosen.append(tri)
+   moustache=abs(c[0])<.05 and mouth[1]+.014<c[1]<mouth[1]+.031 and c[2]<-.08 and n[2]<.25
+   if (in_beard and not leave_lips) or moustache:chosen.append(tri)
   ids=sorted({int(i) for tri in chosen for i in tri});mapping={i:k for k,i in enumerate(ids)}
   if ids:addmesh('FacialHair',P[ids]+N[ids]*.0035,[[mapping[int(i)] for i in f] for f in chosen],beard,fixed('Head'))
 def fixed(name):return {name:1.}
@@ -161,19 +183,21 @@ def skinweights(p):
  return blend(p,[(side+'UpLeg',side+'Leg'),(side+'Leg',side+'Foot')])
 # The covered torso and upper thighs are omitted. There is no bare body under the coat.
 for material in [skin,pants]:
- faces=[]
- for f in groups['body']:
+ faces=[];selected_uv=[]
+ for f,face_uv in zip(groups['body'],uv_groups['body']):
   center=V[f].mean(axis=0);p=convert(center)
   exposed=(p[1]>1.72 or (p[1]>1.63 and abs(p[0])<.115) or (abs(p[0])>.47 and p[1]<1.43)) if TEACHER else (p[1]>1.72 or (abs(p[0])>.50 and p[1]<1.37))
-  if (material==skin and exposed) or (material==pants and .14<p[1]<(1.01 if TEACHER else .77)):faces.append(list(reversed(f)))
+  if (material==skin and exposed) or (material==pants and .14<p[1]<(1.01 if TEACHER else .77)):
+   faces.append(list(reversed(f)));selected_uv.append(list(reversed(face_uv)))
  ids=sorted({i for f in faces for i in f});mapping={idx:i for i,idx in enumerate(ids)}
  points=[convert(V[i]) for i in ids]
- weights=(lambda p:fixed('Hips') if p[1]>.87 else skinweights(p)) if TEACHER and material==pants else skinweights
- addmesh('Human',points,[[mapping[i] for i in f] for f in faces],material,weights)
-# Actual eye surfaces, not painted dots on a helmet.
-for short in ['l','r']:
- fs=groups['helper-'+short+'-eye'];ids=sorted({i for f in fs for i in f});mapping={idx:i for i,idx in enumerate(ids)}
- addmesh('Face',[convert(V[i]) for i in ids],[[mapping[i] for i in reversed(f)] for f in fs],eye,fixed('Head'))
+ weights=anatomy_weights[ids] if TEACHER else skinweights
+ addmesh('Human',points,[[mapping[i] for i in f] for f in faces],material,weights,selected_uv if TEACHER and material==skin else None)
+if not TEACHER:
+ # Actual eye surfaces, not painted dots on a helmet.
+ for short in ['l','r']:
+  fs=groups['helper-'+short+'-eye'];ids=sorted({i for f in fs for i in f});mapping={idx:i for i,idx in enumerate(ids)}
+  addmesh('Face',[convert(V[i]) for i in ids],[[mapping[i] for i in reversed(f)] for f in fs],eye,fixed('Head'))
 def sphere(label,center,radii,material,weights,segments=16,rings=10):
  points=[];faces=[]
  for y in range(rings+1):
@@ -184,24 +208,25 @@ def sphere(label,center,radii,material,weights,segments=16,rings=10):
   for x in range(segments):
    a=y*segments+x;b=y*segments+(x+1)%segments;c=b+segments;d=a+segments;faces.append([a,b,c,d])
  addmesh(label,points,faces,material,weights)
-for short in ['l','r']:
- center=joint('joint-'+short+'-eye');center[2]-=.014
- sphere('Face',center,[.009,.010,.005],iris,fixed('Head'),12,8)
- center[2]-=.004;sphere('Face',center,[.0045,.006,.003],pupil,fixed('Head'),10,6)
-# Scalp follows the anatomical head. Offset avoids coplanar hair/skin flicker.
-fs=[]
-for face in groups['body']:
- c=V[face].mean(axis=0)
- if c[1]>7.78 or (c[1]>7.10 and c[2]<.10) or (c[1]>7.4 and abs(c[0])>.65):fs.append(list(reversed(face)))
-ids=sorted({i for f in fs for i in f});mapping={i:k for k,i in enumerate(ids)}
-points=[]
-for i in ids:
- p=convert(V[i]);d=p-convert([0,7.65,.05]);p+=d/max(np.linalg.norm(d),1e-5)*.006;points.append(p)
-addmesh('Hair',points,[[mapping[i] for i in f] for f in fs],hair,fixed('Head'))
-# Hair follows the scalp directly; no separate floating quiff/helmet.
-for short in ['l','r']:
- center=joint('joint-'+short+'-eye');center[1]+=.023;center[2]-=.008
- sphere('Face',center,[.022,.0035,.005],hair,fixed('Head'),12,6)
+if not TEACHER:
+ for short in ['l','r']:
+  center=joint('joint-'+short+'-eye');center[2]-=.014
+  sphere('Face',center,[.009,.010,.005],iris,fixed('Head'),12,8)
+  center[2]-=.004;sphere('Face',center,[.0045,.006,.003],pupil,fixed('Head'),10,6)
+ # Scalp follows the anatomical head. Offset avoids coplanar hair/skin flicker.
+ fs=[]
+ for face in groups['body']:
+  c=V[face].mean(axis=0)
+  if c[1]>7.78 or (c[1]>7.10 and c[2]<.10) or (c[1]>7.4 and abs(c[0])>.65):fs.append(list(reversed(face)))
+ ids=sorted({i for f in fs for i in f});mapping={i:k for k,i in enumerate(ids)}
+ points=[]
+ for i in ids:
+  p=convert(V[i]);d=p-convert([0,7.65,.05]);p+=d/max(np.linalg.norm(d),1e-5)*.006;points.append(p)
+ addmesh('Hair',points,[[mapping[i] for i in f] for f in fs],hair,fixed('Head'))
+ # Hair follows the scalp directly; no separate floating quiff/helmet.
+ for short in ['l','r']:
+  center=joint('joint-'+short+'-eye');center[1]+=.023;center[2]-=.008
+  sphere('Face',center,[.022,.0035,.005],hair,fixed('Head'),12,6)
 for side in ['Left','Right']:
  ankle=positions[B[side+'Foot']]
  points=[];faces=[];segments=32 if HIGH else 20
@@ -268,7 +293,10 @@ if not TEACHER:
    if y>1.4 and sign<0:continue
    panel('Coat',[[sign*(rx-.065),y-.08,-rz],[sign*(rx+.065),y-.08,-rz],[sign*(rx+.065),y+.035,-rz],[sign*(rx-.065),y+.035,-rz]],coat,coatweights)
  for y in [1.30,1.14,.98,.82]:sphere('Clothes',[.012,y,-.161 if y>1.0 else -.17],[.014,.014,.007],buttons,coatweights,10,6)
-if TEACHER:exec((ROOT/'tools/professor_details.py').read_text(),globals())
+if TEACHER:
+ primitives.pop('Coat',None);primitives.pop('Clothes',None)
+ realistic_sweater();realistic_eyes();realistic_hair();realistic_shoes()
+ exec((ROOT/'tools/professor_details.py').read_text(),globals())
 # Write a native GLB with one rig shared by every garment and face primitive.
 buffer=bytearray();views=[];accessors=[]
 def acc(array,kind,component=5126):
@@ -307,6 +335,7 @@ for label,parts in primitives.items():
 for n in nodes:
  if not n.get('children'):n.pop('children',None)
 j={'asset':{'version':'2.0','generator':'Technical-school character builder','copyright':'CC0 MakeHuman base; authored coat and rig; see ATTRIBUTION.md'},'scene':0,'scenes':[{'nodes':[0]}],'nodes':nodes,'meshes':meshes,'skins':[{'joints':list(range(1,len(bones)+1)),'inverseBindMatrices':inverse,'skeleton':1}],'materials':materials,'buffers':[{'byteLength':len(buffer)}],'bufferViews':views,'accessors':accessors}
+if TEACHER:realism_textures()
 raw=json.dumps(j,separators=(',',':')).encode();raw+=b' '*((-len(raw))%4);buffer+=b'\0'*((-len(buffer))%4)
 output=struct.pack('<III',0x46546c67,2,12+8+len(raw)+8+len(buffer))+struct.pack('<II',len(raw),0x4e4f534a)+raw+struct.pack('<II',len(buffer),0x004e4942)+buffer
 stem='professor-police' if TEACHER else 'technical-student'

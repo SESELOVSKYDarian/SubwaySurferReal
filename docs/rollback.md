@@ -126,3 +126,17 @@ git pull --ff-only origin main
 git revert --no-edit photo-professor-v1
 git push origin main
 ```
+
+## Deshacer el modelado de Blender y los materiales UV del profesor
+
+Respaldo remoto previo: `backup/main-before-blender-c832bc7`.
+La revisión completa se publica como un único commit marcado `professor-blender-v1`.
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit professor-blender-v1
+git push origin main
+```
+
+Esto restaura el profesor anterior sin reescribir el historial.

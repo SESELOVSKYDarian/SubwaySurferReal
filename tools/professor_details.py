@@ -20,8 +20,7 @@ def rib_ring(y,rx,rz,height):
  for k in range(2):
   for j in range(n):a=k*n+j;b=k*n+(j+1)%n;faces.append([a,a+n,b+n,b])
  addmesh('KnitTrim',points,faces,rib,coatweights)
-rib_ring(.94,.298,.219,.055)
-rib_ring(1.707,.108,.094,.020)
+# Boundary-following knit trim is authored by realistic_sweater().
 
 # Rectangular spectacles with rounded corners, bridge and actual side arms.
 eye_centers=[joint('joint-'+side+'-eye') for side in ['l','r']]
@@ -40,13 +39,7 @@ left,right=sorted(eye_centers,key=lambda p:p[0])
 z=min(left[2],right[2])-.061;y=(left[1]+right[1])/2+.007
 tube('Spectacles',[[left[0]+.036,y,z],[0,y+.005,z-.006],[right[0]-.036,y,z]],.0032,frames,fixed('Head'),6)
 
-# Mustache is shaped independently; beard follows the anatomical face surface.
-mouth=joint('joint-mouth').copy();mouth[1]-=.040
-skin_points=next(p[0] for p in primitives['Human'] if p[-1]==skin)
-for sign in [-1,1]:
- near=skin_points[(abs(skin_points[:,1]-(mouth[1]+.020))<.008)&(abs(skin_points[:,0]-sign*.024)<.012)]
- front=float(near[:,2].min()) if len(near) else -.198
- sphere('FacialHair',[sign*.016,mouth[1]+.023,front-.004],[.022,.005,.005],hair,fixed('Head'),16 if HIGH else 10,6)
+# Beard and mustache follow the anatomical skin surface.
 
 # Peaked police cap: crown, black visor, band and small raised shield.
 n=48 if HIGH else 28;points=[];faces=[]

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { surface } from './materials.js';
+import { knitSurface } from './human-materials.js';
 
 const sources=new Map();
 function getSource(teacher=false,low=false) {
@@ -31,18 +32,20 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     object.castShadow = object.receiveShadow = true;
     object.material = [object.material].flat().map(material => {
       const copy = material.clone();
-      if (['StudentCoat', 'TeacherSweater', 'SweaterRib', 'Shirt', 'Trousers'].includes(copy.name)) {
+      if(teacher && ['TeacherSweater','SweaterRib'].includes(copy.name))Object.assign(copy,knitSurface());
+      else if (['StudentCoat', 'Shirt', 'Trousers'].includes(copy.name)) {
         Object.assign(copy, surface('fabric'));
         copy.roughness = 0.92;
+        if(teacher){copy.roughnessMap=null;copy.bumpScale=.0003;}
       }
-      if (copy.name === 'Skin') {
+      if (copy.name === 'Skin' && !teacher) {
         Object.assign(copy, surface('skin'));
         copy.roughness = .72;
       }
-      if(copy.name==='GrayBeard'){
-        copy.map=beardTexture();copy.transparent=true;copy.depthWrite=false;copy.alphaTest=.05;
+      if(copy.name==='GrayBeard' && !copy.map){
+        copy.map=beardTexture();copy.transparent=true;copy.depthWrite=false;copy.alphaTest=.05;copy.opacity=.85;
       }
-      if(copy.name==='GrayHair' || copy.name==='GrayBeard') {
+      if((copy.name==='GrayHair' && !copy.map) || (copy.name==='GrayBeard' && !copy.map)) {
         Object.assign(copy,surface('fur'));copy.bumpScale=.0015;
       }
       return copy;
@@ -252,7 +255,8 @@ function beardTexture(){
     const fade=THREE.MathUtils.smoothstep(top-y,0,.018)*THREE.MathUtils.smoothstep(y-1.737,0,.014)*THREE.MathUtils.smoothstep(.112-Math.abs(x),0,.018);
     const noise=random(),i=(row*256+col)*4,v=140+noise*115;
     pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=v;
-    pixels.data[i+3]=Math.round(255*fade*(.55+.45*noise));
+    const moustache=THREE.MathUtils.smoothstep(y-1.808,0,.005)*THREE.MathUtils.smoothstep(1.825-y,0,.004)*THREE.MathUtils.smoothstep(.049-Math.abs(x),0,.015);
+    pixels.data[i+3]=Math.round(255*Math.max(fade,moustache)*(.55+.45*noise));
   }
   ctx.putImageData(pixels,0,0);beardMap=new THREE.CanvasTexture(c);beardMap.colorSpace=THREE.SRGBColorSpace;
   return beardMap;

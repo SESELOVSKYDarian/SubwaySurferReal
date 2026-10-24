@@ -59,3 +59,25 @@ Build: `python3 tools/build_student.py --professor` (add `--low` for the low mod
 Additional authored geometry is in `tools/professor_details.py`; the beard's
 procedural color/alpha texture is generated locally by `character.js`.
 No additional downloaded model, brand badge or external texture is used.
+
+## Realism materials work branch
+
+The work branch adds CC0 MakeHuman system assets: old light-skinned male skin,
+brown eyes, short02 hair, shoes01 footwear, adult-age/weight targets and the
+standard body weights. This is a generic skin reference, not the professor's
+photographic facial texture. Source headers retain the rights holders and CC0
+notices. Exact source paths, archive URL and SHA-256 hashes are recorded in
+`source/realism/SOURCES.json`; the CC0 text remains in `source/MAKEHUMAN-CC0.md`.
+
+Skin micro-normal and roughness maps are authored approximations derived from
+the reference albedo. Hair is desaturated to gray; footwear and eye derivatives
+preserve their UV layout and required alpha. Preparation code is included in
+`tools/prepare_professor_textures.py`. No AGPL MakeHuman program code is copied;
+the geometry/UV/weight processing code is authored for this project.
+
+## Edición en Blender
+
+`blender/professor.blend` contiene las mallas CC0 anteriores editadas con Blender
+4.3.2 y sus materiales empaquetados. La textura de barba `professor-beard.png`
+y el cuello de punto se generaron para este proyecto. El archivo no contiene
+fotografías originales del profesor ni una textura presentada como su rostro real.
