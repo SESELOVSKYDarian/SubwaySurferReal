@@ -1,2 +1,4 @@
 # Solo para reconstruir el GLB; el juego no necesita Python/numpy en el navegador.
 numpy==2.3.5
+
+Pillow==12.3.0

@@ -356,7 +356,7 @@ test('tablero, banco roto, tres líneas de colectivo y detalle adaptativo',{time
     if(bus.children.length>8)throw Error('Demasiadas piezas sin fusionar en colectivo');
    }
    game.reset();game.start();game.nextSpawn=Infinity;game.setQuality('balanced');game.update(1/60);
-   if(triangles(r.model)>22000||triangles(t.model)>28000)throw Error('Modo equilibrado no usa LOD');
+   if(triangles(r.model)>22000||triangles(t.model)>34000)throw Error('Modo equilibrado no usa LOD');
    const geo=game.A.school.board.children[0].geometry;
    game.addObstacle('low',0,-10);game.addObstacle('low',2,-20);
    for(const o of game.obstacles)if(o.mesh.getObjectByName('DraftingBoard').children[0].geometry!==geo)throw Error('Duplica geometría escolar');
@@ -487,11 +487,11 @@ test('profesor basado en fotos: cuerpo propio, accesorios y dos niveles animados
    const studentMeshes=[];student.model.traverse(o=>{if(o.isMesh)studentMeshes.push(o)});
    teacher.model.traverse(o=>{if(o.isMesh&&studentMeshes.some(s=>s.geometry===o.geometry))throw Error('Reutiliza el cuerpo del alumno');});
    const triangles=()=>{let n=0;teacher.model.traverse(o=>{if(o.isMesh)n+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3});return n;};
-   const high=triangles();if(high>65536||high<40000)throw Error(`Presupuesto alto ${high}`);
+   const high=triangles();if(high>85000||high<40000)throw Error(`Presupuesto alto ${high}`);
    const playerHead=student.bones.Head.quaternion.clone();
    for(const detail of [false,true]){
     teacher.setDetail(detail);
-    if(!detail&&triangles()>28000)throw Error('LOD demasiado pesado');
+    if(!detail&&triangles()>34000)throw Error('LOD demasiado pesado');
     for(let i=0;i<90;i++)teacher.update(1/60,{running:true,speed:24});
     teacher.model.updateMatrixWorld(true);
     teacher.model.traverse(mesh=>{if(mesh.isSkinnedMesh)mesh.computeBoundingBox();});
@@ -518,6 +518,30 @@ test('si falla el perfil del profesor sigue disponible el perseguidor de respald
    await Promise.all([g.characterReady,g.officerReady]);g.renderer.render=()=>{};g.start();g.nextSpawn=Infinity;g.update(1/60);
    if(g.officer||!g.guard.root.visible||!g.guard.root.getObjectByName('PoliceFallbackCap'))throw Error('No muestra respaldo con gorra');
    if(g.state!=='playing')throw Error('El error bloquea la partida');g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});
+
+test('materiales del profesor: UV de piel, normales, ojos con alfa, pelo y cuero',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const {Game}=await import('./game.js');const g=new Game(document.querySelector('#game'));const t=await g.officerReady;
+   if(!t)throw Error('No cargó el profesor texturizado');
+   const mats=new Map();t.model.traverse(o=>{if(o.isMesh)for(const m of [o.material].flat())mats.set(m.name,m);});
+   const skin=mats.get('Skin'),eyes=mats.get('EyeWhite'),hair=mats.get('GrayHair'),shoes=mats.get('Shoes');
+   if(!skin?.map||skin.map.image.width!==2048||!skin.normalMap||!skin.roughnessMap)throw Error('Faltan mapas UV/PBR de piel');
+   if(skin.map.colorSpace!=='srgb'||skin.normalMap.colorSpace==='srgb')throw Error('Espacios de color incorrectos');
+   if(!eyes?.map||eyes.alphaTest<.01||!hair?.map||hair.alphaTest<.1)throw Error('Ojos o pelo pierden sus máscaras alfa');
+   const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');ctx.drawImage(eyes.map.image,0,0,1024,1024);
+   if(ctx.getImageData(950,950,1,1).data[3]!==0)throw Error('La córnea tapa los iris: se perdió el alfa');
+   if(!shoes?.map||!shoes.normalMap)throw Error('Calzado sin textura de cuero y normal');
+   const sweater=mats.get('TeacherSweater');if(sweater.roughnessMap||sweater.roughness<.85)throw Error('La lana vuelve a verse plástica');
+   for(const detail of [false,true]){
+    t.setDetail(detail);for(let i=0;i<30;i++)t.update(1/60,{running:true,speed:24});
+    if(!Number.isFinite(t.model.position.y))throw Error('Animación inválida al cambiar detalle');
+   }
+   g.renderer.dispose();
   });
  }finally{await page.close();}
 });

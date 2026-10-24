@@ -1,0 +1,33 @@
+{
+  "license": "CC0-1.0",
+  "upstream_pack": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "pack_listing": "https://github.com/makehumancommunity/makehuman-static-website/blob/master/content/Assets/AssetPacks/makehuman_system_assets.md",
+  "targets_and_weights": "https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data",
+  "rights_holders": "Data Collection AB; Joel Palmius; Jonas Hauquier (see individual .mhmat/.mhclo/.obj and weight metadata)",
+  "files": {
+    "caucasian-male-old.target.gz": "2c753cc718f627fd1bbdcad20f30c556a7f6963a25abe30c386ef07aacf01b90",
+    "caucasian-male-young.target.gz": "bbb97ccf7f7dcfae93f81db16aa10d538b0751a0f2f2150cce9716178cb84d0f",
+    "default_weights.mhw.gz": "6fcf3332b28d225ae75d5754bc3f7fa5e1d0a098dc389785baafa89323578a80",
+    "eyes/brown-eye.png": "4659691c7295ad6206c78b003e5fd0e5f91dcd53032fa914a229bb48cabe424b",
+    "eyes/brown.mhmat": "4abad93ce50541c08127721e77bce035640c9f16bed16cd0f5524b1cd5908465",
+    "eyes/high-poly.mhclo": "b183cfe37120ab726f9b3f2ea6cd3a64c44ce7b4bd91a77c841cf70c04f83a0d",
+    "eyes/high-poly.obj": "da2493215b708a344c33dc72f2a9a5b8fa985dcc5a70ad3b208995cf871da8e1",
+    "eyes/low-poly.mhclo": "68582e28e9176cba7cfcf35208f671b6201b8d1bc95c32decff61a3160ec34d8",
+    "eyes/low-poly.obj": "783fe1e6331162c876520b4c2bed7a8ca06354ca15497e8ebd68bb1b59f4d3de",
+    "hair/short02.mhclo": "625736cdb73e6d094df6e5a2df18f371781f1d2cd37b0ae15795c5d7051c3ec2",
+    "hair/short02.mhmat": "2ed04c8aad9c1a35d858ca72091525d32b1da3b61b5a031634dd528fd8530f6d",
+    "hair/short02.obj": "48f979114adfa712165a69cc55c45a70831af1fb3cba8e2a89120f0c87407b64",
+    "hair/short02_diffuse.png": "47fe33831a3929567c733356dd66243116e05df2ace1f884ddca0080b728229f",
+    "hair/short02_normal.png": "2cfac7619f8eec77dd90df979d912415058f4f0fc16940cba40a8eb1ae6d74b5",
+    "shoes/shoes01.mhclo": "7994e38f7cdcee0bd5f55101660badcce0162fcdfc7f432218dd1eb301626252",
+    "shoes/shoes01.mhmat": "db1711e2dfea4dd8c24459643603a190d9a9da603fd26da5542002a73d740be8",
+    "shoes/shoes01.mhw": "b377d91e6d0264521f672c3990c366b2631103accba4921fc3965c2ed5ce395b",
+    "shoes/shoes01.obj": "eac355a842a8eb8ae2f09fac8dd18a877a24ef2521ed2d6bf38559b42ce4b49a",
+    "shoes/shoes01_diffuse.png": "50c9a406a7f1cb6aa7b42912348e78f09d0252aa3963c8229cf18dfe8353cdbf",
+    "shoes/shoes01_normal.png": "a9bfd7223e98b8f93100e89596135e3a94e6044f9db11b4d23cec625c37a4599",
+    "skin.mhmat": "001eccec34180d4eb7369933360116a7ea1022c72674c1b012b988af65002600",
+    "skin.png": "dfb2310ed3e0ad024ea7a3ad321215e2e9e2994cca64043d9f3d07c6543ec847",
+    "universal-male-old-averagemuscle-maxweight.target.gz": "96c934d199a7399a94d1b960c002afd665e7fa89027d613ebd16d7d5f7fbf49d",
+    "universal-male-young-averagemuscle-maxweight.target.gz": "707f5d8a4952868b3f56e25cb4c69dfc2a6c1c78caf1974dd2dae1f0de329daf"
+  }
+}

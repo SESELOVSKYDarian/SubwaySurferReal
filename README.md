@@ -114,3 +114,7 @@ Carrera, salto y aterrizaje tienen posturas y apoyos diferenciados.
 [Visibilidad, animaciones y capturas](docs/visibility-animation.md).
 
 Perfil del profesor con gorra de policía: [modelo, referencias y comprobaciones](docs/photo-professor.md).
+
+Trabajo de realismo UV del profesor: [estado, materiales y dato pendiente](docs/realism-materials.md).
+La rama de trabajo usa piel de referencia CC0; falta incorporar la textura facial
+obtenida de los archivos originales del profesor antes de dar el parecido por terminado.
