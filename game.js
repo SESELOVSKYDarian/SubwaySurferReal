@@ -21,6 +21,7 @@ const PLAYER_HALF_DEPTH = 0.3;
 const STAND_HEIGHT = 2.1;
 const ROLL_HEIGHT = 1.2;
 const TRAIN_TOP = 3.3;      // techo de los vagones: se puede correr encima
+const SURFACE_EPS = 0.04; // tolerancia de contacto: 4 cm en bordes redondeados
 const RAMP_LEN = 6;
 const FLY_Y = 9;            // altura de vuelo con jetpack (por encima de las catenarias)
 const FLY_TIME = 7;
@@ -616,20 +617,20 @@ export class Game {
     this.armSeenAt = performance.now();
   }
 
-  surfaceAt(x) {
-    let h = 0, ramp = false;
+  surfaceAt(x, zOffset = 0) {
+    let h = 0, ramp = false, obstacle = null;
     for (const o of this.obstacles) {
       if (o.type !== 'train' || Math.abs(o.mesh.position.x - x) >= 1.1) continue;
-      const front = o.mesh.position.z + o.depth / 2;
-      const back = o.mesh.position.z - o.depth / 2;
+      const front = o.mesh.position.z + zOffset + o.depth / 2;
+      const back = o.mesh.position.z + zOffset - o.depth / 2;
       if (back - PLAYER_HALF_DEPTH <= 0 && 0 <= front + PLAYER_HALF_DEPTH) {
-        if (TRAIN_TOP >= h) { h = TRAIN_TOP; ramp = false; }
+        if (TRAIN_TOP >= h) { h = TRAIN_TOP; ramp = false; obstacle = o; }
       } else if (o.ramp && front < 0 && front + o.ramp >= 0) {
         const rh = (TRAIN_TOP * (front + o.ramp)) / o.ramp;
-        if (rh > h) { h = rh; ramp = true; }
+        if (rh > h) { h = rh; ramp = true; obstacle = o; }
       }
     }
-    return { h, ramp };
+    return { h, ramp, obstacle };
   }
 
   stumble() {
@@ -762,6 +763,7 @@ export class Game {
   }
 
   updatePhysics(dt, move) {
+    const previousX = this.x;
     this.x = THREE.MathUtils.damp(this.x, LANE_X[this.lane], 18, dt);
 
     if (this.flyTimer > 0) {
@@ -780,13 +782,19 @@ export class Game {
       this.y += this.vy * dt - 0.5 * GRAVITY * dt * dt;
       this.vy -= GRAVITY * dt;
       const g = this.surfaceAt(this.x);
-      // Barrido vertical: aterrizar al cruzar el techo, sin trepar paredes.
-      const rampStep = Math.max(0.7, (move + PLAYER_HALF_DEPTH) * TRAIN_TOP / RAMP_LEN + 0.05);
-      const canLand = g.ramp
-        ? wasGrounded || previousY >= g.h - 0.15
-        : previousY >= g.h - 0.01 || (wasGrounded && previousY >= g.h - rampStep);
+      const previousSurface = this.surfaceAt(previousX, -move);
+      // Contacto relativo: la rampa también sube durante el fotograma. Puede
+      // alcanzar los pies aunque el salto aún tenga velocidad positiva.
+      const rampStep = Math.max(0.7, (move + PLAYER_HALF_DEPTH) * TRAIN_TOP / RAMP_LEN + SURFACE_EPS);
+      const fromAbove = this.vy <= 0 && previousY >= g.h - SURFACE_EPS;
+      const risingRamp = previousSurface.ramp && previousSurface.obstacle === g.obstacle &&
+        g.h >= previousSurface.h && g.h - previousSurface.h <= rampStep &&
+        previousY >= previousSurface.h - SURFACE_EPS;
+      const walking = wasGrounded && this.vy <= 0 && previousY >= g.h - rampStep;
+      const rampEntry = wasGrounded && g.ramp &&
+        g.h - previousSurface.h <= rampStep && previousY >= previousSurface.h - SURFACE_EPS;
       this.grounded = false;
-      if (this.vy <= 0 && this.y <= g.h && canLand) {
+      if (this.y <= g.h && (fromAbove || risingRamp || walking || rampEntry)) {
         this.y = g.h;
         this.vy = 0;
         this.grounded = true;
@@ -811,7 +819,7 @@ export class Game {
       if (!hitX || !hitZ) continue;
 
       if (o.type === 'train') {
-        if (this.y >= TRAIN_TOP - 0.01) continue; // vamos por encima
+        if (this.y >= TRAIN_TOP - SURFACE_EPS) continue; // vamos por encima
         // Si el frente del vagón acaba de llegar es un choque de frente;
         // si no, nos hemos metido de lado al cambiar de carril
         const headOn = front + PLAYER_HALF_DEPTH < move + 0.6;

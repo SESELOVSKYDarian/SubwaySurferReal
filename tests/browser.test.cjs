@@ -364,3 +364,43 @@ test('tablero, banco roto, tres líneas de colectivo y detalle adaptativo',{time
   });
  }finally{await page.close();}
 });
+
+test('saltar en la rampa no pierde: 72 combinaciones de velocidad, salto y frecuencia', {timeout:120000}, async()=>{
+ const page=await env.browser.newPage();
+ await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try {
+  await page.goto(env.url);
+  await page.evaluate(async()=>{
+   const {Game}=await import('./game.js');const g=new Game(document.querySelector('#game'));
+   await g.characterReady;g.renderer.render=()=>{};
+   let checked=0;
+   for(const fps of [20,30,60,120])for(const speed of [14,24,34])for(const jumpAt of [null,.3,1,1.8,2.5,3.3]){
+    g.reset();g.start();
+    const random=Math.random;try{Math.random=()=>.1;g.addObstacle('train',1,-7);}finally{Math.random=random;}
+    const bus=g.obstacles[0];bus.mesh.position.z=-11.05;
+    let jumped=false,reachedRoof=false;
+    const dt=1/fps;
+    for(let i=0;i<fps*3;i++){
+     const support=g.surfaceAt(g.x);
+     if(jumpAt!==null&&!jumped&&g.grounded&&support.h>=jumpAt){g.jump();jumped=true;}
+     bus.mesh.position.z+=speed*dt;g.updatePhysics(dt,speed*dt);
+     if(g.state!=='playing')throw Error(`Choque falso: ${fps} FPS, velocidad ${speed}, salto en ${jumpAt}`);
+     if(g.y>=3.3&&g.surfaceAt(g.x).h===3.3)reachedRoof=true;
+    }
+    if(!reachedRoof||(jumpAt!==null&&!jumped))throw Error('La simulación no recorrió el techo');
+    checked++;
+   }
+   if(checked!==72)throw Error('Faltan escenarios');
+   // Subirse exige rampa o altura suficiente: saltar desde el suelo contra un
+   // colectivo sin rampa sigue chocando, incluso con el salto en su punto alto.
+   for(const fps of [20,30,60,120]){
+    g.reset();g.start();const random=Math.random;
+    try{Math.random=()=>.9;g.addObstacle('train',1,-5);}finally{Math.random=random;}
+    const bus=g.obstacles[0];bus.mesh.position.z=-9;g.jump();
+    for(let i=0;i<fps&&g.state==='playing';i++){bus.mesh.position.z+=14/fps;g.updatePhysics(1/fps,14/fps);}
+    if(g.state!=='over')throw Error('El salto desde el suelo atraviesa una pared');
+   }
+   g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});

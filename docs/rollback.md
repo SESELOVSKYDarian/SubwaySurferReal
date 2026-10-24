@@ -93,3 +93,14 @@ git pull --ff-only origin main
 git revert --no-edit marplatense-v1
 git push origin main
 ```
+
+## Deshacer la corrección del salto al subir al colectivo
+
+Respaldo remoto: `backup/main-before-bus-landing-b9f7f7f`.
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit bus-landing-v1
+git push origin main
+```

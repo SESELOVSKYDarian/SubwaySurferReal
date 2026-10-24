@@ -67,3 +67,24 @@ calidad equilibrada y pixel ratio 1, se midieron 364 llamadas de dibujo y
 78.432 triángulos; 30 cuadros dieron 384,43 ms de intervalo medio (2,60 FPS)
 y 471,70 ms de percentil 95 de renderizado. Son mediciones de software,
 sin cámara activa, y no se extrapolan a una GPU ni acreditan 60 FPS.
+
+## Corrección del salto sobre rampas de colectivos
+
+Se reprodujo el falso choque en 35 de 72 combinaciones de entrada, salto y
+velocidad: la rampa avanzaba bajo los pies, pero el apoyo exigía velocidad
+vertical negativa y comparaba solo la altura nueva. Un salto podía terminar
+por debajo de la rampa antes de alcanzar el frente del colectivo.
+
+Ahora se reconstruye la superficie del cuadro anterior usando el desplazamiento
+real del colectivo y la posición lateral anterior del jugador. Se permite el
+contacto cuando la misma rampa alcanza los pies, incluso durante el ascenso del
+salto, incluyendo su transición al techo. Se usa una tolerancia de contacto de
+4 cm en el techo redondeado. Saltar desde el suelo contra un colectivo sin rampa
+sigue siendo un choque.
+
+La regresión recorre rampas completas y saltos desde cinco alturas a velocidades
+14, 24 y 34, en pasos de 20, 30, 60 y 120 Hz: 72 escenarios. Comprueba que se
+alcanza el techo sin perder y añade cuatro controles de choque frontal sin rampa.
+
+Validación de la corrección: 14 pruebas aprobadas con Chromium/SwiftShader,
+incluidos los 72 recorridos de rampa y los cuatro controles frontales.
