@@ -82,8 +82,11 @@ export class World {
   }
 
   buildSides() {
-    const graffitiMats = Array.from({ length: 6 }, (_, i) => i < 2
-      ? this.concrete : mat({ map: T.graffitiWall(['aldosivi', 'alvarado', 'spot', 'mdp'][i - 2]), ...surface('concrete') }));
+    const graffitiMats = Array.from({ length: 6 }, (_, i) => {
+      if(i<2)return this.concrete;
+      const map=T.graffitiWall(['aldosivi','alvarado','spot','mdp'][i-2]);
+      return mat({map,emissiveMap:map,emissive:0xffffff,emissiveIntensity:.28});
+    });
     const chain = T.chainLink();
     chain.repeat.set(SEG / 1.2, 2.2 / 1.2);
     const fenceMat = mat({

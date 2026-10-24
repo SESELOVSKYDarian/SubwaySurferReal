@@ -81,7 +81,8 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   const rest = Object.fromEntries(Object.entries(bones).map(([name, bone]) => [name, bone.quaternion.clone()]));
   const target = new THREE.Quaternion();
   const euler = new THREE.Euler();
-  const poseState = { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0 };
+  const poseState = { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0, landing: 0, tuck: 0, turn: 0 };
+  let wasAirborne = false, lastVerticalSpeed = 0, animationTime = 0;
   const restPosition = Object.fromEntries(Object.entries(bones).map(([name, bone]) => {
     const p = bone.getWorldPosition(new THREE.Vector3());
     return [name, model.worldToLocal(p)];
@@ -99,12 +100,14 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     const l2 = Math.hypot(foot.position.y, foot.position.z);
     const a0 = Math.atan2(-knee.position.z, -knee.position.y);
     const b0 = Math.atan2(-foot.position.z, -foot.position.y);
-    const stride = Math.cos(phase) * 0.24 * poseState.run * (1 - poseState.crouch);
-    const lift = Math.max(0, Math.sin(phase)) * 0.14 * poseState.run * (1 - poseState.crouch);
+    const stride = Math.cos(phase) * 0.34 * poseState.run * (1 - poseState.crouch);
+    const lift = Math.max(0, Math.sin(phase)) * 0.19 * poseState.run * (1 - poseState.crouch);
     const hip = restPosition[`${side}UpLeg`];
     const ankle = restPosition[`${side}Foot`];
-    const dz = ankle.z - hip.z + stride - poseState.air * 0.11;
-    const dy = ankle.y - hip.y + poseState.rootDrop + lift + poseState.air * 0.17;
+    const left=side==='Left';
+    const dz = ankle.z - hip.z + stride + poseState.air * (left ? -.20 : .09);
+    const dy = ankle.y - hip.y + poseState.rootDrop + lift +
+      poseState.air * ((left ? .22 : .10) + poseState.tuck * (left ? 1 : .65));
     const d = THREE.MathUtils.clamp(Math.hypot(dy, dz), Math.abs(l1-l2)+0.001, l1+l2-0.001);
     const bend = -Math.acos(THREE.MathUtils.clamp((d*d-l1*l1-l2*l2)/(2*l1*l2),-1,1));
     const thigh = Math.atan2(-dz,-dy)-Math.atan2(l2*Math.sin(bend),l1+l2*Math.cos(bend))-a0;
@@ -129,7 +132,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     model.getWorldQuaternion(modelRotation);
     for (const side of ['Left', 'Right']) for (const part of ['Arm', 'ForeArm', 'Hand']) {
       const name = side + part, bone = bones[name], sample = arms?.[name];
-      armWeights[name] = THREE.MathUtils.damp(armWeights[name] || 0, sample ? 1 : 0, 12, dt);
+      armWeights[name] = THREE.MathUtils.damp(armWeights[name] || 0, sample ? (arms[`${side}Weight`] ?? 1) : 0, 12, dt);
       if (!sample || armWeights[name] < 0.001) continue;
       // Convertir la dirección de cámara al espacio del padre de cada hueso.
       // Así doblar el codo no vuelve a rotar el hombro ni acumula ángulos.
@@ -141,6 +144,30 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       bone.quaternion.slerp(armRotations[name], armWeights[name] * (1 - poseState.crouch));
       bone.updateWorldMatrix(false, false);
     }
+  };
+  const soleSamples=[],soleIndices=new WeakMap();
+  for(const {mesh} of detailMeshes) {
+    if(![mesh.material].flat().some(material=>material.name==='Shoes'))continue;
+    soleSamples.push(mesh);
+  }
+  const solePoint=new THREE.Vector3(),parentInverse=new THREE.Matrix4();
+  const plantFeet = () => {
+    parentInverse.copy(model.parent.matrixWorld).invert();
+    let lowest=Infinity;
+    for(const mesh of soleSamples){
+      let indices=soleIndices.get(mesh.geometry);
+      if(!indices){
+        indices=[];const positions=mesh.geometry.attributes.position;
+        for(let i=0;i<positions.count;i++)if(positions.getY(i)<.035)indices.push(i);
+        soleIndices.set(mesh.geometry,indices);
+      }
+      for(const index of indices){
+        mesh.getVertexPosition(index,solePoint);
+        solePoint.applyMatrix4(mesh.matrixWorld).applyMatrix4(parentInverse);
+        lowest=Math.min(lowest,solePoint.y);
+      }
+    }
+    if(Number.isFinite(lowest))model.position.y-=THREE.MathUtils.clamp(lowest,-.12,.18)*(1-poseState.crouch);
   };
   const controller = {
     model, bones, poseState,
@@ -156,13 +183,20 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     reset() {
       Object.values(bones).forEach(bone => bone.quaternion.copy(rest[bone.name.replace(/^mixamorig:?/, '')]));
       for (const name of Object.keys(armWeights)) { armWeights[name] = 0; delete armRotations[name]; }
-      Object.assign(poseState, { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0 });
+      Object.assign(poseState, { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0, landing: 0, tuck: 0, turn: 0 });
+      wasAirborne=false;lastVerticalSpeed=0;animationTime=0;
       model.position.set(0,0,0);
       model.rotation.set(0,0,0);
       controller.update(0.1, {});
     },
-    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false, arms = null } = {}) {
+    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false, arms = null, verticalSpeed = 0, turn = 0 } = {}) {
       dt = THREE.MathUtils.clamp(dt,0,0.1);
+      animationTime += dt;
+      if(wasAirborne && !airborne && !flying) poseState.landing=Math.min(.09,Math.abs(lastVerticalSpeed)*.007);
+      wasAirborne=airborne;lastVerticalSpeed=verticalSpeed;
+      poseState.landing=THREE.MathUtils.damp(poseState.landing,0,12,dt);
+      poseState.tuck=THREE.MathUtils.damp(poseState.tuck,airborne ? .06+.18*(1-Math.min(1,Math.abs(verticalSpeed)/13)):0,12,dt);
+      poseState.turn=THREE.MathUtils.damp(poseState.turn,turn,10,dt);
       const crouching = rolling && !airborne && !flying;
       const blend = 1 - Math.exp(-22 * dt);
       poseState.crouch = THREE.MathUtils.damp(poseState.crouch, crouching ? 1 : 0, 22, dt);
@@ -170,27 +204,34 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       poseState.flight = THREE.MathUtils.damp(poseState.flight, flying ? 1 : 0, 14, dt);
       poseState.run = THREE.MathUtils.damp(poseState.run, running && !airborne && !crouching && !flying ? 1 : 0, 16, dt);
       poseState.phase += dt * THREE.MathUtils.clamp(speed * 0.65, 7, 14) * poseState.run;
-      poseState.rootDrop = poseState.crouch * 0.68;
-      model.position.y = -poseState.rootDrop;
+      const bounce=(1-Math.cos(poseState.phase*2))*.022*poseState.run;
+      poseState.rootDrop = poseState.crouch * .68 + (bounce+poseState.landing)*(1-poseState.crouch);
+      model.position.y = -poseState.rootDrop + (!running && !airborne ? Math.sin(animationTime*2.2)*.003 : 0);
+      model.rotation.y=-poseState.turn*.13*(1-poseState.crouch);
+      move('Hips',0,Math.sin(poseState.phase)*.055*poseState.run,
+        Math.sin(poseState.phase)*.022*poseState.run,blend);
       // Los pies se resuelven como dos eslabones; el torso se inclina sin girar
       // todo el personaje. Mantener agachado no reinicia ninguna animación.
       legPose('Left', poseState.phase, blend);
       legPose('Right', poseState.phase + Math.PI, blend);
-      move('Spine', -0.16*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight,
+      move('Spine', -0.20*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7,
         -Math.sin(poseState.phase)*0.045*poseState.run, 0, blend);
-      move('Spine2', -0.35*poseState.crouch, Math.sin(poseState.phase)*0.09*poseState.run, 0, blend);
+      move('Spine2', -0.35*poseState.crouch, -Math.sin(poseState.phase)*0.10*poseState.run, 0, blend);
       move('Neck', 0.12*poseState.crouch, 0, 0, blend);
       move('Head', 0.02, 0, 0, blend);
       for (const [side, sign] of [['Left',1],['Right',-1]]) {
-        const swing = -sign*Math.sin(poseState.phase)*0.65*poseState.run;
+        const swing = sign*Math.cos(poseState.phase)*0.80*poseState.run;
         const reach = grabbing ? 1.1 : 0;
-        move(`${side}Arm`, swing + 0.6*poseState.air + 0.8*poseState.crouch + reach,
-          0, -sign*(0.36 + 0.08*poseState.crouch), blend);
-        move(`${side}ForeArm`, 0.2*poseState.run + 0.45*poseState.crouch, 0, 0, blend);
-        move(`${side}Hand`,0,0,0,blend);
+        move(`${side}Arm`, swing + (sign>0 ? .65 : .35)*poseState.air + 0.8*poseState.crouch + reach,
+          0, -sign*(.70 - .26*poseState.crouch - .12*poseState.air), blend);
+        move(`${side}ForeArm`, .95*poseState.run + .45*poseState.crouch + .40*poseState.air + .65*poseState.flight, 0, 0, blend);
+        move(`${side}Hand`,-.12*poseState.run,0,0,blend);
       }
       followArms(dt, arms);
       model.updateMatrixWorld(true);
+      if(running && !airborne && !flying && !crouching) {
+        plantFeet();model.updateMatrixWorld(true);
+      }
     },
   };
   controller.update(0.1, {});

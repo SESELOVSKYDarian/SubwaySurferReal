@@ -5,6 +5,7 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import { loadRunner, loadOfficer } from './character.js';
 import { mintCoin, buildShepherd } from './props.js';
 import { schoolProps } from './school-props.js';
+import { updateChaseCamera, disposeBusView } from './camera-rig.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { World, LANE_X, NEAR_Z } from './world.js';
@@ -339,6 +340,7 @@ export class Game {
     this.officerAnchor = new THREE.Group();
     this.scene.add(this.officerAnchor);
     this.officerReady = loadOfficer(this.officerAnchor).then(officer => {
+      this.lightCharacter(officer);
       this.officer = officer;
       return officer;
     }).catch(error => {
@@ -357,6 +359,7 @@ export class Game {
     this.characterAnchor = new THREE.Group();
     this.scene.add(this.characterAnchor);
     this.characterReady = loadRunner(this.characterAnchor).then(runner => {
+      this.lightCharacter(runner);
       this.runner = runner;
       this.player.visible = false;
       this.jetpack.position.set(0, 1.45, 0.3);
@@ -366,6 +369,15 @@ export class Game {
       console.error('No se pudo cargar el corredor detallado:', error);
       this.cb.onCharacterError?.();
       return null;
+    });
+  }
+
+  lightCharacter(character) {
+    // Luz indirecta del cielo: deja leer tela y anatomía en el lado en sombra.
+    character.model.traverse(mesh=>{
+      for(const material of [mesh.material].flat())if(material?.isMeshStandardMaterial){
+        material.envMap=this.environmentTarget.texture;material.envMapIntensity=.18;
+      }
     });
   }
 
@@ -404,7 +416,7 @@ export class Game {
   reset() {
     this.coinInstances.count = this.coinFarInstances.count = 0;
     for (const list of [this.obstacles, this.coins, this.pickups]) {
-      for (const o of list) this.scene.remove(o.mesh);
+      for (const o of list) { this.scene.remove(o.mesh); disposeBusView(o); }
       list.length = 0;
     }
     this.state = 'ready';
@@ -428,7 +440,9 @@ export class Game {
     this.caughtReason = null;
     this.time = 0;
     this.shake = 0;
-    this.camY = 2.9;
+    this.camY = 4.0;
+    this.cameraAimX = 0;
+    this.cameraAimY = 1.15;
     this.guardZ = 2.6;
     this.guardX = 0;
     this.runner?.reset();
@@ -574,7 +588,7 @@ export class Game {
     }
     g.position.set(LANE_X[lane], 0, z);
     this.scene.add(g);
-    this.obstacles.push({ type, mesh: g, yMin, yMax, depth, ramp });
+    this.obstacles.push({ type, mesh: g, yMin, yMax, depth, ramp, rampGeometry: A.rampGeo });
   }
 
   addCoin(lane, z, y = 0.95) {
@@ -676,6 +690,7 @@ export class Game {
       const o = this.obstacles[i];
       if (o.mesh.position.z - o.depth / 2 > NEAR_Z) {
         this.scene.remove(o.mesh);
+        disposeBusView(o);
         this.obstacles.splice(i, 1);
       }
     }
@@ -729,7 +744,8 @@ export class Game {
     this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
     if (this.runner) {
       this.runner.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7);
-      if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed,
+      if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed, verticalSpeed: this.vy,
+        turn: THREE.MathUtils.clamp((LANE_X[this.lane]-this.x)/2.2,-1,1),
         arms: performance.now() - this.armSeenAt < 350 ? this.armTargets : null });
 
     }
@@ -745,19 +761,8 @@ export class Game {
 
     this.updateGuard(dt);
 
-    // Tercera persona: cámara detrás del corredor y vista abierta de los tres
-    // carriles. En pantalla vertical se aleja para conservar el ancho de juego.
     this.shake = Math.max(0, this.shake - dt * 2);
-    const s = this.shake;
-    const followHeight = this.flyTimer > 0 ? this.y : Math.min(this.y, this.surfaceAt(this.x).h);
-    const jumpHeight = this.y - followHeight;
-    const distance = Math.max(6.4, 3.6 / (Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect));
-    this.camera.position.set(
-      THREE.MathUtils.damp(this.camera.position.x, this.x * 0.12 * Math.min(1, this.camera.aspect), 7, dt) + (Math.random() - 0.5) * s,
-      3.1 + (distance - 6.4) * 0.08 + followHeight + jumpHeight * 0.25 + (Math.random() - 0.5) * s,
-      distance,
-    );
-    this.camera.lookAt(this.camera.position.x, 1.35 + followHeight + jumpHeight * 0.15, -14);
+    updateChaseCamera(this,dt);
 
     this.renderer.render(this.scene, this.camera);
   }

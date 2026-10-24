@@ -105,3 +105,8 @@ Detalles de seguimiento y techo de vagones: [cámara y cuenta atrás](docs/camer
 El alumno acompaña brazos, codos y orientación aproximada de las manos captados por la cámara. [Detalles y límites](docs/arm-tracking.md).
 
 Ambientación marplatense: colectivos 542 rojo, 720 verde/amarillo y 563 azul; pintadas de Aldosivi, Alvarado y SPOT. [Modelos, optimización y validación](docs/marplatense.md).
+
+La cámara acompaña los cambios de carril, sube junto a colectivos y atenúa los
+que obstruyen la vista. Los bancos son verdes y los murales tienen más contraste.
+Carrera, salto y aterrizaje tienen posturas y apoyos diferenciados.
+[Visibilidad, animaciones y capturas](docs/visibility-animation.md).

@@ -104,3 +104,14 @@ git pull --ff-only origin main
 git revert --no-edit bus-landing-v1
 git push origin main
 ```
+
+## Deshacer cámara móvil, bancos verdes y nuevas posturas
+
+Respaldo remoto: `backup/main-before-camera-animation-53672b8`.
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit camera-animation-v1
+git push origin main
+```

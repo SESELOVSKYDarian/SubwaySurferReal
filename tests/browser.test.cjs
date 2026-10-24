@@ -404,3 +404,72 @@ test('saltar en la rampa no pierde: 72 combinaciones de velocidad, salto y frecu
   });
  }finally{await page.close();}
 });
+
+test('cámara acompaña, despeja colectivos y conserva encuadre vertical',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const THREE=await import('three'),{Game}=await import('./game.js');
+   const {updateChaseCamera}=await import('./camera-rig.js');
+   const g=new Game(document.querySelector('#game'));await g.characterReady;
+   g.renderer.render=()=>{};g.start();g.nextSpawn=Infinity;
+   g.x=-2.2;g.lane=0;
+   const random=Math.random;try{Math.random=()=>.9;g.addObstacle('train',1,0);}finally{Math.random=random;}
+   const bus=g.obstacles[0];bus.mesh.position.z=2;
+   const original=g.A.trains[2][0];
+   for(let i=0;i<120;i++)updateChaseCamera(g,1/60);
+   if(g.camera.position.x>-.9||g.camera.position.y<5.4)throw Error('Cámara no acompaña ni se eleva');
+   if(!bus.viewMaterials||bus.viewOpacity>.25)throw Error('Colectivo cercano sigue tapando el carril lateral');
+   if(original.opacity!==1||original.transparent)throw Error('Atenuación altera materiales compartidos');
+   for(const aspect of [16/9,9/16])for(const lane of [0,2])for(const height of [0,3.3]){
+    g.x=[-2.2,0,2.2][lane];g.lane=lane;g.y=height;
+    g.camera.aspect=aspect;g.camera.updateProjectionMatrix();
+    updateChaseCamera(g,0);g.camera.updateMatrixWorld(true);
+    for(const x of [-3.1,3.1])for(const y of [height,height+2.1]){
+     const p=new THREE.Vector3(x,y,0).project(g.camera);
+     if(Math.abs(p.x)>1||Math.abs(p.y)>1)throw Error(`Encuadre incompleto ${aspect}/${lane}/${height}`);
+    }
+   }
+   bus.mesh.position.z=30;for(let i=0;i<120;i++)updateChaseCamera(g,1/60);
+   if(bus.viewOpacity!==1)throw Error('Colectivo no recupera opacidad');
+   let disposed=0;bus.viewMaterials.forEach(m=>m.addEventListener('dispose',()=>disposed++));
+   const count=bus.viewMaterials.length;g.reset();if(disposed!==count)throw Error('No libera materiales de cámara');
+   g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});
+
+test('banco verde legible y animaciones con aterrizaje, giro y salto diferenciado',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const THREE=await import('three');const {Game}=await import('./game.js');const g=new Game(document.querySelector('#game'));const r=await g.characterReady;
+   let green=false;g.A.school.desk.traverse(m=>{if(m.material?.name==='SchoolGreen'){green=true;if(m.material.emissive.g<=m.material.emissive.r||!m.material.map)throw Error('Banco pierde color o desgaste');}});
+   if(!green)throw Error('Banco sin pintura verde');
+   for(let i=0;i<60;i++)r.update(1/60,{running:true,speed:20});
+   // Una suela debe tocar el piso durante la carrera sin hundirse.
+   for(let i=0;i<40;i++){
+    r.setDetail(i<20);
+    r.update(1/60,{running:true,speed:20});let min=Infinity;
+    r.model.traverse(mesh=>{if(mesh.isSkinnedMesh&&mesh.material?.name==='Shoes'){
+     mesh.computeBoundingBox();const box=mesh.boundingBox.clone().applyMatrix4(mesh.matrixWorld);min=Math.min(min,box.min.y);
+    }});
+    if(!Number.isFinite(min)||Math.abs(min)>.04)throw Error(`Pies sin apoyo: ${min}`);
+   }
+   const elbow=r.bones.LeftForeArm.quaternion.clone();
+   if(Math.abs(elbow.x)<.25)throw Error('La carrera mantiene codos rígidos');
+   r.update(1/60,{running:true,airborne:true,verticalSpeed:10});
+   for(let i=0;i<30;i++)r.update(1/60,{running:true,airborne:true,verticalSpeed:0,turn:.6});
+   if(r.poseState.tuck<.20||r.model.rotation.y>-.04)throw Error('Salto/giro sin articulación');
+   const left=r.bones.LeftUpLeg.quaternion.clone(),right=r.bones.RightUpLeg.quaternion.clone();
+   if(left.angleTo(right)<.1)throw Error('Piernas idénticas en salto');
+   r.update(1/60,{running:true,airborne:true,verticalSpeed:-10});
+   r.update(1/60,{running:true,airborne:false});
+   if(r.poseState.landing<.03)throw Error('Sin amortiguación al aterrizar');
+   for(let i=0;i<90;i++)r.update(1/60,{running:true});
+   if(r.poseState.landing>.001)throw Error('Aterrizaje queda trabado');
+   r.reset();if(r.poseState.landing!==0||r.poseState.turn!==0)throw Error('No limpia transiciones');
+   g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});

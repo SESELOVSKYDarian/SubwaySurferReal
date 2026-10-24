@@ -189,7 +189,8 @@ function graffitiPiece(g, x, y, size, label, palette) {
 // Muro de hormigón con grafitis (y a veces hiedra colgando)
 export function graffitiWall(theme = 'mdp') {
   const W = 1024, H = 240;
-  const [c, g] = makeCanvas(W, H);
+  const [c, g] = makeCanvas(W*2, H*2);
+  g.scale(2,2);
   concreteBase(g, W, H, '#a49d90');
   // Juntas de los paneles
   for (let x = 0; x <= W; x += 256) {
@@ -229,21 +230,21 @@ export function graffitiWall(theme = 'mdp') {
   }
   // Firmas pequeñas
   g.font = 'italic bold 26px "Comic Sans MS", cursive, sans-serif';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     g.fillStyle = pick(['#111', '#fff', '#e33', '#36f']);
-    g.fillText(pick(WORDS).toLowerCase(), rand(0, W - 60), rand(190, 230));
+    g.fillText(pick(WORDS).toLowerCase(), rand(0, W - 60), rand(221, 237));
   }
   // Suciedad abajo
   const dirt = g.createLinearGradient(0, H - 60, 0, H);
   dirt.addColorStop(0, 'rgba(50,40,30,0)');
-  dirt.addColorStop(1, 'rgba(50,40,30,0.55)');
+  dirt.addColorStop(1, 'rgba(50,40,30,0.25)');
   g.fillStyle = dirt;
   g.fillRect(0, H - 60, W, 60);
   // Hiedra
-  if (Math.random() < 0.6) {
+  if (Math.random() < 0.35) {
     const start = rand(0, W * 0.6), len = rand(150, 450);
     for (let x = start; x < start + len; x += rand(4, 10)) {
-      const hang = rand(10, 120) * Math.sin(((x - start) / len) * Math.PI);
+      const hang = rand(8, 40) * Math.sin(((x - start) / len) * Math.PI);
       for (let y = 0; y < hang; y += rand(5, 9)) {
         g.fillStyle = `hsl(${rand(85, 125)},${rand(35, 60)}%,${rand(18, 38)}%)`;
         g.beginPath();
@@ -252,7 +253,7 @@ export function graffitiWall(theme = 'mdp') {
       }
     }
   }
-  grain(g, W, H, 18);
+  // Conservar el contraste de la pintura; el muro ya aporta ruido y desgaste.
   return toTexture(c);
 }
 

@@ -38,7 +38,7 @@ const {mkdir,writeFile}=require('node:fs/promises');
   await page.screenshot({path:'test-results/profesor-detalle.png',timeout:60000});
   const graffiti=await page.evaluate(async()=>{
    const T=await import('./textures.js');const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=960;
-   const ctx=canvas.getContext('2d');['aldosivi','alvarado','spot','mdp'].forEach((theme,i)=>ctx.drawImage(T.graffitiWall(theme).image,0,i*240));
+   const ctx=canvas.getContext('2d');['aldosivi','alvarado','spot','mdp'].forEach((theme,i)=>ctx.drawImage(T.graffitiWall(theme).image,0,i*240,1024,240));
    return canvas.toDataURL('image/png').split(',')[1];
   });
   await writeFile('test-results/grafitis-mdp.png',Buffer.from(graffiti,'base64'));
