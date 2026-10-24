@@ -3,36 +3,24 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { surface } from './materials.js';
 
-let source;
-const getSource = () => source || (source = new GLTFLoader().loadAsync(
-  new URL('./assets/characters/technical-student.glb', import.meta.url).href,
-).catch(error => { source = null; throw error; }));
-
-let lowSource;
-const getLowSource = () => lowSource || (lowSource = new GLTFLoader().loadAsync(
-  new URL('./assets/characters/technical-student-low.glb', import.meta.url).href,
-).catch(() => { lowSource = null; return null; }));
+const sources=new Map();
+function getSource(teacher=false,low=false) {
+  const stem=teacher?'professor-police':'technical-student';
+  const filename=stem+(low?'-low':'')+'.glb';
+  if(!sources.has(filename))sources.set(filename,new GLTFLoader().loadAsync(
+    new URL('./assets/characters/'+filename,import.meta.url).href,
+  ).catch(error=>{sources.delete(filename);if(low)return null;throw error;}));
+  return sources.get(filename);
+}
 
 // Rig de alumno/taller: cabeza descubierta, ropa y guardapolvo modelados como
 // geometría propia. Las posturas se calculan desde cero, sin sumar giros de una
 // carrera a un salto ni usar el temporizador de colisión como ángulo del cuerpo.
 export async function loadRunner(parent, { teacher = false } = {}) {
-  const [gltf, low] = await Promise.all([getSource(), getLowSource()]);
+  const [gltf, low] = await Promise.all([getSource(teacher), getSource(teacher,true)]);
   const lowGeometries = new Map();
   low?.scene.traverse(mesh => { if (mesh.isMesh) lowGeometries.set(mesh.name, mesh.geometry); });
   const detailMeshes = [];
-  const shapeTeacher = (geometry, name) => {
-    if (!teacher || !name.startsWith('Human')) return geometry;
-    const copy=geometry.clone(), p=copy.attributes.position;
-    for (let i=0;i<p.count;i++) {
-      const y=p.getY(i);
-      if (y>1.74) {
-        const jaw=THREE.MathUtils.smoothstep(y,1.74,1.84)*(1-THREE.MathUtils.smoothstep(y,1.94,2.03));
-        p.setX(i,p.getX(i)*(1+.06*jaw));
-      }
-    }
-    copy.computeVertexNormals();return copy;
-  };
   const model = clone(gltf.scene);
   model.name = teacher ? 'Teacher' : 'TechnicalStudent';
   model.updateMatrixWorld(true);
@@ -43,27 +31,26 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     object.castShadow = object.receiveShadow = true;
     object.material = [object.material].flat().map(material => {
       const copy = material.clone();
-      if (['StudentCoat', 'Shirt', 'Trousers'].includes(copy.name)) {
+      if (['StudentCoat', 'TeacherSweater', 'SweaterRib', 'Shirt', 'Trousers'].includes(copy.name)) {
         Object.assign(copy, surface('fabric'));
         copy.roughness = 0.92;
       }
       if (copy.name === 'Skin') {
         Object.assign(copy, surface('skin'));
         copy.roughness = .72;
-        if (teacher) copy.color.setRGB(.56,.38,.28);
       }
-      if (teacher && copy.name === 'StudentCoat') {
-        copy.color.setHex(0x77776d);
-        copy.name = 'TeacherCoat';
+      if(copy.name==='GrayBeard'){
+        copy.map=beardTexture();copy.transparent=true;copy.depthWrite=false;copy.alphaTest=.05;
       }
-      if (teacher && copy.name === 'Hair') copy.color.setHex(0x514a43);
+      if(copy.name==='GrayHair' || copy.name==='GrayBeard') {
+        Object.assign(copy,surface('fur'));copy.bumpScale=.0015;
+      }
       return copy;
     });
     if (object.material.length === 1) object.material = object.material[0];
-    object.geometry = shapeTeacher(object.geometry, object.name);
     const lowGeometry = lowGeometries.get(object.name);
     detailMeshes.push({ mesh: object, high: object.geometry,
-      low: lowGeometry ? shapeTeacher(lowGeometry, object.name) : object.geometry });
+      low: lowGeometry || object.geometry });
     if (object.isSkinnedMesh) {
       object.skeleton.update();
       object.computeBoundingBox();
@@ -76,7 +63,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   const bounds = new THREE.Box3().setFromObject(model);
   model.scale.setScalar(2.05 / bounds.getSize(new THREE.Vector3()).y);
   parent.add(model);
-  addSchoolBadge(parent, bones, teacher);
+  if(!teacher)addSchoolBadge(parent, bones, false);
 
   const rest = Object.fromEntries(Object.entries(bones).map(([name, bone]) => [name, bone.quaternion.clone()]));
   const target = new THREE.Quaternion();
@@ -252,3 +239,21 @@ function addSchoolBadge(parent, bones, teacher) {
 
 // Alias mantenido para las reglas de persecución del juego; visualmente es profesor.
 export const loadOfficer = parent => loadRunner(parent, { teacher: true });
+
+let beardMap;
+function beardTexture(){
+  if(beardMap)return beardMap;
+  const c=document.createElement('canvas');c.width=c.height=256;
+  const ctx=c.getContext('2d'),pixels=ctx.createImageData(256,256);
+  let seed=701;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+  for(let row=0;row<256;row++)for(let col=0;col<256;col++){
+    const x=col/255*.24-.12,y=1.72+(1-row/255)*.16;
+    const top=1.802+.040*Math.min(1,Math.abs(x)/.10);
+    const fade=THREE.MathUtils.smoothstep(top-y,0,.018)*THREE.MathUtils.smoothstep(y-1.737,0,.014)*THREE.MathUtils.smoothstep(.112-Math.abs(x),0,.018);
+    const noise=random(),i=(row*256+col)*4,v=140+noise*115;
+    pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=v;
+    pixels.data[i+3]=Math.round(255*fade*(.55+.45*noise));
+  }
+  ctx.putImageData(pixels,0,0);beardMap=new THREE.CanvasTexture(c);beardMap.colorSpace=THREE.SRGBColorSpace;
+  return beardMap;
+}

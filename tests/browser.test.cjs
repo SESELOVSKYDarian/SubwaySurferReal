@@ -155,7 +155,7 @@ test('profesor esquelético independiente y monedas metálicas instanciadas',{ti
    officer.update(.25,{running:true,airborne:false,rolling:false,speed:14});
    if(previous.angleTo(runnerLeg.quaternion)>0.000001)throw Error('Animar el profesor mueve al jugador');
    let teacherMaterials=0;officer.model.traverse(object=>{
-    for(const material of [object.material].flat())if(material?.name==='TeacherCoat')teacherMaterials++;
+    for(const material of [object.material].flat())if(material?.name==='TeacherSweater')teacherMaterials++;
    });
    if(teacherMaterials!==1)throw Error('Falta el uniforme');
    game.start();game.update(1/60);
@@ -356,7 +356,7 @@ test('tablero, banco roto, tres líneas de colectivo y detalle adaptativo',{time
     if(bus.children.length>8)throw Error('Demasiadas piezas sin fusionar en colectivo');
    }
    game.reset();game.start();game.nextSpawn=Infinity;game.setQuality('balanced');game.update(1/60);
-   if(triangles(r.model)>22000||triangles(t.model)>22000)throw Error('Modo equilibrado no usa LOD');
+   if(triangles(r.model)>22000||triangles(t.model)>28000)throw Error('Modo equilibrado no usa LOD');
    const geo=game.A.school.board.children[0].geometry;
    game.addObstacle('low',0,-10);game.addObstacle('low',2,-20);
    for(const o of game.obstacles)if(o.mesh.getObjectByName('DraftingBoard').children[0].geometry!==geo)throw Error('Duplica geometría escolar');
@@ -470,6 +470,54 @@ test('banco verde legible y animaciones con aterrizaje, giro y salto diferenciad
    if(r.poseState.landing>.001)throw Error('Aterrizaje queda trabado');
    r.reset();if(r.poseState.landing!==0||r.poseState.turn!==0)throw Error('No limpia transiciones');
    g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});
+
+test('profesor basado en fotos: cuerpo propio, accesorios y dos niveles animados',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const THREE=await import('three'),{Game}=await import('./game.js');
+   const g=new Game(document.querySelector('#game'));const [student,teacher]=await Promise.all([g.characterReady,g.officerReady]);
+   if(!teacher)throw Error('No cargó el perfil fotográfico');
+   const names=[];teacher.model.traverse(o=>{if(o.isMesh)names.push(o.name)});
+   for(const expected of ['PoliceCap','PoliceVisor','PoliceInsignia','Spectacles','FacialHair','Wristwatch'])
+    if(!names.some(name=>name.startsWith(expected)))throw Error(`Falta ${expected}`);
+   const studentMeshes=[];student.model.traverse(o=>{if(o.isMesh)studentMeshes.push(o)});
+   teacher.model.traverse(o=>{if(o.isMesh&&studentMeshes.some(s=>s.geometry===o.geometry))throw Error('Reutiliza el cuerpo del alumno');});
+   const triangles=()=>{let n=0;teacher.model.traverse(o=>{if(o.isMesh)n+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3});return n;};
+   const high=triangles();if(high>65536||high<40000)throw Error(`Presupuesto alto ${high}`);
+   const playerHead=student.bones.Head.quaternion.clone();
+   for(const detail of [false,true]){
+    teacher.setDetail(detail);
+    if(!detail&&triangles()>28000)throw Error('LOD demasiado pesado');
+    for(let i=0;i<90;i++)teacher.update(1/60,{running:true,speed:24});
+    teacher.model.updateMatrixWorld(true);
+    teacher.model.traverse(mesh=>{if(mesh.isSkinnedMesh)mesh.computeBoundingBox();});
+    const box=new THREE.Box3().setFromObject(teacher.model);
+    if(!Number.isFinite(box.min.y)||box.min.y<-.05||box.max.y>2.25)throw Error('Postura o tamaño inválido');
+   }
+   if(playerHead.angleTo(student.bones.Head.quaternion)>1e-7)throw Error('La animación altera al alumno');
+   teacher.reset();const cap=teacher.model.getObjectByName('PoliceCap');
+   const before=cap.getVertexPosition(0,new THREE.Vector3());
+   teacher.bones.Head.rotation.y=.3;teacher.model.updateMatrixWorld(true);
+   const after=cap.getVertexPosition(0,new THREE.Vector3());
+   if(before.distanceTo(after)<.01)throw Error('La gorra no sigue la cabeza');
+   g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});
+
+test('si falla el perfil del profesor sigue disponible el perseguidor de respaldo',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ await page.route('**/professor-police.glb',r=>r.abort());
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const {Game}=await import('./game.js');const g=new Game(document.querySelector('#game'));
+   await Promise.all([g.characterReady,g.officerReady]);g.renderer.render=()=>{};g.start();g.nextSpawn=Infinity;g.update(1/60);
+   if(g.officer||!g.guard.root.visible||!g.guard.root.getObjectByName('PoliceFallbackCap'))throw Error('No muestra respaldo con gorra');
+   if(g.state!=='playing')throw Error('El error bloquea la partida');g.renderer.dispose();
   });
  }finally{await page.close();}
 });

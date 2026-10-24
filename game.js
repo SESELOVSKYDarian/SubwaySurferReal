@@ -330,10 +330,18 @@ export class Game {
 
     // Profesor genérico de respaldo; se reemplaza por el rig humano al cargar.
     const G = {
-      skin: std({ color: 0xc98d6a }), top: std({ color: 0x77776d }),
-      pants: std({ color: 0x29313c }), shoe: std({ color: 0x202020 }), hair: std({ color: 0x514a43 }),
+      skin: std({ color: 0xd0ad98 }), top: std({ color: 0x34402b }),
+      pants: std({ color: 0x17191a }), shoe: std({ color: 0x705139 }), hair: std({ color: 0x9a9b96 }),
     };
-    this.guard = this.buildRunner(G, { hat: () => {} });
+    this.guard = this.buildRunner(G, { wide: 1.16, hat: (head, add) => {
+      const navy=std({color:0x101d35}),black=std({color:0x111417});
+      const cap=add(head,new THREE.CylinderGeometry(.205,.185,.10,16),navy,0,.28,.015);
+      cap.name='PoliceFallbackCap';
+      add(head,box(.29,.02,.20),black,0,.235,-.11);
+      for(const x of [-.09,.09])add(head,box(.14,.065,.014),black,x,.10,-.184);
+      add(head,box(.05,.012,.014),black,0,.11,-.197);
+      add(head,new THREE.SphereGeometry(.10,12,8),G.hair,0,.005,-.145).scale.set(1.2,.7,.35);
+    } });
 
     this.dog = buildShepherd();
     this.scene.add(this.dog.root);

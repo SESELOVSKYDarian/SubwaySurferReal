@@ -115,3 +115,14 @@ git pull --ff-only origin main
 git revert --no-edit camera-animation-v1
 git push origin main
 ```
+
+## Deshacer el profesor basado en las fotos y su gorra de policía
+
+Respaldo remoto: `backup/main-before-photo-professor-a92cb13`.
+
+```bash
+git switch main
+git pull --ff-only origin main
+git revert --no-edit photo-professor-v1
+git push origin main
+```

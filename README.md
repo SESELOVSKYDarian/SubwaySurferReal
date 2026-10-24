@@ -3,7 +3,9 @@
 Corredor en tercera persona ambientado alrededor de una escuela técnica. El alumno
 lleva un guardapolvo azul inspirado en la referencia: cabeza descubierta, pelo
 corto, solapas, botones y bolsillos. Un profesor lo persigue tras los tropiezos.
-El profesor es **provisional**: su apariencia específica queda pendiente de la foto.
+El profesor tiene un modelo propio inspirado en las fotos aportadas: contextura
+más ancha, pelo y barba canosos, anteojos, suéter verde, pantalón oscuro y gorra
+de policía. El parecido es una interpretación 3D, no un escaneo facial.
 El entorno urbano tiene asfalto, carriles y colectivos argentinos, con grafitis de talleres,
 electromecánica y laboratorios.
 
@@ -59,7 +61,7 @@ procesan en el navegador. Three.js y los personajes se sirven desde el repositor
 `assets/characters/technical-student.glb` contiene la anatomía CC0 de MakeHuman,
 rig propio, guardapolvo y accesorios modelados para este juego. No es el modelo
 militar recoloreado ni una reproducción exacta del rostro de la referencia.
-Alumno y profesor tienen huesos y materiales independientes. La procedencia y
+Alumno y profesor usan archivos, huesos y materiales independientes. La procedencia y
 licencias están en [`assets/characters/ATTRIBUTION.md`](assets/characters/ATTRIBUTION.md).
 
 Para reconstruir el GLB (opcional, no hace falta para jugar):
@@ -110,3 +112,5 @@ La cámara acompaña los cambios de carril, sube junto a colectivos y atenúa lo
 que obstruyen la vista. Los bancos son verdes y los murales tienen más contraste.
 Carrera, salto y aterrizaje tienen posturas y apoyos diferenciados.
 [Visibilidad, animaciones y capturas](docs/visibility-animation.md).
+
+Perfil del profesor con gorra de policía: [modelo, referencias y comprobaciones](docs/photo-professor.md).

@@ -8,7 +8,8 @@
     "benchmark": "node tests/benchmark.cjs",
     "capture": "node tests/capture-poses.cjs",
     "capture:mdp": "node tests/capture-marplatense.cjs",
-    "capture:visibility": "node tests/capture-visibility.cjs"
+    "capture:visibility": "node tests/capture-visibility.cjs",
+    "capture:professor": "node tests/capture-professor.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

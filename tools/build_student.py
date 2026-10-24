@@ -4,6 +4,7 @@ Garment, rig and accessories are authored here; no soldier geometry is retained.
 """
 import gzip,json,math,struct,pathlib,sys
 HIGH = '--low' not in sys.argv
+TEACHER = '--professor' in sys.argv
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 verts=[];groups={};name=''
@@ -14,7 +15,18 @@ with gzip.open(ROOT/'assets/characters/source/makehuman-base.obj.gz','rt') as fi
   elif line.startswith('f '):groups[name].append([int(x.split('/')[0])-1 for x in line.split()[1:]])
 V=np.array(verts);minimum=min(V[i,1] for face in groups['body'] for i in face)
 S=2.03/(max(V[i,1] for face in groups['body'] for i in face)-minimum)
-def convert(p):return np.array([p[0]*S,(p[1]-minimum)*S,-p[2]*S])
+def convert(p):
+ q=np.array([p[0]*S,(p[1]-minimum)*S,-p[2]*S])
+ if TEACHER:
+  y=q[1]
+  if y>1.72:
+   jaw=math.exp(-((y-1.84)/.09)**2)
+   q[0]*=1.12+.10*jaw
+   # Nariz y mentón más definidos, con mejillas y mandíbula más anchas.
+   if q[2]<-.055:
+    q[2]-=.013*math.exp(-(q[0]/.038)**2)*math.exp(-((y-1.845)/.035)**2)
+  else:q[0]*=1.12 if y>1.05 else 1.10
+ return q
 def joint(name):
  ids={i for face in groups[name] for i in face};return convert(V[list(ids)].mean(axis=0))
 bones=[];positions=[];parents=[]
@@ -43,6 +55,24 @@ shirt=mat('Shirt',[.73,.74,.69],.9);pants=mat('Trousers',[.025,.035,.055],.95)
 shoe=mat('Shoes',[.015,.017,.019],.72);hair=mat('Hair',[.035,.021,.014],.95)
 eye=mat('EyeWhite',[.65,.67,.62],.4);iris=mat('Iris',[.075,.045,.025],.35)
 pupil=mat('Pupil',[.005,.004,.003],.3);buttons=mat('Buttons',[.01,.015,.025],.55)
+if TEACHER:
+ materials[skin]['pbrMetallicRoughness']['baseColorFactor']=[.64,.46,.37,1]
+ materials[coat].update(name='TeacherSweater')
+ materials[coat]['pbrMetallicRoughness']['baseColorFactor']=[.045,.067,.035,1]
+ materials[shoe]['pbrMetallicRoughness']['baseColorFactor']=[.105,.073,.040,1]
+ materials[pants]['pbrMetallicRoughness']['baseColorFactor']=[.010,.012,.014,1]
+ materials[hair].update(name='GrayHair')
+ materials[hair]['pbrMetallicRoughness']['baseColorFactor']=[.37,.39,.36,1]
+ beard=mat('GrayBeard',[.37,.39,.36],.95)
+ frames=mat('GlassesFrames',[.012,.014,.016],.36)
+ cap=mat('PoliceCap',[.012,.023,.050],.82)
+ visor=mat('PoliceVisor',[.008,.011,.014],.42,True)
+ gold=mat('PoliceBadge',[.55,.35,.075],.4,True)
+ materials[gold]['pbrMetallicRoughness']['metallicFactor']=.65
+ rib=mat('SweaterRib',[.032,.048,.026],.95)
+ lens=mat('GlassesLenses',[.65,.73,.78],.18,True)
+ materials[lens]['pbrMetallicRoughness']['baseColorFactor'][3]=.075
+ materials[lens]['alphaMode']='BLEND'
 # Each primitive owns topology and UVs; bones use model axes and local translations.
 primitives={}
 def refine_skin(points, faces):
@@ -77,7 +107,12 @@ def refine_skin(points, faces):
    result.append([a,edge_ids[tuple(sorted((a,nxt)))],face_ids[fi],edge_ids[tuple(sorted((prev,a)))]])
  return points,result
 def addmesh(label,points,faces,material,weights):
- if HIGH and label=='Human' and material==skin:points,faces=refine_skin(points,faces)
+ if HIGH and label=='Human' and material==skin:
+  if TEACHER:
+   head=[f for f in faces if min(points[i][1] for i in f)>1.72]
+   rest=[f for f in faces if min(points[i][1] for i in f)<=1.72]
+   points,head=refine_skin(points,head);faces=head+rest
+  else:points,faces=refine_skin(points,faces)
  P=np.array(points,dtype=np.float32);F=[]
  for f in faces:
   for k in range(1,len(f)-1):F.append([f[0],f[k],f[k+1]])
@@ -93,7 +128,19 @@ def addmesh(label,points,faces,material,weights):
   for k,(bn,w) in enumerate(sorted(ws.items(),key=lambda x:-x[1])[:4]):J[i,k]=B[bn];W[i,k]=w/total
   W[i]/=max(W[i].sum(),1e-8)
  UV=np.stack([P[:,0]*4,P[:,1]*4],axis=1).astype(np.float32)
+ if TEACHER and material==beard:UV=np.stack([(P[:,0]+.12)/.24,(P[:,1]-1.72)/.16],axis=1).astype(np.float32)
  primitives.setdefault(label,[]).append((P,N,F,J,W,UV,material))
+ if TEACHER and label=='Human' and material==skin:
+  mouth=joint('joint-mouth').copy();mouth[1]-=.040; jaw=joint('joint-jaw')
+  chosen=[]
+  for tri in F:
+   c=P[tri].mean(axis=0);n=N[tri].mean(axis=0)
+   beard_top=mouth[1]+.008+.040*min(abs(c[0])/.10,1)
+   in_beard=(jaw[1]-.012<c[1]<beard_top and abs(c[0])<.108 and c[2]<-.07 and n[2]<.30)
+   leave_lips=abs(c[0])<.035 and mouth[1]-.012<c[1]<mouth[1]+.012
+   if in_beard and not leave_lips:chosen.append(tri)
+  ids=sorted({int(i) for tri in chosen for i in tri});mapping={i:k for k,i in enumerate(ids)}
+  if ids:addmesh('FacialHair',P[ids]+N[ids]*.0035,[[mapping[int(i)] for i in f] for f in chosen],beard,fixed('Head'))
 def fixed(name):return {name:1.}
 def blend(p,choices):
  scores={}
@@ -104,6 +151,10 @@ def blend(p,choices):
 def skinweights(p):
  if p[1]>1.80:return fixed('Head')
  if p[1]>1.60:return fixed('Neck')
+ if TEACHER and abs(p[0])>.33 and p[1]<1.55:
+  side='Left' if p[0]>0 else 'Right'
+  if abs(p[0])>.61:return fixed(side+'Hand')
+  return blend(p,[(side+'Arm',side+'ForeArm'),(side+'ForeArm',side+'Hand')])
  if abs(p[0])>.45:return fixed(('Left' if p[0]>0 else 'Right')+'Hand')
  side='Left' if p[0]>0 else 'Right'
  if p[1]<.16:return fixed(side+'Foot')
@@ -113,11 +164,12 @@ for material in [skin,pants]:
  faces=[]
  for f in groups['body']:
   center=V[f].mean(axis=0);p=convert(center)
-  exposed=p[1]>1.72 or (abs(p[0])>.50 and p[1]<1.37)
-  if (material==skin and exposed) or (material==pants and .14<p[1]<.77):faces.append(list(reversed(f)))
+  exposed=(p[1]>1.72 or (p[1]>1.63 and abs(p[0])<.115) or (abs(p[0])>.47 and p[1]<1.43)) if TEACHER else (p[1]>1.72 or (abs(p[0])>.50 and p[1]<1.37))
+  if (material==skin and exposed) or (material==pants and .14<p[1]<(1.01 if TEACHER else .77)):faces.append(list(reversed(f)))
  ids=sorted({i for f in faces for i in f});mapping={idx:i for i,idx in enumerate(ids)}
  points=[convert(V[i]) for i in ids]
- addmesh('Human',points,[[mapping[i] for i in f] for f in faces],material,skinweights)
+ weights=(lambda p:fixed('Hips') if p[1]>.87 else skinweights(p)) if TEACHER and material==pants else skinweights
+ addmesh('Human',points,[[mapping[i] for i in f] for f in faces],material,weights)
 # Actual eye surfaces, not painted dots on a helmet.
 for short in ['l','r']:
  fs=groups['helper-'+short+'-eye'];ids=sorted({i for f in fs for i in f});mapping={idx:i for i,idx in enumerate(ids)}
@@ -156,6 +208,7 @@ for side in ['Left','Right']:
  # Continuous shoe shell from heel/cuff to toe, with a nearly flat sole.
  # Separate ellipsoids made the toes look detached during a running stride.
  sections=[(.06,.055,.015,.20),(0,.075,.01,.23),(-.12,.10,.01,.125),(-.23,.085,.01,.09),(-.32,.025,.018,.05)]
+ if TEACHER:sections=[(.06,.052,.012,.20),(0,.068,.01,.23),(-.10,.080,.01,.15),(-.20,.075,.01,.105),(-.26,.045,.015,.075)]
  for z,width,bottom,top in sections:
   for j in range(segments):
    angle=j*2*math.pi/segments
@@ -168,6 +221,7 @@ for side in ['Left','Right']:
  addmesh('Clothes',points,faces,shoe,fixed(side+'Foot'))
 # Long coat: tailored waist, front opening/lapels and split rear hem.
 rings=[(.67,.27,.17,.012),(.75,.26,.165,.01),(.99,.235,.15,.008),(1.2,.235,.15,.008),(1.47,.26,.17,.015),(1.60,.23,.15,.20),(1.72,.105,.09,.72)]
+if TEACHER:rings=[(.94,.29,.21,0),(.98,.31,.23,0),(1.08,.33,.25,0),(1.22,.34,.24,0),(1.36,.33,.21,0),(1.49,.32,.19,0),(1.67,.285,.17,0),(1.72,.105,.09,0)]
 points=[];faces=[];segments=64 if HIGH else 48
 for y,rx,rz,gap in rings:
  for i in range(segments+1):
@@ -175,9 +229,11 @@ for y,rx,rz,gap in rings:
 for ring in range(len(rings)-1):
  for i in range(segments):
   # Small vent at the lower back prevents the hem bridging both thighs rigidly.
-  if ring==0 and abs(i-segments/2)<1:continue
+  if not TEACHER and ring==0 and abs(i-segments/2)<1:continue
   a=ring*(segments+1)+i;faces.append([a,a+segments+1,a+segments+2,a+1])
 def coatweights(p):
+ if TEACHER:
+  t=float(np.clip((p[1]-1.02)/.58,0,1));return {'Hips':max(.001,1-t),'Spine2':max(.001,t)}
  if p[1]<1.06:
   side='Left' if p[0]>0 else 'Right';leg=np.clip((1.06-p[1])/.44,0,1)*.55
   return {'Hips':1-leg,side+'UpLeg':leg}
@@ -185,10 +241,14 @@ def coatweights(p):
 addmesh('Coat',points,faces,coat,coatweights)
 # Sleeves follow shoulder/elbow/wrist instead of being rigid floating pieces.
 for side in ['Left','Right']:
- shoulder=positions[B[side+'Arm']].copy();shoulder[0]*=.86
- sphere('Coat',[shoulder[0],shoulder[1]-.025,shoulder[2]],[.087,.075,.085],coat,{side+'Arm':.5,'Spine2':.5},16,10)
+ shoulder=positions[B[side+'Arm']].copy();shoulder[0]*=1 if TEACHER else .86
+ if not TEACHER:sphere('Coat',[shoulder[0],shoulder[1]-.025,shoulder[2]],[.087,.075,.085],coat,{side+'Arm':.5,'Spine2':.5},16,10)
  elbow=positions[B[side+'ForeArm']];wrist=positions[B[side+'Hand']]
  centers=[(shoulder,.085),(shoulder*.5+elbow*.5,.078),(elbow,.067),(elbow*.4+wrist*.6,.061),(wrist,.048)]
+ if TEACHER:
+  end=elbow*.40+wrist*.60
+  inset=shoulder.copy();inset[0]*=.78;inset[1]-=.025
+  centers=[(inset,.108),(shoulder*.5+elbow*.5,.097),(elbow,.083),(end,.074)]
  points=[];faces=[];segments=32 if HIGH else 20
  for k,(center,radius) in enumerate(centers):
   tangent=centers[min(k+1,len(centers)-1)][0]-centers[max(0,k-1)][0];tangent/=np.linalg.norm(tangent)
@@ -199,14 +259,16 @@ for side in ['Left','Right']:
  faces.append(list(reversed(range(segments))))
  addmesh('Coat',points,faces,coat,lambda p,s=side:blend(p,[(s+'Arm',s+'ForeArm'),(s+'ForeArm',s+'Hand')]))
 def panel(label,coordinates,material,weights):addmesh(label,coordinates,[list(reversed(range(len(coordinates))))],material,weights)
-panel('Clothes',[[-.085,1.55,-.155],[.085,1.55,-.155],[.08,1.71,-.105],[-.08,1.71,-.105]],shirt,coatweights)
-for sign in [-1,1]:
- # Folded collar and lapel, offset from the coat surface.
- panel('Coat',[[sign*.015,1.39,-.177],[sign*.135,1.55,-.177],[sign*.11,1.70,-.105],[sign*.045,1.65,-.13]],coat,coatweights)
- for y,rx,rz in [(1.05,.17,.163),(1.47,.15,.174)]:
-  if y>1.4 and sign<0:continue
-  panel('Coat',[[sign*(rx-.065),y-.08,-rz],[sign*(rx+.065),y-.08,-rz],[sign*(rx+.065),y+.035,-rz],[sign*(rx-.065),y+.035,-rz]],coat,coatweights)
-for y in [1.30,1.14,.98,.82]:sphere('Clothes',[.012,y,-.161 if y>1.0 else -.17],[.014,.014,.007],buttons,coatweights,10,6)
+if not TEACHER:
+ panel('Clothes',[[-.085,1.55,-.155],[.085,1.55,-.155],[.08,1.71,-.105],[-.08,1.71,-.105]],shirt,coatweights)
+ for sign in [-1,1]:
+  # Folded collar and lapel, offset from the coat surface.
+  panel('Coat',[[sign*.015,1.39,-.177],[sign*.135,1.55,-.177],[sign*.11,1.70,-.105],[sign*.045,1.65,-.13]],coat,coatweights)
+  for y,rx,rz in [(1.05,.17,.163),(1.47,.15,.174)]:
+   if y>1.4 and sign<0:continue
+   panel('Coat',[[sign*(rx-.065),y-.08,-rz],[sign*(rx+.065),y-.08,-rz],[sign*(rx+.065),y+.035,-rz],[sign*(rx-.065),y+.035,-rz]],coat,coatweights)
+ for y in [1.30,1.14,.98,.82]:sphere('Clothes',[.012,y,-.161 if y>1.0 else -.17],[.014,.014,.007],buttons,coatweights,10,6)
+if TEACHER:exec((ROOT/'tools/professor_details.py').read_text(),globals())
 # Write a native GLB with one rig shared by every garment and face primitive.
 buffer=bytearray();views=[];accessors=[]
 def acc(array,kind,component=5126):
@@ -216,7 +278,7 @@ def acc(array,kind,component=5126):
  count=len(array);entry={'bufferView':len(views)-1,'componentType':component,'count':count,'type':kind}
  if kind=='VEC3' and component==5126:entry.update(min=array.min(axis=0).tolist(),max=array.max(axis=0).tolist())
  accessors.append(entry);return len(accessors)-1
-nodes=[{'name':'TechnicalStudent','children':[]}]
+nodes=[{'name':'ProfessorPolice' if TEACHER else 'TechnicalStudent','children':[]}]
 for i,name in enumerate(bones):
  parent=parents[i];translation=positions[i]-(positions[parent] if parent is not None else 0)
  nodes.append({'name':'mixamorig'+name,'translation':translation.tolist(),'children':[]})
@@ -247,6 +309,7 @@ for n in nodes:
 j={'asset':{'version':'2.0','generator':'Technical-school character builder','copyright':'CC0 MakeHuman base; authored coat and rig; see ATTRIBUTION.md'},'scene':0,'scenes':[{'nodes':[0]}],'nodes':nodes,'meshes':meshes,'skins':[{'joints':list(range(1,len(bones)+1)),'inverseBindMatrices':inverse,'skeleton':1}],'materials':materials,'buffers':[{'byteLength':len(buffer)}],'bufferViews':views,'accessors':accessors}
 raw=json.dumps(j,separators=(',',':')).encode();raw+=b' '*((-len(raw))%4);buffer+=b'\0'*((-len(buffer))%4)
 output=struct.pack('<III',0x46546c67,2,12+8+len(raw)+8+len(buffer))+struct.pack('<II',len(raw),0x4e4f534a)+raw+struct.pack('<II',len(buffer),0x004e4942)+buffer
-path=ROOT/'assets/characters'/('technical-student.glb' if HIGH else 'technical-student-low.glb')
+stem='professor-police' if TEACHER else 'technical-student'
+path=ROOT/'assets/characters'/(stem+('' if HIGH else '-low')+'.glb')
 temporary=path.with_suffix('.tmp');temporary.write_bytes(output);temporary.replace(path)
 print(path,len(output),'bytes',len(bones),'bones',sum(len(p[2]) for parts in primitives.values() for p in parts),'triangles')
