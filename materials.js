@@ -23,7 +23,7 @@ export function surface(kind = 'concrete') {
   ctx.putImageData(image, 0, 0);
   const bump = new THREE.CanvasTexture(canvas);
   bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
-  bump.anisotropy = 4;
+  bump.anisotropy = 8;
   // Datos de relieve y rugosidad: espacio lineal, no sRGB.
   const result = { bumpMap: bump, bumpScale: kind === 'skin' ? 0.0012 : kind === 'fabric' ? 0.004 : kind === 'metal' ? 0.0015 : kind === 'fur' ? 0.004 : 0.035, roughnessMap: bump };
   cache.set(kind, result);

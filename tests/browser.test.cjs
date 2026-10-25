@@ -167,7 +167,9 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    for(let i=0;i<65;i++)game.update(1/60);
    if(game.score<=0)throw Error('Puntuación');
    game.setQuality('high');const far=game.world.viewDistance;
-   game.setQuality('balanced');if(game.world.viewDistance>=far)throw Error('Calidad fija');
+   if(game.sun.shadow.mapSize.x!==2048||game.renderer.shadowMap.type!==THREE.PCFSoftShadowMap)throw Error('Sombras de alta calidad');
+   game.setQuality('balanced');
+   if(game.world.viewDistance>=far||game.sun.shadow.mapSize.x!==1024)throw Error('Calidad equilibrada');
    game.setQuality('auto');for(let i=0;i<400;i++)game.adaptQuality(0.04);
    if(Math.abs(game.pixelRatio-0.55)>0.001||game.sun.castShadow)throw Error('Calidad automática');
    game.addObstacle('high',game.lane,0);game.update(1/60);if(game.state!=='over')throw Error('Colisión');

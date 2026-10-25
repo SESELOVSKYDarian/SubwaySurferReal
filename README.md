@@ -48,8 +48,11 @@ integración balística para reducir diferencias entre tasas de cuadros. Pausar
 congela también las posturas, monedas, jetpack y cámara; no consume objetos.
 
 La cámara permanece detrás del alumno, encuadra los tres carriles y se aleja en
-pantallas verticales. El selector de calidad adapta resolución y distancia de
-visualización. El rendimiento depende del equipo: no se garantizan 60 FPS.
+pantallas verticales. El selector ofrece calidad alta con resolución interna de
+hasta 2×, sombras suaves de mayor detalle y más distancia de dibujado; el modo
+automático ajusta la resolución entre 0,55× y 1,5× según el rendimiento.
+Equilibrada prioriza la fluidez. El rendimiento depende del equipo: no se
+garantizan 60 FPS.
 
 ## Cámara corporal
 

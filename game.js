@@ -41,7 +41,7 @@ export class Game {
     const r = (this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }));
     r.setPixelRatio(this.pixelRatio);
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFShadowMap;
+    r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 0.92;
     r.outputColorSpace = THREE.SRGBColorSpace;
@@ -118,8 +118,10 @@ export class Game {
   setQuality(quality) {
     if (!['auto', 'high', 'balanced'].includes(quality)) return;
     this.quality = quality;
-    this.pixelRatio = Math.min(window.devicePixelRatio, quality === 'high' ? 1.75 : 1.25);
+    const pixelRatioLimit = quality === 'high' ? 2 : quality === 'auto' ? 1.5 : 1.25;
+    this.pixelRatio = Math.min(window.devicePixelRatio, pixelRatioLimit);
     this.renderer.setPixelRatio(this.pixelRatio);
+    this.sun.shadow.mapSize.set(quality === 'high' ? 2048 : 1024, quality === 'high' ? 2048 : 1024);
     this.sun.castShadow = true;
     this.resize();
     this.world.viewDistance = quality === 'high' ? 340 : 230;
@@ -133,7 +135,7 @@ export class Game {
     this.qualityElapsed += dt;
     if (this.quality !== 'auto' || this.qualityElapsed < 3) return;
     this.qualityElapsed = 0;
-    const max = Math.min(window.devicePixelRatio, 1.25);
+    const max = Math.min(window.devicePixelRatio, 1.5);
     const next = THREE.MathUtils.clamp(this.pixelRatio + (this.frameAverage > 0.022 ? -0.125 : this.frameAverage < 0.017 ? 0.125 : 0), Math.min(0.55, max), max);
     if (next !== this.pixelRatio) {
       this.pixelRatio = next;
