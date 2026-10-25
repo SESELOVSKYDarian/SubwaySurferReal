@@ -1,6 +1,7 @@
 // Une el juego con los controles (cuerpo vía cámara + teclado).
 import { Game } from './game.js';
 import { PlaySession } from './session.js';
+import { routeState } from './avenue-route.js';
 
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
@@ -171,8 +172,12 @@ window.addEventListener('keydown', (e) => {
 
 // --- Bucle ---
 let last = performance.now();
+const routeZone = $('route-zone');
 function frame(now) {
   game.update((now - last) / 1000);
+  const route = routeState(game.distance);
+  const label = `${route.zone} · Vuelta ${route.lap}`;
+  if (routeZone.textContent !== label) routeZone.textContent = label;
   last = now;
   requestAnimationFrame(frame);
 }

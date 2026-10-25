@@ -9,6 +9,10 @@ de policía. El parecido es una interpretación 3D, no un escaneo facial.
 El entorno urbano tiene asfalto, carriles y colectivos argentinos, con grafitis de talleres,
 electromecánica y laboratorios.
 
+La ambientación recorre Juan B. Justo desde Av. de los Trabajadores hasta San Juan,
+en un bucle fijo con comercios y fachadas inspirados en la avenida marplatense.
+El recorrido está comprimido para el juego. [Criterio y referencias](docs/juan-b-justo.md).
+
 ## Jugar
 
 ```bash

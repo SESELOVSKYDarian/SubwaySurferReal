@@ -24,6 +24,19 @@ html, body {
   text-shadow: 0 2px 6px rgba(0, 0, 0, .6);
   pointer-events: none;
 }
+#route-label {
+  position: fixed;
+  top: 76px;
+  left: 18px;
+  max-width: calc(100vw - 36px);
+  color: #f5efdb;
+  font-size: 12px;
+  line-height: 1.6;
+  text-shadow: 0 2px 5px #000;
+  pointer-events: none;
+}
+#route-label b { display: block; letter-spacing: .06em; }
+#route-zone { display: block; color: #e3dfcf; }
 #score { font-size: 42px; }
 #coins { font-size: 26px; color: #ffd84a; }
 #power {

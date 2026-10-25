@@ -1,10 +1,12 @@
 // Escenario: calle, muros con grafitis, vallas, edificios y skyline.
-// Todo lo que pasa junto al jugador se recicla: al quedar detrás de la cámara se
-// manda otra vez al fondo con un aspecto distinto.
+// Los edificios y los muros siguen un recorrido fijo que se repite en San Juan.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as T from './textures.js';
 import { surface } from './materials.js';
+import { LOT_LENGTH, avenueSample, buildingAt, isLandmarkKind } from './avenue-route.js';
+import { avenueFacade, avenueStreetSign } from './avenue-facades.js';
+import { landmarkGeometry } from './avenue-landmarks.js';
 
 export const LANE_X = [-2.2, 0, 2.2];
 export const NEAR_Z = 24;     // un poco por detrás de la cámara
@@ -50,6 +52,7 @@ export class World {
     this.buildSides();
     this.buildBuildings();
     this.buildSkyline();
+    this.update(0, 0);
   }
 
   buildTrack() {
@@ -175,131 +178,195 @@ export class World {
         tree.position.set(s * (WALL_X + 2.2), WALL_H, 0);
         g.add(tree);
 
-        const seg = { group: g, wall, graffiti, lamp, tree, foliage, foliageMats, graffitiMats };
+        const seg = { s, group: g, wall, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats };
         g.position.z = NEAR_Z - SEG / 2 - i * SEG;
-        this.randomizeSegment(seg);
         this.scene.add(g);
         this.segments.push(seg);
       }
     }
   }
 
-  randomizeSegment(seg) {
-    seg.graffiti.material = seg.graffitiMats[Math.floor(Math.random() * seg.graffitiMats.length)];
-    seg.lamp.visible = Math.random() < 0.6;
-    seg.lamp.position.z = (Math.random() - 0.5) * SEG * 0.8;
-    seg.tree.visible = Math.random() < 0.65;
-    seg.tree.position.z = (Math.random() - 0.5) * SEG * 0.8;
-    seg.tree.rotation.y = Math.random() * Math.PI * 2;
-    seg.tree.scale.setScalar(0.8 + Math.random() * 0.6);
-    seg.foliage.material = seg.foliageMats[Math.floor(Math.random() * seg.foliageMats.length)];
+  randomizeSegment(seg, slot) {
+    const sample = channel => avenueSample(slot, seg.s, channel);
+    const landmark = isLandmarkKind(buildingAt(slot, seg.s).appearance.kind);
+    seg.fence.visible = seg.frame.visible = !landmark;
+    seg.graffiti.material = seg.graffitiMats[Math.floor(sample(0) * seg.graffitiMats.length)];
+    seg.lamp.visible = sample(1) < 0.6;
+    seg.lamp.position.z = (sample(2) - 0.5) * SEG * 0.8;
+    seg.tree.visible = !landmark && sample(3) < 0.65;
+    seg.tree.position.z = (sample(4) - 0.5) * SEG * 0.8;
+    seg.tree.rotation.y = sample(5) * Math.PI * 2;
+    seg.tree.scale.setScalar(0.8 + sample(6) * 0.6);
+    seg.foliage.material = seg.foliageMats[Math.floor(sample(7) * seg.foliageMats.length)];
   }
 
   buildBuildings() {
-    this.facades = T.FACADE_STYLES.map((s) => T.facade(s));
-    const roofMat = mat({ color: 0x5b5752 });
-    const billboardMat = mat({ map: T.billboard(), emissive: 0x330000, roughness: 0.6 });
-    const unit = new THREE.BoxGeometry(1, 1, 1);
-    // Caché por dimensiones: crear una vez y reutilizar al reciclar edificios.
+    this.avenueMaterials = new Map();
+    this.streetSignMaterials = new Map();
     this.windowDetails = new Map();
-    const trimMat = mat({ color: 0x8d8981, roughness: 0.92 });
-
-    // Escalera de incendios (6 pisos), hacia -x desde la fachada
-    const parts = [];
-    const plat = new THREE.BoxGeometry(1.1, 0.06, 3.6);
-    const rail = new THREE.BoxGeometry(0.04, 0.9, 3.6);
-    const stair = new THREE.BoxGeometry(0.7, 0.06, 3.6);
-    for (let k = 1; k <= 6; k++) {
-      const y = k * 3.2;
-      parts.push(placed(plat, -0.55, y, 0), placed(rail, -1.1, y + 0.45, 0));
-      parts.push(placed(stair, -0.45, y - 1.6, 0, Math.atan2(3.2, 3.6) * (k % 2 ? 1 : -1)));
-    }
-    const upright = new THREE.BoxGeometry(0.05, 6 * 3.2, 0.05);
-    for (const z of [-1.8, 1.8]) parts.push(placed(upright, -1.1, 3.2 * 3.5, z));
-    const fireGeo = mergeGeometries(parts);
-    const fireMat = mat({ color: 0x1f2124, metalness: 0.6, roughness: 0.6 });
-
+    this.landmarkDetails = new Map();
+    const unit = new THREE.BoxGeometry(1, 1, 1);
+    const plane = new THREE.PlaneGeometry(1, 1);
+    this.buildingUnit = unit;
+    this.buildingPlane = plane;
+    this.roofMaterial = mat({ color: 0x635e52 });
+    this.trimMaterial = mat({ color: 0xbcb5a3 });
+    this.darkTrimMaterial = mat({ color: 0x3e4847 });
+    this.glassMaterial = mat({ color: 0x2f5059, emissive: 0x14252b });
     this.buildings = [];
-    this.buildingEdge = {};
+    this.buildingCount = Math.ceil((NEAR_Z - FAR_Z) / LOT_LENGTH) + 1;
     for (const s of [-1, 1]) {
-      let z = NEAR_Z;
-      while (z > FAR_Z) {
-        const front = this.facades[0].clone();
-        const ends = this.facades[0].clone();
-        const frontMat = mat({ map: front, ...surface('concrete') });
-        const endMat = mat({ map: ends, ...surface('concrete') });
-        // El volumen usa un material; la fachada interior y la cornisa son piezas separadas.
-        const box = mesh(unit, endMat, { cast: false });
-        const facade = mesh(new THREE.PlaneGeometry(1, 1), frontMat, { cast: false });
+      for (let i = 0; i < this.buildingCount; i++) {
+        const group = new THREE.Group();
+        group.name = 'JuanBJustoBuilding';
+        const box = mesh(unit, this.concrete);
+        const facade = mesh(plane, this.concrete);
         facade.rotation.y = -s * Math.PI / 2;
-        const cornice = mesh(unit, roofMat, { cast: false });
-        const windows = mesh(unit, trimMat, { cast: false });
+        const cornice = mesh(unit, this.roofMaterial);
+        const windows = mesh(unit, this.trimMaterial);
         windows.scale.x = s;
-        const fire = mesh(fireGeo, fireMat, { cast: false });
-        fire.scale.x = s;
-        const board = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), billboardMat);
-        board.rotation.y = -s * Math.PI / 2;
-        const g = new THREE.Group();
-        g.add(box, facade, cornice, windows, fire, board);
-        this.scene.add(g);
-        const b = { s, group: g, box, facade, cornice, windows, fire, board, front, ends, w: 0 };
-        this.randomizeBuilding(b);
-        g.position.z = z - b.w / 2;
-        z -= b.w;
-        this.buildings.push(b);
+        const awning = mesh(unit, this.darkTrimMaterial);
+        const roof = mesh(unit, this.roofMaterial);
+        const sign = mesh(plane, this.concrete);
+        const post = mesh(unit, this.darkTrimMaterial);
+        sign.scale.set(6.5, 1.6, 1);
+        sign.position.set(s * (WALL_X + .7), WALL_H + 5.9, 0);
+        post.scale.set(.09, 6.1, .09);
+        post.position.set(s * (WALL_X + .7), WALL_H + 3.05, -.08);
+        group.add(box, facade, cornice, windows, awning, roof, sign, post);
+        this.scene.add(group);
+        this.buildings.push({ s, group, box, facade, cornice, windows, awning, roof, sign, post, slot: null, w: LOT_LENGTH });
       }
-      this.buildingEdge[s] = z;
     }
   }
 
-  randomizeBuilding(b) {
-    const style = Math.floor(Math.random() * this.facades.length);
-    const w = 12 + Math.floor(Math.random() * 3) * 4;
-    const h = 6.4 * (2 + Math.floor(Math.random() * 6));
-    const depth = 8;
-    b.w = w;
-    for (const [tex, width] of [[b.front, w], [b.ends, depth]]) {
-      tex.source = this.facades[style].source;
-      tex.repeat.set(width / 8, h / 6.4);
-      tex.needsUpdate = true;
+  setBuilding(b, slot) {
+    const lot = buildingAt(slot, b.s);
+    const p = lot.appearance;
+    b.slot = slot;
+    b.span = lot.span;
+    b.group.userData.routeIndex = lot.index;
+    b.group.userData.landmark = p.id;
+    if (!this.avenueMaterials.has(p.id)) {
+      const map = avenueFacade(p);
+      this.avenueMaterials.set(p.id, {
+        front: isLandmarkKind(p.kind) ? new THREE.MeshBasicMaterial({ map }) : mat({ map }),
+        side: mat({ color: p.color }),
+        accent: mat({ color: p.accent }),
+        trim: mat({ color: p.kind === 'lumber' ? 0xcdd0c4 : p.kind === 'bendu' ? 0xb0b2a4 : 0xa8aba0 }),
+        secondary: mat({ color: p.secondary }),
+      });
     }
+    const materials = this.avenueMaterials.get(p.id);
+    const w = LOT_LENGTH * lot.span - .6, h = p.height, depth = p.kind === 'mall' ? 13 : 8;
+    if (isLandmarkKind(p.kind)) {
+      this.setLandmark(b, p, materials, w);
+      this.setBuildingSign(b, lot);
+      return;
+    }
+    for (const part of [b.box, b.facade, b.cornice, b.windows, b.awning, b.roof]) {
+      part.visible = true;
+      part.rotation.set(0, 0, 0);
+      part.scale.set(1, 1, 1);
+    }
+    for (const part of [b.box, b.cornice, b.awning, b.roof]) part.geometry = this.buildingUnit;
+    b.facade.geometry = this.buildingPlane;
+    b.facade.rotation.y = -b.s * Math.PI / 2;
+    b.cornice.material = this.roofMaterial;
+    b.windows.material = this.trimMaterial;
+    b.windows.scale.x = b.s;
     const x = b.s * (BUILD_X + depth / 2);
+    b.box.material = materials.side;
     b.box.scale.set(depth, h, w);
     b.box.position.set(x, WALL_H + h / 2, 0);
+    b.facade.material = materials.front;
     b.facade.scale.set(w, h, 1);
-    b.facade.position.set(b.s * (BUILD_X - 0.012), WALL_H + h / 2, 0);
-    b.cornice.scale.set(depth + 0.35, 0.25, w + 0.25);
+    b.facade.position.set(b.s * (BUILD_X - .018), WALL_H + h / 2, 0);
+    b.cornice.scale.set(depth + .25, .24, w + .15);
     b.cornice.position.set(x, WALL_H + h, 0);
+    b.awning.material = materials.accent;
+    b.awning.visible = ['textile', 'arched', 'mall', 'corner'].includes(p.kind);
+    b.awning.scale.set(p.kind === 'mall' ? 1.8 : .9, .2, w - .25);
+    b.awning.position.set(b.s * (BUILD_X - .45), WALL_H + h * .59, 0);
+    b.roof.visible = p.kind === 'house';
+    b.roof.material = materials.accent;
+    b.roof.scale.set(depth + .5, .35, w + .35);
+    b.roof.rotation.z = b.s * .12;
+    b.roof.position.set(x, WALL_H + h + .35, 0);
     b.windows.position.set(b.s * BUILD_X, WALL_H, 0);
-    const key = `${w}:${h}`;
+    const key = `${p.id}:${lot.span}`;
     if (!this.windowDetails.has(key)) {
       const parts = [];
-      for (let floor = 0; floor < h / 3.2; floor++) {
-        for (let column = 0; column < w / 4; column++) {
-          const y = (floor + 0.5) * 3.2;
-          const z = (column + 0.5) * 4 - w / 2;
-          parts.push(placed(new THREE.BoxGeometry(0.28, 0.12, 2.2), -0.08, y - 0.95, z));
-          parts.push(placed(new THREE.BoxGeometry(0.2, 0.13, 2.1), -0.05, y + 0.95, z));
+      const box = new THREE.BoxGeometry(1, 1, 1);
+      const piece = (dx, dy, dz, x, y, z) => parts.push(box.clone().scale(dx, dy, dz).translate(x, y, z));
+      if (p.kind === 'apartments') {
+        for (let floor = 0; floor < 4; floor++) {
+          const y = h - (floor + .9) * h / 5.2;
+          piece(.9, .13, w, -.4, y, 0);
+          piece(.07, .6, w, -.85, y + .35, 0);
+          for (let col = 0; col < 8; col++) piece(.07, .6, .045, -.85, y + .35, (col + .5) * w / 8 - w / 2);
         }
+      } else if (p.kind === 'arched') {
+        for (let col = 0; col < 4; col++) {
+          const z = (col + .5) * w / 4 - w / 2;
+          const arch = new THREE.TorusGeometry(w / 8 - .28, .12, 3, 8, Math.PI);
+          parts.push(placed(arch, -.12, h * .697, z, 0, -Math.PI / 2));
+          arch.dispose();
+          piece(.32, h * .6, .18, -.1, h * .3, z - w / 8 + .2);
+        }
+      } else {
+        const columns = p.kind === 'mall' ? 8 : 5;
+        for (let col = 0; col <= columns; col++) piece(.2, h * .65, .11, -.08, h * .325, col * w / columns - w / 2);
+        piece(.25, .16, w, -.1, .35, 0);
       }
+      box.dispose();
       this.windowDetails.set(key, mergeGeometries(parts));
       parts.forEach(part => part.dispose());
     }
     b.windows.geometry = this.windowDetails.get(key);
-    b.fire.visible = style < 2 && h > 20;
-    b.fire.position.set(b.s * BUILD_X, WALL_H, (Math.random() - 0.5) * (w - 4));
-    b.board.visible = Math.random() < 0.18 && h > 16;
-    b.board.position.set(b.s * (BUILD_X - 0.05), WALL_H + 9, 0);
+    this.setBuildingSign(b, lot);
   }
 
-  // Skyline unido en una sola geometría: la bruma oculta el detalle lejano.
+  setLandmark(b, profile, materials, width) {
+    const key = `${profile.id}:${b.span}`;
+    if (!this.landmarkDetails.has(key)) this.landmarkDetails.set(key, landmarkGeometry(profile, width));
+    const geometry = this.landmarkDetails.get(key);
+    const parts = [
+      [b.box, geometry.body, materials.side],
+      [b.facade, geometry.front, materials.front],
+      [b.cornice, geometry.trim, materials.trim],
+      [b.windows, geometry.detail, materials.accent],
+      [b.awning, geometry.glass, this.glassMaterial],
+      [b.roof, geometry.secondary, materials.secondary],
+    ];
+    for (const [part, shape, material] of parts) {
+      part.visible = !!shape;
+      if (!shape) continue;
+      part.geometry = shape;
+      part.material = material;
+      part.rotation.set(0, b.s === -1 ? Math.PI : 0, 0);
+      part.position.set(b.s * BUILD_X, WALL_H, 0);
+      part.scale.set(1, 1, 1);
+    }
+  }
+
+  setBuildingSign(b, lot) {
+    b.sign.visible = b.post.visible = !!lot.marker;
+    if (lot.marker) {
+      const key = lot.marker[0];
+      if (!this.streetSignMaterials.has(key)) this.streetSignMaterials.set(key, new THREE.MeshBasicMaterial({ map: avenueStreetSign(lot.marker) }));
+      b.sign.material = this.streetSignMaterials.get(key);
+    }
+  }
+
+  // Volúmenes bajos al fondo, en lugar del skyline de rascacielos.
   buildSkyline() {
     const parts = [];
     for (let i = 0; i < 34; i++) {
-      const w = 10 + Math.random() * 18;
-      const h = 40 + Math.random() * 110;
-      parts.push(placed(new THREE.BoxGeometry(w, h, w), (Math.random() - 0.5) * 170,
-        h / 2, FAR_Z - 20 - Math.random() * 140));
+      const w = 10 + avenueSample(i, 1, 8) * 18;
+      const h = 8 + avenueSample(i, 1, 9) * 24;
+      parts.push(placed(new THREE.BoxGeometry(w, h, w), (avenueSample(i, 1, 10) - .5) * 170,
+        h / 2, FAR_Z - 20 - avenueSample(i, 1, 11) * 140));
     }
     const geometry = mergeGeometries(parts);
     parts.forEach(part => part.dispose());
@@ -308,28 +375,28 @@ export class World {
 
   update(move, distance) {
     this.track.position.z = distance % TILE;
-
-    for (const seg of this.segments) {
-      seg.group.position.z += move;
+    const firstSlot = Math.floor((distance - NEAR_Z) / SEG);
+    for (let i = 0; i < this.segments.length; i++) {
+      const seg = this.segments[i];
+      const slot = firstSlot + i % this.segCount;
+      seg.group.position.z = distance - (slot + .5) * SEG;
       seg.group.visible = seg.group.position.z > -this.viewDistance;
       seg.wall.castShadow = seg.group.position.z > -45;
-      if (seg.group.position.z - SEG / 2 > NEAR_Z) {
-        seg.group.position.z -= this.segCount * SEG;
-        this.randomizeSegment(seg);
+      if (seg.slot !== slot) {
+        seg.slot = slot;
+        this.randomizeSegment(seg, slot);
       }
     }
-
-    this.buildingEdge[-1] += move;
-    this.buildingEdge[1] += move;
-    for (const b of this.buildings) {
-      b.group.position.z += move;
-      b.group.visible = b.group.position.z > -this.viewDistance;
-      b.windows.visible = b.group.position.z > -90;
-      if (b.group.position.z - b.w / 2 > NEAR_Z) {
-        this.randomizeBuilding(b);
-        b.group.position.z = this.buildingEdge[b.s] - b.w / 2;
-        this.buildingEdge[b.s] -= b.w;
-      }
+    for (let i = 0; i < this.buildings.length; i++) {
+      const b = this.buildings[i];
+      const slot = firstSlot + i % this.buildingCount;
+      const lot = buildingAt(slot, b.s);
+      if (lot.offset && slot !== firstSlot) { b.group.visible = false; continue; }
+      const anchor = slot - lot.offset;
+      if (b.slot !== anchor) this.setBuilding(b, anchor);
+      b.group.position.z = distance - (anchor + lot.span / 2) * LOT_LENGTH;
+      b.group.visible = b.group.position.z + lot.span * LOT_LENGTH / 2 > -this.viewDistance;
+      b.windows.visible = !!b.windows.geometry && (b.group.position.z > -90 || isLandmarkKind(lot.appearance.kind));
     }
   }
 }

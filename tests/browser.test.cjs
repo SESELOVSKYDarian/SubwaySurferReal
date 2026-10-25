@@ -6,6 +6,100 @@ let env;
 before(async()=>{env=await harness();});
 after(async()=>{if(env)await env.close();});
 
+test('Juan B. Justo repite fachadas y muros, reinicia en la costa y mantiene recursos acotados', {timeout:120000}, async()=>{
+ const page=await env.browser.newPage({viewport:{width:1120,height:720}});
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
+ try {
+  await page.goto(env.url);
+  const stats=await page.evaluate(async()=>{
+   const THREE=await import('three');
+   const {Game}=await import('./game.js');const {ROUTE_LENGTH,LOT_LENGTH,AVENUE_PROFILES,LANDMARKS,isLandmarkKind}=await import('./avenue-route.js');
+   const game=window.avenueDemo=new Game(document.querySelector('#game'));
+   await Promise.all([game.characterReady,game.officerReady]);
+   game.setQuality('balanced');game.start();game.nextSpawn=Infinity;game.update(0);
+   const world=game.world,children=game.scene.children.length;
+   const snapshot=()=>JSON.stringify({
+    buildings:world.buildings.filter(b=>b.group.visible).map(b=>[b.group.position.z,b.group.userData.landmark,b.group.userData.routeIndex,b.facade.material.uuid,b.sign.visible]),
+    sides:world.segments.map(s=>[s.group.position.z,s.graffiti.material.uuid,s.fence.visible,s.tree.visible,s.tree.position.z,s.tree.scale.x,s.lamp.position.z]),
+   });
+   const original=snapshot();world.update(0,ROUTE_LENGTH);
+   if(snapshot()!==original)throw Error('La segunda vuelta altera la secuencia');
+   let maxMeshes=0,maxTriangles=0,totalTriangles=0,frames=0;
+   for(let distance=0;distance<ROUTE_LENGTH*3;distance+=LOT_LENGTH){
+    world.update(0,distance);
+    const visible=world.buildings.filter(b=>b.group.visible);
+    if(new Set(visible.map(b=>`${b.s}:${b.slot}`)).size!==visible.length)throw Error('Hito de varios lotes dibujado dos veces');
+    let meshes=0,triangles=0;
+    for(const b of visible)b.group.traverseVisible(m=>{if(m.isMesh){meshes++;triangles+=(m.geometry.index?.count||m.geometry.attributes.position.count)/3;}});
+    maxMeshes=Math.max(meshes,maxMeshes);maxTriangles=Math.max(triangles,maxTriangles);totalTriangles+=triangles;frames++;
+   }
+   if(maxMeshes>105||maxTriangles>7700||totalTriangles/frames>3522)throw Error('Se superó el presupuesto gráfico de los edificios anteriores');
+   for(const landmark of LANDMARKS){
+    const profile=AVENUE_PROFILES.find(p=>p.id===landmark.profile);
+    if(!isLandmarkKind(profile.kind))continue;
+    world.update(0,landmark.slot*LOT_LENGTH);
+    const b=world.buildings.find(b=>b.group.visible&&b.s===landmark.side&&b.slot===landmark.slot);
+    if(!b||b.facade.scale.x!==1)throw Error('Hito ausente o texto espejado');
+    const seg=world.segments.find(s=>s.s===landmark.side&&s.slot===landmark.slot);
+    if(seg.fence.visible||!seg.wall.visible)throw Error('Reja tapa el hito o desaparece el paredón');
+    if(profile.kind==='lumber'){
+     b.cornice.geometry.computeBoundingBox();const bounds=b.cornice.geometry.boundingBox;
+     if(bounds.max.y-bounds.min.y<3)throw Error('La maderera no tiene techo curvo');
+    }
+    if(profile.kind==='station'){
+     const body=new THREE.Mesh(b.box.geometry,b.box.material);body.updateMatrixWorld();
+     const ray=new THREE.Raycaster(new THREE.Vector3(-1,2.5,1),new THREE.Vector3(1,0,0));
+     const hit=ray.intersectObject(body)[0];
+     if(!hit||hit.point.x<10)throw Error('La estación dejó de ser una playa abierta');
+    }
+   }
+   if(world.avenueMaterials.size>AVENUE_PROFILES.length||world.windowDetails.size+world.landmarkDetails.size>AVENUE_PROFILES.length+LANDMARKS.length||world.streetSignMaterials.size!==4)throw Error('Los recursos crecen por vuelta');
+   if(world.buildings.length!==32||game.scene.children.length!==children)throw Error('Se acumulan objetos al reciclar');
+   world.update(0,ROUTE_LENGTH*2+LOT_LENGTH*20);game.reset();game.update(0);
+   if(snapshot()!==original)throw Error('Reiniciar no regresa a la costa');
+   document.querySelector('#overlay').classList.add('hidden');document.querySelector('#cam').style.display='none';
+   return {buildings:world.buildings.length,facades:world.avenueMaterials.size,signs:world.streetSignMaterials.size};
+  });
+  await mkdir('test-results',{recursive:true});
+  for(const [name,distance] of [['costa',0],['textiles',720],['san-juan',1944]]){
+   await page.evaluate(distance=>{
+    const g=window.avenueDemo;g.distance=distance;g.nextSpawn=Infinity;g.update(0);
+   },distance);
+   await page.screenshot({path:`test-results/jb-justo-${name}.png`,timeout:60000});
+  }
+  assert.equal(stats.buildings,32);assert.deepEqual(errors,[]);
+ }finally{await page.close();}
+});
+
+test('D entra en debug aunque la cámara espere el cuerpo completo', {timeout:120000}, async()=>{
+ const page=await env.browser.newPage({viewport:{width:960,height:540}});
+ await page.route('**/pose.js',route=>route.fulfill({contentType:'text/javascript',body:`
+  export class PoseController {
+   constructor(video,canvas,handlers){this.handlers=handlers;this.running=true;}
+   async start(){this.handlers.onCalibrating();setInterval(()=>{this.handlers.onLost();this.handlers.onLane(-1);},100);}
+  }
+ `}));
+ try{
+  await page.goto(env.url);await page.locator('#camBtn').click();await page.locator('#playBtn').click();
+  await page.waitForFunction(()=>document.querySelector('#pause-title').textContent.includes('Calibrando'));
+  await page.keyboard.press('KeyD');
+  await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0);
+  assert.equal(await page.locator('#pause').evaluate(el=>el.classList.contains('hidden')),true);
+  await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowDown');
+  assert.match(await page.locator('#route-zone').innerText(),/De los Trabajadores.*Vuelta 1/);
+  for(const width of [320,768,1440]){
+   await page.setViewportSize({width,height:720});
+   const readable=await page.evaluate(()=>{
+    const route=document.querySelector('#route-label').getBoundingClientRect();
+    const quality=document.querySelector('#quality-control').getBoundingClientRect();
+    return route.left>=0&&route.right<=innerWidth&&route.top>=quality.bottom;
+   });
+   assert.equal(readable,true,`Cartel de recorrido superpuesto en ${width}px`);
+  }
+ }finally{await page.close();}
+});
+
 test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:120000},async()=>{
  const page=await env.browser.newPage({viewport:{width:960,height:540}});
  const errors=[],external=[];
