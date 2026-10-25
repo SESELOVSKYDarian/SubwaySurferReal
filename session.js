@@ -3,6 +3,7 @@ export class PlaySession {
   constructor(game, show, hide, timer = { set: (fn) => setTimeout(fn, 1000), clear: (id) => clearTimeout(id) }) {
     Object.assign(this, { game, show, hide, timer });
     this.camera = false; this.ready = false; this.pending = false; this.manual = false;
+    this.keyboard = false;
   }
   cancel() { this.timer.clear(this.tick); this.tick = null; }
   request() {
@@ -12,15 +13,29 @@ export class PlaySession {
   }
   tracking(ready) {
     this.camera = true; this.ready = ready;
+    if (this.keyboard) return;
     if (!ready) {
       this.cancel();
       if (this.game.state === 'playing') { this.game.pause(); this.pending = true; }
       if (this.pending) this.show('⏸ Calibrando', 'Ponte en el centro y quédate quieto');
     } else if (this.pending && !this.manual) this.advance();
   }
+  useKeyboard() {
+    if (this.keyboard) return;
+    this.keyboard = true;
+    if (this.pending && !this.manual) this.advance();
+  }
+  startDebug() {
+    this.cancel();
+    this.keyboard = true;
+    this.pending = false;
+    this.manual = false;
+    this.hide();
+    if (this.game.state === 'paused') this.game.resume(); else this.game.start();
+  }
   advance(n = 3) {
     this.cancel();
-    if (this.camera && !this.ready) {
+    if (!this.keyboard && this.camera && !this.ready) {
       this.show('⏸ Calibrando', 'Necesito ver tus hombros y cadera con claridad'); return;
     }
     if (!n) {

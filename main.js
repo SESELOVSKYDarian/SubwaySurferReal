@@ -57,10 +57,10 @@ function play() {
 }
 
 const poseHandlers = {
-  onArms: targets => game.setArmTargets(targets),
+  onArms: targets => { if (!session.keyboard) game.setArmTargets(targets); },
   onStatus: (text) => {
     $('pose-status').textContent = text;
-    if (session.pending && !session.ready) $('pause-text').textContent = text;
+    if (!session.keyboard && session.pending && !session.ready) $('pause-text').textContent = text;
   },
   onLost: () => {
     session.tracking(false);
@@ -69,27 +69,31 @@ const poseHandlers = {
   onCalibrating: () => session.tracking(false),
   onCalibrated: () => {
     flash('¡Listo! 🙌', '#7dff9a');
-    game.setLane(1);
+    if (!session.keyboard) game.setLane(1);
     session.tracking(true);
   },
   onLane: (lane) => {
+    if (session.keyboard) return;
     game.setLane(lane + 1);
     flash(['⬅', '⬆', '➡'][lane + 1]);
   },
   onJump: () => {
+    if (session.keyboard) return;
     game.jump();
     flash('SALTO ⤒', '#ffd84a');
   },
   onDuck: () => {
+    if (session.keyboard) return;
     game.roll();
     flash('AGACHADO ⤓', '#4ad0ff');
   },
-  onDuckHold: () => game.holdRoll(),
-  onDuckEnd: () => game.releaseRoll(),
-  onHandsUp: play,
+  onDuckHold: () => { if (!session.keyboard) game.holdRoll(); },
+  onDuckEnd: () => { if (!session.keyboard) game.releaseRoll(); },
+  onHandsUp: () => { if (!session.keyboard) play(); },
 };
 
 async function activateCamera() {
+  session.keyboard = false;
   const btn = $('camBtn');
   btn.disabled = true;
   btn.textContent = 'Cargando…';
@@ -136,6 +140,17 @@ window.addEventListener('keyup', e => {
   if (e.code === 'ArrowDown' || e.code === 'KeyS') game.releaseRoll();
 });
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyD' && !e.repeat && (!overlay.classList.contains('hidden') || session.pending)) {
+    overlay.classList.add('hidden');
+    $('retryCam').classList.add('hidden');
+    session.startDebug();
+    flash('DEBUG · ← → ↑ ↓', '#ffd84a');
+    e.preventDefault();
+    return;
+  }
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS', 'Space', 'Enter'].includes(e.code)) {
+    session.useKeyboard();
+  }
   if (e.repeat && ['Space', 'KeyW', 'ArrowUp'].includes(e.code)) return;
   switch (e.code) {
     case 'ArrowLeft': case 'KeyA': game.left(); break;
@@ -165,5 +180,5 @@ requestAnimationFrame(frame);
 
 // Consultar el permiso no abre un diálogo. Solo reconectamos automáticamente si ya está concedido.
 navigator.permissions?.query({ name: 'camera' }).then(permission => {
-  if (permission.state === 'granted') activateCamera();
+  if (permission.state === 'granted' && !session.keyboard) activateCamera();
 }).catch(() => {});

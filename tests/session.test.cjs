@@ -14,6 +14,34 @@ test('inicio, pérdida en cuenta atrás, recalibración y pausa manual',async()=
  s.togglePause();s.tracking(false);s.tracking(true);assert.equal(next,null);
  s.togglePause();tick();tick();tick();assert.equal(game.state,'playing');
 });
+test('teclado permite iniciar y reanudar sin calibración de cámara',async()=>{
+ const {PlaySession}=await import('../session.js');
+ let next;
+ const game={state:'ready',start(){this.state='playing'},pause(){this.state='paused'},resume(){this.state='playing'}};
+ const s=new PlaySession(game,()=>{},()=>{}, {set(fn){next=fn;return 1},clear(){next=null}});
+ const countdown=()=>{for(let i=0;i<3;i++){const fn=next;next=null;fn()}};
+ s.tracking(false);s.request();assert.equal(next,null);
+ s.useKeyboard();assert.equal(s.pending,true);countdown();assert.equal(game.state,'playing');
+ s.tracking(false);assert.equal(game.state,'playing');assert.equal(next,null);
+ s.togglePause();s.useKeyboard();assert.equal(game.state,'paused');assert.equal(next,null);
+ s.togglePause();countdown();assert.equal(game.state,'playing');
+ s.keyboard=false;s.tracking(false);assert.equal(game.state,'paused');
+});
+
+test('debug arranca inmediatamente y no se bloquea por seguimiento incompleto',async()=>{
+ const {PlaySession}=await import('../session.js');
+ for(const state of ['ready','paused','over']) {
+  let hidden=false,cleared=false;
+  const game={state,start(){this.state='playing'},resume(){this.state='playing'}};
+  const s=new PlaySession(game,()=>{},()=>{hidden=true}, {set(){throw Error('Debug no debe esperar una cuenta atrás')},clear(){cleared=true}});
+  s.camera=true;s.ready=false;s.pending=true;s.manual=true;
+  s.startDebug();s.tracking(false);s.tracking(true);s.tracking(false);
+  assert.equal(game.state,'playing');assert.equal(s.keyboard,true);
+  assert.equal(s.pending,false);assert.equal(s.manual,false);
+  assert.equal(hidden,true);assert.equal(cleared,true);
+ }
+});
+
 test('cámara: reutiliza stream y modelo; detección parcial no calibra',async()=>{
  const {PoseController}=await import('../pose.js');
  let requests=0,models=0,frames=0,lost=0,calibrated=0;
