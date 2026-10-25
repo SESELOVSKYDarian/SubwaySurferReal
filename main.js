@@ -42,7 +42,26 @@ const game = new Game($('game'), {
   },
 });
 
-$('quality').addEventListener('change', event => game.setQuality(event.target.value));
+const qualityDescriptions = {
+  auto: 'Ajusta la resolución según el rendimiento del equipo.',
+  low: 'Menos sombras y distancia; prioriza fluidez en equipos modestos.',
+  balanced: 'Equilibrio entre nitidez, sombras y rendimiento.',
+  high: 'Más resolución, sombras y detalle en personajes y escenario.',
+  ultra: 'Máxima resolución, sombras y distancia de dibujado; requiere un equipo potente.',
+};
+const qualityInput = $('quality');
+try {
+  const savedQuality = localStorage.getItem('graphicsQuality');
+  if (['auto', 'low', 'balanced', 'high', 'ultra'].includes(savedQuality)) qualityInput.value = savedQuality;
+} catch {}
+game.setQuality(qualityInput.value);
+$('quality-description').textContent = qualityDescriptions[qualityInput.value];
+qualityInput.addEventListener('change', event => {
+  const quality = event.target.value;
+  game.setQuality(quality);
+  $('quality-description').textContent = qualityDescriptions[quality];
+  try { localStorage.setItem('graphicsQuality', quality); } catch {}
+});
 
 let pose = null;
 const pauseEl = $('pause');
@@ -178,9 +197,18 @@ window.addEventListener('keydown', (e) => {
 
 // --- Bucle ---
 let last = performance.now();
+let fpsSampleStart = last;
+let fpsFrames = 0;
 const routeZone = $('route-zone');
 function frame(now) {
   game.update((now - last) / 1000);
+  fpsFrames++;
+  const fpsElapsed = now - fpsSampleStart;
+  if (fpsElapsed >= 500) {
+    $('fps').textContent = String(Math.round(fpsFrames * 1000 / fpsElapsed));
+    fpsFrames = 0;
+    fpsSampleStart = now;
+  }
   const route = routeState(game.distance);
   const label = `${route.zone} · Vuelta ${route.lap}`;
   if (routeZone.textContent !== label) routeZone.textContent = label;

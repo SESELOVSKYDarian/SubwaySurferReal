@@ -57,6 +57,8 @@ congela también las posturas, monedas, jetpack y cámara; no consume objetos.
 La cámara permanece detrás del alumno, encuadra los tres carriles y se aleja en
 pantallas verticales. El selector de calidad adapta resolución y distancia de
 visualización. El rendimiento depende del equipo: no se garantizan 60 FPS.
+La calidad alta usa sombras suaves de mayor resolución y hasta 2× de densidad de
+píxeles; automática y equilibrada limitan esos costes según el equipo.
 
 ## Cámara corporal
 

@@ -107,6 +107,9 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
  await page.route('https://**',route=>{external.push(route.request().url());return route.abort();});
  try{
   await page.goto(env.url);
+  await page.waitForFunction(()=>/^\d+$/.test(document.querySelector('#fps').textContent),{timeout:10000});
+  const fps=Number(await page.locator('#fps').innerText());
+  assert.ok(fps>0&&fps<1000,`FPS fuera de rango: ${fps}`);
   await page.locator('#playBtn').click();
   await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0,{timeout:60000});
   assert.equal(await page.locator('#overlay').evaluate(el=>el.classList.contains('hidden')),true);
@@ -135,6 +138,8 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    const THREE=await import('three');const {Game}=await import('./game.js');
    const game=new Game(document.querySelector('#game'));const runner=await game.characterReady;
    if(!runner)throw Error('No cargó el modelo');
+   if(game.scene.environment!==game.environmentTarget.texture)throw Error('Falta la iluminación ambiental compartida');
+   if(game.renderer.toneMapping!==THREE.AgXToneMapping)throw Error('La curva de color no conserva tonos naturales');
    let skins=0;runner.model.traverse(object=>{if(object.isSkinnedMesh)skins++;});
    const height=new THREE.Box3().setFromObject(runner.model).getSize(new THREE.Vector3()).y;
    if(height<1.8||height>2.3)throw Error(`Escala incorrecta: ${height}`);
@@ -167,7 +172,9 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    for(let i=0;i<65;i++)game.update(1/60);
    if(game.score<=0)throw Error('Puntuación');
    game.setQuality('high');const far=game.world.viewDistance;
-   game.setQuality('balanced');if(game.world.viewDistance>=far)throw Error('Calidad fija');
+   if(game.sun.shadow.mapSize.width!==2048||game.sun.shadow.radius!==2)throw Error('Calidad alta no mejora las sombras');
+   game.setQuality('balanced');
+   if(game.world.viewDistance>=far||game.sun.shadow.mapSize.width!==1024)throw Error('Calidad equilibrada no reduce el coste');
    game.setQuality('auto');for(let i=0;i<400;i++)game.adaptQuality(0.04);
    if(Math.abs(game.pixelRatio-0.55)>0.001||game.sun.castShadow)throw Error('Calidad automática');
    game.addObstacle('high',game.lane,0);game.update(1/60);if(game.state!=='over')throw Error('Colisión');
@@ -564,6 +571,65 @@ test('banco verde legible y animaciones con aterrizaje, giro y salto diferenciad
    if(r.poseState.landing>.001)throw Error('Aterrizaje queda trabado');
    r.reset();if(r.poseState.landing!==0||r.poseState.turn!==0)throw Error('No limpia transiciones');
    g.renderer.dispose();
+  });
+ }finally{await page.close();}
+});
+
+test('carrera con apoyos alternados y cadencia ligada a la velocidad para ambos personajes',{timeout:120000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const THREE=await import('three');const {Game}=await import('./game.js');
+   const g=new Game(document.querySelector('#game'));const [student,teacher]=await Promise.all([g.characterReady,g.officerReady]);
+   if(!teacher)throw Error('No cargó el profesor para validar su carrera');
+   const render=g.renderer.render.bind(g.renderer);g.renderer.render=()=>{};
+   for(const actor of [student,teacher]){
+    actor.setDetail(false);
+    const cadence=speed=>{
+     actor.reset();
+     for(let i=0;i<90;i++)actor.update(1/60,{running:true,speed});
+     return actor.poseState.phase;
+    };
+    const slow=cadence(14),fast=cadence(34);
+    if(fast<slow*1.3)throw Error('La cadencia no responde a la velocidad');
+    actor.reset();
+    const joints=['LeftUpLeg','RightUpLeg','LeftArm','RightArm','LeftForeArm','RightForeArm'];
+    const samples=Object.fromEntries(joints.map(name=>[name,[]]));
+    const feet={Left:[],Right:[]};
+    for(let i=0;i<120;i++){
+     actor.update(1/60,{running:true,speed:22});
+     actor.model.updateMatrixWorld(true);
+     for(const name of joints)samples[name].push(actor.bones[name].quaternion.clone());
+     for(const side of ['Left','Right']){
+      const point=actor.bones[`${side}Foot`].getWorldPosition(new THREE.Vector3());
+      feet[side].push(actor.model.worldToLocal(point).y);
+     }
+    }
+    for(const name of joints){
+     const first=samples[name][0];
+     const movement=Math.max(...samples[name].map(rotation=>first.angleTo(rotation)));
+     if(movement<(name.includes('ForeArm')?.025:.12))throw Error(`${name} permanece rígido durante la carrera`);
+    }
+    for(const side of ['Left','Right']){
+     const range=Math.max(...feet[side])-Math.min(...feet[side]);
+     if(range<.06)throw Error(`El pie ${side} no alterna entre apoyo y recuperación`);
+    }
+    actor.reset();
+    let supported=0,flight=0,peakLift=0;
+    for(let i=0;i<180;i++){
+     actor.update(1/60,{running:true,speed:34});
+     const state=actor.poseState;
+     if(state.leftSupport||state.rightSupport){
+      supported++;
+      if(state.runLift>.001)throw Error('El cuerpo rebota mientras un pie sigue apoyado');
+     }else{
+      flight++;
+      peakLift=Math.max(peakLift,state.runLift);
+     }
+    }
+    if(!supported||flight<4||peakLift<.04)throw Error('La carrera rápida no distingue apoyo y fase aérea');
+   }
+   g.renderer.render=render;g.renderer.dispose();
   });
  }finally{await page.close();}
 });

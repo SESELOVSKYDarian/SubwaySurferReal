@@ -7,25 +7,48 @@ export function surface(kind = 'concrete') {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  const image = ctx.createImageData(256, 256);
   let seed = 731;
   const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (let y = 0; y < 256; y++) {
-    for (let x = 0; x < 256; x++) {
-      const fabric = kind === 'fabric';
-      const weave = fabric ? ((x % 4 < 2 ? 9 : -9) + (y % 4 < 2 ? 9 : -9)) : 0;
-      const value = 150 + weave + (random() - 0.5) * (fabric ? 18 : 85);
-      const i = (y * 256 + x) * 4;
+  if (kind === 'asphalt') {
+    const grainCanvas = document.createElement('canvas');
+    grainCanvas.width = grainCanvas.height = 32;
+    const grainCtx = grainCanvas.getContext('2d');
+    const image = grainCtx.createImageData(32, 32);
+    for (let i = 0; i < image.data.length; i += 4) {
+      const value = 128 + (random() - 0.5) * 36;
       image.data[i] = image.data[i + 1] = image.data[i + 2] = value;
       image.data[i + 3] = 255;
     }
+    grainCtx.putImageData(image, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(grainCanvas, 0, 0, 256, 256);
+  } else {
+    const image = ctx.createImageData(256, 256);
+    for (let y = 0; y < 256; y++) {
+      for (let x = 0; x < 256; x++) {
+        const fabric = kind === 'fabric';
+        const weave = fabric ? ((x % 4 < 2 ? 9 : -9) + (y % 4 < 2 ? 9 : -9)) : 0;
+        const value = 150 + weave + (random() - 0.5) * (fabric ? 18 : 85);
+        const i = (y * 256 + x) * 4;
+        image.data[i] = image.data[i + 1] = image.data[i + 2] = value;
+        image.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
   }
-  ctx.putImageData(image, 0, 0);
   const bump = new THREE.CanvasTexture(canvas);
   bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
   bump.anisotropy = 4;
   // Datos de relieve y rugosidad: espacio lineal, no sRGB.
-  const result = { bumpMap: bump, bumpScale: kind === 'skin' ? 0.0012 : kind === 'fabric' ? 0.004 : kind === 'metal' ? 0.0015 : kind === 'fur' ? 0.004 : 0.035, roughnessMap: bump };
+  const bumpScale = {
+    asphalt: 0.006,
+    concrete: 0.035,
+    fabric: 0.004,
+    fur: 0.004,
+    metal: 0.0015,
+    skin: 0.0012,
+  }[kind] ?? 0.035;
+  const result = { bumpMap: bump, bumpScale, roughnessMap: bump };
   cache.set(kind, result);
   return result;
 }

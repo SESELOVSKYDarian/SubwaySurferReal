@@ -31,11 +31,15 @@ Aldosivi, Alvarado, SPOT y Mar del Plata siguen reutilizándose.
 
 ## Animación
 
-La carrera tiene zancada más amplia, codos flexionados, muñecas relajadas, balanceo
-contrapuesto de pelvis y hombros y oscilación vertical pequeña. El apoyo de las
-suelas se corrige con una muestra de vértices de los zapatos, sin recorrer todo
-el cuerpo. Las muestras se almacenan por geometría, incluyendo ambos niveles de
-detalle, para que el cambio de calidad no deje índices del modelo anterior.
+La carrera separa apoyo, despegue, fase aérea y recuperación: durante el apoyo el
+pie recorre el suelo, y en la recuperación vuelve hacia delante con la rodilla
+flexionada y la punta relajada. A velocidad alta aparece un breve vuelo entre
+apoyos; la pelvis absorbe el contacto y acompaña el despegue. La cadencia y la
+proporción de apoyo responden a la velocidad. Hombros y brazos se contrapesan,
+mientras cuello y cabeza reducen el balanceo. El ajuste de contacto se limita a
+una muestra de vértices de los zapatos, sin recorrer todo el cuerpo. Las muestras
+se almacenan por geometría para ambos niveles de detalle. El mismo ciclo anima al
+alumno y al profesor.
 
 El salto distingue ascenso, ápice y descenso: flexión variable y piernas en
 posiciones distintas. Al aterrizar hay una compresión breve que se disipa. El
@@ -61,8 +65,9 @@ salto y agachado. La comparación usa el mismo escenario con el encuadre anterio
 y el nuevo. Las pruebas cubren seguimiento lateral, visibilidad del carril
 contiguo, encuadre de los tres carriles, recuperación de opacidad, aislamiento y
 liberación de materiales, color del banco, suelas en ambos niveles de detalle,
-flexión de codos, salto, giro y aterrizaje. Se conservan las regresiones de pausa,
-agachado, brazos de cámara y las 72 combinaciones de rampas de colectivos.
+flexión de codos, salto, giro y aterrizaje, alternancia de pasos, fase aérea y
+cadencia según velocidad en ambos personajes. Se conservan las regresiones de
+pausa, agachado, brazos de cámara y las 72 combinaciones de rampas de colectivos.
 La validación gráfica usa SwiftShader; no acredita FPS en un dispositivo físico.
 
 Resultado: 17 pruebas aprobadas. Tras ajustar la coordinación de brazos/piernas

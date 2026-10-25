@@ -30,7 +30,7 @@ const {mkdir}=require('node:fs/promises');
    const g=window.demo;g.reset();g.setQuality('high');g.x=0;g.y=0;g.update(0);
    g.officerAnchor.visible=g.guard.root.visible=g.dog.root.visible=false;
    g.camera.position.set(2.4,1.65,2.9);g.camera.lookAt(0,1.05,0);
-   g.runner.reset();for(let i=0;i<45;i++)g.runner.update(1/60,{running:true,speed:20});
+   g.runner.reset();for(let i=0;i<45;i++)g.runner.update(1/60,{running:true,speed:34});
    window.draw(g.scene,g.camera);
   });
   await page.screenshot({path:'test-results/animation-run.png',timeout:60000});

@@ -71,7 +71,11 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   const rest = Object.fromEntries(Object.entries(bones).map(([name, bone]) => [name, bone.quaternion.clone()]));
   const target = new THREE.Quaternion();
   const euler = new THREE.Euler();
-  const poseState = { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0, landing: 0, tuck: 0, turn: 0 };
+  const poseState = {
+    crouch: 0, air: 0, run: 0, flight: 0, phase: 0, stance: 0.58,
+    rootDrop: 0, runLift: 0, landing: 0, tuck: 0, turn: 0,
+    leftSupport: false, rightSupport: false,
+  };
   let wasAirborne = false, lastVerticalSpeed = 0, animationTime = 0;
   const restPosition = Object.fromEntries(Object.entries(bones).map(([name, bone]) => {
     const p = bone.getWorldPosition(new THREE.Vector3());
@@ -82,21 +86,36 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     target.setFromEuler(euler.set(x, y, z)).premultiply(rest[name]);
     bones[name].quaternion.slerp(target, alpha);
   };
+  const gaitAt = phase => {
+    const cycle = THREE.MathUtils.euclideanModulo(phase, Math.PI * 2) / (Math.PI * 2);
+    const stance = poseState.stance;
+    if (cycle < stance) {
+      return { support: true, stride: THREE.MathUtils.lerp(-0.38, 0.38, cycle / stance), lift: 0, footPitch: 0 };
+    }
+    const progress = (cycle - stance) / (1 - stance);
+    const eased = progress * progress * (3 - 2 * progress);
+    return {
+      support: false,
+      stride: THREE.MathUtils.lerp(0.38, -0.38, eased),
+      lift: Math.sin(Math.PI * progress) * 0.18,
+      footPitch: Math.sin(Math.PI * progress) * 0.12,
+    };
+  };
   const legPose = (side, phase, alpha) => {
-    const up = bones[`${side}UpLeg`];
     const knee = bones[`${side}Leg`];
     const foot = bones[`${side}Foot`];
     const l1 = Math.hypot(knee.position.y, knee.position.z);
     const l2 = Math.hypot(foot.position.y, foot.position.z);
     const a0 = Math.atan2(-knee.position.z, -knee.position.y);
     const b0 = Math.atan2(-foot.position.z, -foot.position.y);
-    const stride = Math.cos(phase) * 0.34 * poseState.run * (1 - poseState.crouch);
-    const lift = Math.max(0, Math.sin(phase)) * 0.19 * poseState.run * (1 - poseState.crouch);
+    const gait = gaitAt(phase);
+    const stride = gait.stride * poseState.run * (1 - poseState.crouch);
+    const lift = gait.lift * poseState.run * (1 - poseState.crouch);
     const hip = restPosition[`${side}UpLeg`];
     const ankle = restPosition[`${side}Foot`];
     const left=side==='Left';
     const dz = ankle.z - hip.z + stride + poseState.air * (left ? -.20 : .09);
-    const dy = ankle.y - hip.y + poseState.rootDrop + lift +
+    const dy = ankle.y - hip.y - model.position.y + lift +
       poseState.air * ((left ? .22 : .10) + poseState.tuck * (left ? 1 : .65));
     const d = THREE.MathUtils.clamp(Math.hypot(dy, dz), Math.abs(l1-l2)+0.001, l1+l2-0.001);
     const bend = -Math.acos(THREE.MathUtils.clamp((d*d-l1*l1-l2*l2)/(2*l1*l2),-1,1));
@@ -104,7 +123,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     const shin = bend-(b0-a0);
     move(`${side}UpLeg`, thigh, 0, 0, alpha);
     move(`${side}Leg`, shin, 0, 0, alpha);
-    move(`${side}Foot`, -(thigh+shin), 0, 0, alpha);
+    move(`${side}Foot`, -(thigh+shin) + gait.footPitch * poseState.run * (1-poseState.crouch), 0, 0, alpha);
   };
   const armWeights = {};
   const armRotations = {};
@@ -173,7 +192,11 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     reset() {
       Object.values(bones).forEach(bone => bone.quaternion.copy(rest[bone.name.replace(/^mixamorig:?/, '')]));
       for (const name of Object.keys(armWeights)) { armWeights[name] = 0; delete armRotations[name]; }
-      Object.assign(poseState, { crouch: 0, air: 0, run: 0, flight: 0, phase: 0, rootDrop: 0, landing: 0, tuck: 0, turn: 0 });
+      Object.assign(poseState, {
+        crouch: 0, air: 0, run: 0, flight: 0, phase: 0, stance: 0.58,
+        rootDrop: 0, runLift: 0, landing: 0, tuck: 0, turn: 0,
+        leftSupport: false, rightSupport: false,
+      });
       wasAirborne=false;lastVerticalSpeed=0;animationTime=0;
       model.position.set(0,0,0);
       model.rotation.set(0,0,0);
@@ -193,33 +216,53 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       poseState.air = THREE.MathUtils.damp(poseState.air, airborne ? 1 : 0, 14, dt);
       poseState.flight = THREE.MathUtils.damp(poseState.flight, flying ? 1 : 0, 14, dt);
       poseState.run = THREE.MathUtils.damp(poseState.run, running && !airborne && !crouching && !flying ? 1 : 0, 16, dt);
-      poseState.phase += dt * THREE.MathUtils.clamp(speed * 0.65, 7, 14) * poseState.run;
-      const bounce=(1-Math.cos(poseState.phase*2))*.022*poseState.run;
-      poseState.rootDrop = poseState.crouch * .68 + (bounce+poseState.landing)*(1-poseState.crouch);
-      model.position.y = -poseState.rootDrop + (!running && !airborne ? Math.sin(animationTime*2.2)*.003 : 0);
+      const cadence = THREE.MathUtils.clamp(1.9 + (speed - 14) * 0.055, 1.9, 3.0);
+      poseState.stance = THREE.MathUtils.clamp(0.58 - Math.max(0, speed - 14) * 0.008, 0.42, 0.58);
+      poseState.phase += dt * cadence * Math.PI * 2 * poseState.run;
+      const leftGait = gaitAt(poseState.phase);
+      const rightGait = gaitAt(poseState.phase + Math.PI);
+      poseState.leftSupport = leftGait.support && poseState.run > 0.001;
+      poseState.rightSupport = rightGait.support && poseState.run > 0.001;
+      let runLift = 0;
+      if (!leftGait.support && !rightGait.support && poseState.run > 0) {
+        const cycle = THREE.MathUtils.euclideanModulo(poseState.phase, Math.PI * 2) / (Math.PI * 2);
+        const flightProgress = cycle < 0.5
+          ? (cycle - poseState.stance) / (0.5 - poseState.stance)
+          : (cycle - 0.5 - poseState.stance) / (0.5 - poseState.stance);
+        runLift = Math.sin(Math.PI * THREE.MathUtils.clamp(flightProgress, 0, 1)) * 0.055 * poseState.run;
+      }
+      const compression = (1-Math.cos(poseState.phase*2))*.012*poseState.run;
+      poseState.runLift = runLift;
+      poseState.rootDrop = poseState.crouch * .68 + (compression+poseState.landing)*(1-poseState.crouch);
+      model.position.y = runLift - poseState.rootDrop + (!running && !airborne ? Math.sin(animationTime*2.2)*.003 : 0);
       model.rotation.y=-poseState.turn*.13*(1-poseState.crouch);
-      move('Hips',0,Math.sin(poseState.phase)*.055*poseState.run,
+      move('Hips',Math.sin(poseState.phase)*.025*poseState.run,
+        Math.sin(poseState.phase)*.055*poseState.run,
         Math.sin(poseState.phase)*.022*poseState.run,blend);
       // Los pies se resuelven como dos eslabones; el torso se inclina sin girar
       // todo el personaje. Mantener agachado no reinicia ninguna animación.
       legPose('Left', poseState.phase, blend);
       legPose('Right', poseState.phase + Math.PI, blend);
-      move('Spine', -0.20*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7,
-        -Math.sin(poseState.phase)*0.045*poseState.run, 0, blend);
-      move('Spine2', -0.35*poseState.crouch, -Math.sin(poseState.phase)*0.10*poseState.run, 0, blend);
-      move('Neck', 0.12*poseState.crouch, 0, 0, blend);
-      move('Head', 0.02, 0, 0, blend);
+      move('Spine', -0.14*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7,
+        -Math.sin(poseState.phase)*0.06*poseState.run, -Math.sin(poseState.phase)*0.02*poseState.run, blend);
+      move('Spine2', -0.35*poseState.crouch, -Math.sin(poseState.phase)*0.075*poseState.run,
+        Math.sin(poseState.phase)*0.018*poseState.run, blend);
+      move('Neck', 0.12*poseState.crouch, Math.sin(poseState.phase)*0.035*poseState.run,
+        -Math.sin(poseState.phase)*0.012*poseState.run, blend);
+      move('Head', 0.02, -Math.sin(poseState.phase)*0.025*poseState.run,
+        Math.sin(poseState.phase)*0.01*poseState.run, blend);
       for (const [side, sign] of [['Left',1],['Right',-1]]) {
-        const swing = sign*Math.cos(poseState.phase)*0.80*poseState.run;
+        const swing = sign*Math.cos(poseState.phase)*0.55*poseState.run;
         const reach = grabbing ? 1.1 : 0;
         move(`${side}Arm`, swing + (sign>0 ? .65 : .35)*poseState.air + 0.8*poseState.crouch + reach,
-          0, -sign*(.70 - .26*poseState.crouch - .12*poseState.air), blend);
-        move(`${side}ForeArm`, .95*poseState.run + .45*poseState.crouch + .40*poseState.air + .65*poseState.flight, 0, 0, blend);
-        move(`${side}Hand`,-.12*poseState.run,0,0,blend);
+          0, -sign*(.16 - .05*poseState.crouch - .04*poseState.air), blend);
+        const elbowBend = 1.05 + .12*Math.max(0, sign*Math.sin(poseState.phase));
+        move(`${side}ForeArm`, elbowBend*poseState.run + .45*poseState.crouch + .40*poseState.air + .65*poseState.flight, 0, 0, blend);
+        move(`${side}Hand`,-.12*poseState.run,0,Math.sin(poseState.phase)*.035*poseState.run,blend);
       }
       followArms(dt, arms);
       model.updateMatrixWorld(true);
-      if(running && !airborne && !flying && !crouching) {
+      if(running && !airborne && !flying && !crouching && (poseState.leftSupport || poseState.rightSupport)) {
         plantFeet();model.updateMatrixWorld(true);
       }
     },

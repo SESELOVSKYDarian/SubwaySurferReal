@@ -61,7 +61,12 @@ export class World {
 
     const roadTex = T.asphalt();
     roadTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
-    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), mat({ map: roadTex }), { receive: true });
+    this.roadMaterial = new THREE.MeshStandardMaterial({
+      map: roadTex,
+      roughness: 0.94,
+      ...surface('asphalt'),
+    });
+    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), this.roadMaterial, { receive: true });
     ground.name='AsphaltRoad';ground.rotation.x = -Math.PI / 2;
     ground.position.z = NEAR_Z - len / 2;this.track.add(ground);
     const perLane = Math.floor(len / TILE);
@@ -219,14 +224,14 @@ export class World {
       for (let i = 0; i < this.buildingCount; i++) {
         const group = new THREE.Group();
         group.name = 'JuanBJustoBuilding';
-        const box = mesh(unit, this.concrete);
-        const facade = mesh(plane, this.concrete);
+        const box = mesh(unit, this.concrete, { cast: true, receive: true });
+        const facade = mesh(plane, this.concrete, { receive: true });
         facade.rotation.y = -s * Math.PI / 2;
-        const cornice = mesh(unit, this.roofMaterial);
+        const cornice = mesh(unit, this.roofMaterial, { cast: true, receive: true });
         const windows = mesh(unit, this.trimMaterial);
         windows.scale.x = s;
         const awning = mesh(unit, this.darkTrimMaterial);
-        const roof = mesh(unit, this.roofMaterial);
+        const roof = mesh(unit, this.roofMaterial, { cast: true, receive: true });
         const sign = mesh(plane, this.concrete);
         const post = mesh(unit, this.darkTrimMaterial);
         sign.scale.set(6.5, 1.6, 1);
@@ -396,6 +401,9 @@ export class World {
       if (b.slot !== anchor) this.setBuilding(b, anchor);
       b.group.position.z = distance - (anchor + lot.span / 2) * LOT_LENGTH;
       b.group.visible = b.group.position.z + lot.span * LOT_LENGTH / 2 > -this.viewDistance;
+      const shadowing = b.group.visible && b.group.position.z > -60;
+      b.box.castShadow = b.cornice.castShadow = b.roof.castShadow = shadowing;
+      b.box.receiveShadow = b.facade.receiveShadow = b.cornice.receiveShadow = b.roof.receiveShadow = shadowing;
       b.windows.visible = !!b.windows.geometry && (b.group.position.z > -90 || isLandmarkKind(lot.appearance.kind));
     }
   }

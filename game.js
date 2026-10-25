@@ -35,15 +35,15 @@ export class Game {
   constructor(canvas, callbacks = {}) {
     this.cb = callbacks;
     this.quality = 'auto';
-    this.pixelRatio = Math.min(window.devicePixelRatio, 1.25);
+    this.pixelRatio = Math.min(window.devicePixelRatio, 1.5);
     this.frameAverage = 1 / 60;
     this.qualityElapsed = 0;
     const r = (this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }));
     r.setPixelRatio(this.pixelRatio);
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFShadowMap;
-    r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 0.92;
+    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.toneMapping = THREE.AgXToneMapping;
+    r.toneMappingExposure = 1;
     r.outputColorSpace = THREE.SRGBColorSpace;
 
     this.scene = new THREE.Scene();
@@ -53,9 +53,9 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(54, 1, 0.1, 700);
 
     // Luz de tarde: sol cálido y bajo + cielo azulado
-    this.scene.add(new THREE.HemisphereLight(0xb9cce1, 0x40382f, 1.2));
+    this.scene.add(new THREE.HemisphereLight(0xb9cce1, 0x51483d, 1.5));
     const sun = (this.sun = new THREE.DirectionalLight(0xffd5a0, 3.4));
-    sun.position.set(-18, 19, -8);
+    sun.position.set(-18, 24, -12);
     sun.target.position.set(0, 0, -8);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -85,13 +85,14 @@ export class Game {
     // El cielo se calcula una vez: no ejecutar la dispersión atmosférica en
     // cada píxel de cada cuadro, especialmente en equipos modestos.
     this.scene.background = this.environmentTarget.texture;
+    this.scene.environment = this.environmentTarget.texture;
     sky.geometry.dispose();
     sky.material.dispose();
     this.scene.traverse(object => {
       for (const material of [object.material].flat()) {
-        if (material?.isMeshStandardMaterial && material.metalness >= 0.5) {
+        if (material?.isMeshStandardMaterial) {
           material.envMap = this.environmentTarget.texture;
-          material.envMapIntensity = 0.45;
+          material.envMapIntensity = material.metalness >= 0.5 ? 0.45 : 0.12;
         }
       }
     });
@@ -116,14 +117,37 @@ export class Game {
   }
 
   setQuality(quality) {
-    if (!['auto', 'high', 'balanced'].includes(quality)) return;
+    if (!['auto', 'low', 'balanced', 'high', 'ultra'].includes(quality)) return;
     this.quality = quality;
-    this.pixelRatio = Math.min(window.devicePixelRatio, quality === 'high' ? 1.75 : 1.25);
+    const profiles = {
+      low:      { pixelRatio: 0.75, shadows: false, shadowSize: 512, viewDistance: 145, fogFar: 245, detail: false, anisotropy: 1 },
+      balanced: { pixelRatio: 1, shadows: true, shadowSize: 1024, viewDistance: 225, fogFar: 325, detail: false, anisotropy: 4 },
+      high:     { pixelRatio: 1.5, shadows: true, shadowSize: 2048, viewDistance: 325, fogFar: 445, detail: true, anisotropy: 8 },
+      ultra:    { pixelRatio: 2, shadows: true, shadowSize: 4096, viewDistance: 410, fogFar: 560, detail: true, anisotropy: 16 },
+    };
+    const profile = profiles[quality] ?? { ...profiles.balanced, pixelRatio: 1.5, viewDistance: 285, fogFar: 390, detail: true, anisotropy: 8 };
+    this.profile = profile;
+    this.pixelRatio = Math.min(window.devicePixelRatio, profile.pixelRatio);
     this.renderer.setPixelRatio(this.pixelRatio);
-    this.sun.castShadow = true;
+    this.renderer.shadowMap.enabled = profile.shadows;
+    this.sun.castShadow = profile.shadows;
+    const shadowSize = profile.shadowSize;
+    if (this.sun.shadow.mapSize.width !== shadowSize) {
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+      this.sun.shadow.mapSize.set(shadowSize, shadowSize);
+    }
+    this.sun.shadow.radius = quality === 'ultra' ? 3 : quality === 'high' ? 2 : 1;
     this.resize();
-    this.world.viewDistance = quality === 'high' ? 340 : 230;
-    this.scene.fog.far = quality === 'high' ? 440 : 310;
+    this.world.viewDistance = profile.viewDistance;
+    this.scene.fog.far = profile.fogFar;
+    this.scene.traverse(object => {
+      for (const material of [object.material].flat()) {
+        for (const value of Object.values(material ?? {})) {
+          if (value?.isTexture) value.anisotropy = Math.min(profile.anisotropy, this.renderer.capabilities.getMaxAnisotropy());
+        }
+      }
+    });
     this.qualityElapsed = 0;
   }
 
@@ -133,12 +157,13 @@ export class Game {
     this.qualityElapsed += dt;
     if (this.quality !== 'auto' || this.qualityElapsed < 3) return;
     this.qualityElapsed = 0;
-    const max = Math.min(window.devicePixelRatio, 1.25);
+    const max = Math.min(window.devicePixelRatio, 1.5);
     const next = THREE.MathUtils.clamp(this.pixelRatio + (this.frameAverage > 0.022 ? -0.125 : this.frameAverage < 0.017 ? 0.125 : 0), Math.min(0.55, max), max);
     if (next !== this.pixelRatio) {
       this.pixelRatio = next;
       this.renderer.setPixelRatio(next);
       this.sun.castShadow = next > 0.6;
+      this.renderer.shadowMap.enabled = next > 0.6;
       this.resize();
     }
   }
@@ -751,7 +776,7 @@ export class Game {
       THREE.MathUtils.clamp(this.rig.root.rotation.z, -0.16, 0.16), 12, dt);
     this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
     if (this.runner) {
-      this.runner.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7);
+      this.runner.setDetail(this.profile.detail && this.pixelRatio > .7);
       if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed, verticalSpeed: this.vy,
         turn: THREE.MathUtils.clamp((LANE_X[this.lane]-this.x)/2.2,-1,1),
         arms: performance.now() - this.armSeenAt < 350 ? this.armTargets : null });
@@ -936,7 +961,7 @@ export class Game {
     this.officerAnchor.position.copy(g.root.position);
     this.officerAnchor.visible = g.root.visible;
     if (this.officer) {
-      this.officer.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
+      this.officer.setDetail(this.profile.detail && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
       if (this.state !== 'paused') this.officer.update(dt, {
         running: !still && !reached, airborne: false, rolling: false,
         speed: this.speed, grabbing: reached,

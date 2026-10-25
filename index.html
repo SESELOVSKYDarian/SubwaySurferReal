@@ -27,13 +27,7 @@
     <div id="power"><span>🚀</span><div class="bar"><div id="power-fill"></div></div></div>
   </div>
 
-  <label id="quality-control">Calidad
-    <select id="quality" aria-label="Calidad gráfica">
-      <option value="auto">Automática</option>
-      <option value="high">Alta</option>
-      <option value="balanced">Equilibrada</option>
-    </select>
-  </label>
+  <div id="fps-display" title="Cuadros por segundo">FPS <b id="fps" aria-live="off">--</b></div>
   <div id="action"></div>
 
   <div id="pause" class="hidden">
@@ -63,6 +57,16 @@
         <li><b>¡Cuidado con el profesor!</b> Si tropiezas dos veces seguidas, te atrapa</li>
         <li><b>Levanta las dos manos</b> → empezar / reiniciar</li>
       </ul>
+      <label id="quality-control">Calidad gráfica
+        <select id="quality" aria-label="Calidad gráfica">
+          <option value="auto">Automática</option>
+          <option value="low">Ligera · más rendimiento</option>
+          <option value="balanced">Equilibrada</option>
+          <option value="high">Alta · más detalle</option>
+          <option value="ultra">Ultra · máxima calidad</option>
+        </select>
+        <span id="quality-description" aria-live="polite"></span>
+      </label>
       <label class="sens">
         Sensibilidad de salto / agacharse
         <input id="sens" type="range" min="0.6" max="1.6" step="0.1" value="1">
