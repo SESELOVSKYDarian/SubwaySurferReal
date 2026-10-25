@@ -71,6 +71,7 @@
       <div class="buttons">
         <button id="camBtn">📷 Activar cámara</button>
         <button id="playBtn">▶ Jugar</button>
+        <button id="rankingBtn">🏆 Ranking</button>
       </div>
       <p class="hint">
         <b>Pulsa D para iniciar en modo debug sin cámara. Usa ← → ↑ ↓ para jugar.</b><br>
@@ -81,6 +82,34 @@
       </p>
     </div>
   </div>
+
+  <dialog id="score-dialog" class="score-modal" aria-labelledby="score-dialog-title">
+    <h2 id="score-dialog-title">¡Partida terminada!</h2>
+    <p id="final-score" class="final-score"></p>
+    <form id="score-form">
+      <label for="score-initials">Tus tres iniciales</label>
+      <input id="score-initials" name="initials" type="text" minlength="3" maxlength="3" pattern="[A-Z]{3}" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="initials-hint score-error">
+      <p id="initials-hint" class="hint">Escribí tres letras, por ejemplo ABC.</p>
+      <p id="score-error" class="ranking-error" role="alert"></p>
+      <div class="buttons">
+        <button id="save-score" type="submit" disabled>Guardar y ver ranking</button>
+        <button id="skip-score" type="button" class="secondary-button">Omitir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ranking-dialog" class="score-modal" aria-labelledby="ranking-title">
+    <h2 id="ranking-title">🏆 Ranking</h2>
+    <p class="hint">Los diez mejores puntajes guardados en este navegador.</p>
+    <p id="ranking-empty">Todavía no hay partidas guardadas. ¡Jugá para inaugurar el ranking!</p>
+    <table id="ranking-table" hidden>
+      <caption class="sr-only">Mejores puntuaciones de Técnica Run</caption>
+      <thead><tr><th scope="col">#</th><th scope="col">Iniciales</th><th scope="col">Puntos</th><th scope="col">Monedas</th></tr></thead>
+      <tbody id="ranking-rows"></tbody>
+    </table>
+    <p id="ranking-status" role="status"></p>
+    <div class="buttons"><button id="close-ranking" type="button">Volver al menú</button></div>
+  </dialog>
 
   <script type="module" src="main.js"></script>
 </body>

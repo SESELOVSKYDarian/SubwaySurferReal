@@ -2,10 +2,12 @@
 import { Game } from './game.js';
 import { PlaySession } from './session.js';
 import { routeState } from './avenue-route.js';
+import { Leaderboard } from './leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
 const actionEl = $('action');
+const leaderboard = new Leaderboard(() => overlay.classList.remove('hidden'));
 let actionTimer;
 
 function flash(text, color = '#fff') {
@@ -33,10 +35,10 @@ const game = new Game($('game'), {
   },
   onGameOver(score, coins, reason) {
     $('title').textContent = reason === 'caught' ? '¡Te atrapó el profesor! 👨‍🏫' : '¡Choque! 💥';
-    $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — levanta las dos manos para volver a jugar`;
+    $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — jugá otra vez con el botón o levantando las dos manos`;
     $('howto').style.display = 'none';
     $('playBtn').textContent = '↻ Otra vez';
-    setTimeout(() => game.state === 'over' && !session.pending && overlay.classList.remove('hidden'), 600);
+    leaderboard.offerScore(score, coins);
   },
 });
 
@@ -52,7 +54,7 @@ function showPause(title, text = '', count = false) {
 }
 const session = new PlaySession(game, showPause, () => pauseEl.classList.add('hidden'));
 function play() {
-  if (game.state === 'playing' || session.pending || session.manual) return;
+  if (leaderboard.blocking || game.state === 'playing' || session.pending || session.manual) return;
   overlay.classList.add('hidden');
   session.request();
 }
@@ -137,10 +139,14 @@ sensInput.addEventListener('input', () => {
 });
 
 // --- Control por teclado ---
+const editingField = target => target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]');
 window.addEventListener('keyup', e => {
+  if (leaderboard.blocking || editingField(e.target)) return;
   if (e.code === 'ArrowDown' || e.code === 'KeyS') game.releaseRoll();
 });
 window.addEventListener('keydown', (e) => {
+  if (leaderboard.blocking || editingField(e.target)) return;
+  if (['Enter', 'Space'].includes(e.code) && e.target instanceof Element && e.target.closest('button, a')) return;
   if (e.code === 'KeyD' && !e.repeat && (!overlay.classList.contains('hidden') || session.pending)) {
     overlay.classList.add('hidden');
     $('retryCam').classList.add('hidden');

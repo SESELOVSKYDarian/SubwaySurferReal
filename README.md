@@ -36,6 +36,13 @@ rampas para subir a colectivos, monedas y jetpack. El primer tropiezo acerca al
 profesor; otro tropiezo durante la persecución termina la partida. Los bancos
 y los choques frontales con colectivos también terminan la partida.
 
+El menú **Ranking** muestra los diez mejores puntajes. Al finalizar cada partida
+se solicitan tres iniciales; se guardan todas las partidas registradas como JSON
+en `localStorage` (`tecnica-run-ranking-v1`), con puntos, monedas y fecha. Los
+empates se ordenan por monedas y luego por antigüedad. El ranking persiste al
+recargar en ese navegador y origen; no se comparte entre dispositivos ni se
+escribe un archivo en GitHub Pages. Se puede omitir el guardado de una partida.
+
 ## Animación y colisiones
 
 Agacharse sostiene una postura baja: no gira el cuerpo ni reinicia una voltereta
