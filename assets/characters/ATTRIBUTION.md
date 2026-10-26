@@ -89,3 +89,14 @@ Licencia: Creative Commons Attribution 4.0, https://creativecommons.org/licenses
 Archivo original proporcionado por el usuario en `source/teen-boy/original.glb`.
 Adaptaciones: escala, postura de brazos, transferencia de pesos al rig del juego
 con Blender y generación de un nivel de detalle reducido. Texturas originales conservadas.
+
+## Personajes agregados desde archivos del usuario
+
+`hoodie-student` deriva de `grey_hoodie_teen_portrait.glb` y `phone-student`
+de `young_woman_holding_a_smartphone.glb`, proporcionados por el usuario para
+integrar en este juego. No se les atribuye la licencia CC0 ni CC BY de otros
+recursos. No se suministraron URLs de autores o licencias de esos dos archivos.
+Adaptaciones: unión de piezas del escaneo, soldadura de costuras, reducción de
+polígonos, mapas a 1024 px, normalización y pesos del esqueleto del juego.
+Las versiones `classic-student` conservan el alumno de MakeHuman y guardapolvo
+propios ya documentados en este archivo.

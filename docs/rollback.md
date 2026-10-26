@@ -140,3 +140,14 @@ git push origin main
 ```
 
 Esto restaura el profesor anterior sin reescribir el historial.
+
+## Deshacer el menú y los nuevos personajes
+
+Respaldo remoto: `backup/main-before-menu-d804ced`.
+
+```sh
+git switch main
+git pull --ff-only origin main
+git revert --no-edit menu-characters-v1
+git push origin main
+```

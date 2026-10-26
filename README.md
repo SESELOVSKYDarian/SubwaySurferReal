@@ -131,3 +131,5 @@ Perfil del profesor con gorra de policía: [modelo, referencias y comprobaciones
 Profesor modelado en Blender: [modelo editable, materiales y reconstrucción](docs/realism-materials.md).
 Incluye piel UV, barba, ropa y dos niveles de detalle animados. El rostro es una
 aproximación con piel CC0; el parecido fotográfico exacto sigue pendiente.
+
+Menú El Guardapolvo, sonido y cuatro personajes seleccionables: [detalles y límites](docs/menu-personajes.md).

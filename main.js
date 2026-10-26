@@ -1,5 +1,6 @@
 // Une el juego con los controles (cuerpo vía cámara + teclado).
 import { Game } from './game.js';
+import { initMenu, sound } from './menu.js';
 import { PlaySession } from './session.js';
 import { routeState } from './avenue-route.js';
 import { Leaderboard } from './leaderboard.js';
@@ -26,14 +27,15 @@ const game = new Game($('game'), {
     $('score').textContent = score;
     $('coins').textContent = `🪙 ${coins}`;
   },
-  onCoin() {},
-  onStumble: () => flash('¡TROPIEZO! 👨‍🏫', '#ff5a5a'),
+  onCoin() {sound('coin');},
+  onStumble: () => { sound('lose');flash('¡TROPIEZO! 👨‍🏫', '#ff5a5a'); },
   onJetpack: () => flash('¡JETPACK! 🚀', '#ffb42e'),
   onPower(fraction) {
     $('power').classList.toggle('show', fraction > 0);
     $('power-fill').style.width = `${fraction * 100}%`;
   },
   onGameOver(score, coins, reason) {
+    window.dispatchEvent(new CustomEvent('runner:gameover',{detail:{score,coins}}));
     $('title').textContent = reason === 'caught' ? '¡Te atrapó el profesor! 👨‍🏫' : '¡Choque! 💥';
     $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — jugá otra vez con el botón o levantando las dos manos`;
     $('howto').style.display = 'none';
@@ -75,6 +77,7 @@ const session = new PlaySession(game, showPause, () => pauseEl.classList.add('hi
 function play() {
   if (leaderboard.blocking || game.state === 'playing' || session.pending || session.manual) return;
   overlay.classList.add('hidden');
+  sound('start');
   session.request();
 }
 
@@ -101,12 +104,12 @@ const poseHandlers = {
   },
   onJump: () => {
     if (session.keyboard) return;
-    game.jump();
+    game.jump();sound('jump');
     flash('SALTO ⤒', '#ffd84a');
   },
   onDuck: () => {
     if (session.keyboard) return;
-    game.roll();
+    game.roll();sound('duck');
     flash('AGACHADO ⤓', '#4ad0ff');
   },
   onDuckHold: () => { if (!session.keyboard) game.holdRoll(); },
@@ -160,11 +163,11 @@ sensInput.addEventListener('input', () => {
 // --- Control por teclado ---
 const editingField = target => target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]');
 window.addEventListener('keyup', e => {
-  if (leaderboard.blocking || editingField(e.target)) return;
+  if (leaderboard.blocking || document.querySelector('.menu-dialog[open]') || editingField(e.target)) return;
   if (e.code === 'ArrowDown' || e.code === 'KeyS') game.releaseRoll();
 });
 window.addEventListener('keydown', (e) => {
-  if (leaderboard.blocking || editingField(e.target)) return;
+  if (leaderboard.blocking || document.querySelector('.menu-dialog[open]') || editingField(e.target)) return;
   if (['Enter', 'Space'].includes(e.code) && e.target instanceof Element && e.target.closest('button, a')) return;
   if (e.code === 'KeyD' && !e.repeat && (!overlay.classList.contains('hidden') || session.pending)) {
     overlay.classList.add('hidden');
@@ -182,9 +185,9 @@ window.addEventListener('keydown', (e) => {
     case 'ArrowLeft': case 'KeyA': game.left(); break;
     case 'ArrowRight': case 'KeyD': game.right(); break;
     case 'ArrowUp': case 'KeyW': case 'Space':
-      if (game.state === 'playing') game.jump(); else play();
+      if (game.state === 'playing') {game.jump();sound('jump');} else play();
       break;
-    case 'ArrowDown': case 'KeyS': game.roll(); break;
+    case 'ArrowDown': case 'KeyS': game.roll(); if(!e.repeat)sound('duck');break;
     case 'Enter': play(); break;
     case 'KeyC': pose?.recalibrate(); break;
     case 'KeyP':
@@ -201,7 +204,8 @@ let fpsSampleStart = last;
 let fpsFrames = 0;
 const routeZone = $('route-zone');
 function frame(now) {
-  game.update((now - last) / 1000);
+  // El menú es una ilustración: no gastar GPU dibujando la escena detrás.
+  if (overlay.classList.contains('hidden')) game.update((now - last) / 1000);
   fpsFrames++;
   const fpsElapsed = now - fpsSampleStart;
   if (fpsElapsed >= 500) {
@@ -221,3 +225,5 @@ requestAnimationFrame(frame);
 navigator.permissions?.query({ name: 'camera' }).then(permission => {
   if (permission.state === 'granted' && !session.keyboard) activateCamera();
 }).catch(() => {});
+
+initMenu(game,session);

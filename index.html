@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Técnica Run</title>
+  <title>El Guardapolvo · Técnica 5</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="menu.css">
   <script type="importmap">
     {
       "imports": {
@@ -44,7 +45,35 @@
     <div id="pose-status">Cámara apagada</div>
   </div>
 
-  <div id="overlay">
+  <div id="overlay" class="game-menu">
+    <div class="menu-vignette"></div>
+    <main class="menu-home" aria-label="Menú principal">
+      <div class="school-tag">MAR DEL PLATA <span>·</span> TÉCNICA 5</div>
+      <section class="menu-content">
+        <p class="menu-kicker">LLEGAR TARDE NO ES UNA OPCIÓN</p>
+        <h1 class="menu-logo"><small>EL</small> GUARDAPOLVO</h1>
+        <p class="menu-story">Te lo olvidaste en casa.<br>Volvé, agarralo y llegá a tiempo.</p>
+        <div class="menu-modes">
+          <button id="playBtn" class="paint-button primary"><img src="assets/menu/icons/run.svg" alt=""><span>MODO INFINITO<small>Corré por Juan B. Justo</small></span><img src="assets/menu/icons/arrow-right.svg" alt=""></button>
+          <button class="paint-button story-button" id="storyBtn" aria-describedby="story-note"><img src="assets/menu/icons/book.svg" alt=""><span>MODO HISTORIA<small id="story-note">Próximamente</small></span><img src="assets/menu/icons/arrow-right.svg" alt=""></button>
+        </div>
+        <p class="selected-label">Vas con <b id="selected-name">El pibe</b> <button id="quick-character">CAMBIAR</button></p>
+        <p id="menu-notice" role="status"></p>
+      </section>
+      <nav class="menu-nav" aria-label="Opciones del juego">
+        <button id="settingsBtn"><img src="assets/menu/icons/settings.svg" alt="">AJUSTES</button>
+        <button id="rankingBtn"><img src="assets/menu/icons/chart-bar.svg" alt="">RÉCORDS</button>
+        <button id="charactersBtn"><img src="assets/menu/icons/user.svg" alt="">PERSONAJES</button>
+        <button id="achievementsBtn"><img src="assets/menu/icons/trophy.svg" alt="">LOGROS</button>
+      </nav>
+      <button id="sound-toggle" class="sound-toggle" aria-label="Desactivar sonido" aria-pressed="true"><img src="assets/menu/icons/volume.svg" alt=""><span>SONIDO ON</span></button>
+      <p class="menu-credit">Hecho para la Técnica <b>5</b></p>
+    </main>
+  </div>
+  <dialog id="settings-dialog" class="menu-dialog" aria-label="Ajustes">
+    <button class="dialog-close" data-close aria-label="Cerrar ajustes"><img src="assets/menu/icons/x.svg" alt=""></button>
+    <h2>AJUSTES</h2>
+    <label class="audio-volume">Volumen <input id="sound-volume" type="range" min="0" max="100" value="55"></label>
     <div class="panel">
       <h1 id="title">Técnica <span>RUN</span></h1>
       <p id="subtitle">Corre con tu guardapolvo por la técnica</p>
@@ -74,8 +103,8 @@
       </label>
       <div class="buttons">
         <button id="camBtn">📷 Activar cámara</button>
-        <button id="playBtn">▶ Jugar</button>
-        <button id="rankingBtn">🏆 Ranking</button>
+
+
       </div>
       <p class="hint">
         <b>Pulsa D para iniciar en modo debug sin cámara. Usa ← → ↑ ↓ para jugar.</b><br>
@@ -85,7 +114,17 @@
         Teclado sin cámara: ↑ / Enter empezar · ← → carril · ↑ / Espacio saltar · ↓ agacharse · P pausa · C recalibrar
       </p>
     </div>
-  </div>
+  </dialog>
+  <dialog id="characters-dialog" class="menu-dialog character-dialog" aria-labelledby="characters-title">
+    <button class="dialog-close" data-close aria-label="Cerrar personajes"><img src="assets/menu/icons/x.svg" alt=""></button>
+    <p class="dialog-eyebrow">CADA QUIEN CORRE A SU MANERA</p><h2 id="characters-title">ELEGÍ TU PERSONAJE</h2>
+    <p class="dialog-description">Mismos controles. Tu estilo. Elegí quién llega a la técnica.</p>
+    <div id="character-grid" class="character-grid"></div><p id="character-status" role="status"></p>
+  </dialog>
+  <dialog id="achievements-dialog" class="menu-dialog" aria-labelledby="achievements-title">
+    <button class="dialog-close" data-close aria-label="Cerrar logros"><img src="assets/menu/icons/x.svg" alt=""></button>
+    <p class="dialog-eyebrow">DEJÁ TU MARCA</p><h2 id="achievements-title">TUS LOGROS</h2><div id="achievement-list"></div>
+  </dialog>
 
   <dialog id="score-dialog" class="score-modal" aria-labelledby="score-dialog-title">
     <h2 id="score-dialog-title">¡Partida terminada!</h2>

@@ -9,7 +9,9 @@
     "capture": "node tests/capture-poses.cjs",
     "capture:mdp": "node tests/capture-marplatense.cjs",
     "capture:visibility": "node tests/capture-visibility.cjs",
-    "capture:professor": "node tests/capture-professor.cjs"
+    "capture:professor": "node tests/capture-professor.cjs",
+    "capture:menu": "node tests/capture-menu.cjs",
+    "capture:roster": "node tests/capture-roster.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

@@ -5,8 +5,10 @@ import { surface } from './materials.js';
 import { knitSurface } from './human-materials.js';
 
 const sources=new Map();
+let selectedCharacter='technical-student';
+try { const saved=localStorage.getItem('runnerCharacter');if(['technical-student','classic-student','hoodie-student','phone-student'].includes(saved))selectedCharacter=saved; } catch {}
 function getSource(teacher=false,low=false) {
-  const stem=teacher?'professor-police':'technical-student';
+  const stem=teacher?'professor-police':selectedCharacter;
   const filename=stem+(low?'-low':'')+'.glb';
   if(!sources.has(filename))sources.set(filename,new GLTFLoader().loadAsync(
     new URL('./assets/characters/'+filename,import.meta.url).href,

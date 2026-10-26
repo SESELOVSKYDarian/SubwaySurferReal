@@ -81,7 +81,7 @@ test('D entra en debug aunque la cámara espere el cuerpo completo', {timeout:12
   }
  `}));
  try{
-  await page.goto(env.url);await page.locator('#camBtn').click();await page.locator('#playBtn').click();
+  await page.goto(env.url);await page.locator('#settingsBtn').click();await page.locator('#camBtn').click();await page.keyboard.press('Escape');await page.locator('#playBtn').click();
   await page.waitForFunction(()=>document.querySelector('#pause-title').textContent.includes('Calibrando'));
   await page.keyboard.press('KeyD');
   await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0);
@@ -109,7 +109,9 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
   await page.goto(env.url);
   const fps=await (await page.waitForFunction(()=>{const n=Number(document.querySelector('#fps').textContent);return n>0?n:false;},{timeout:30000})).jsonValue();
   assert.ok(fps>0&&fps<1000,`FPS fuera de rango: ${fps}`);
+  await page.locator('#settingsBtn').click();
   await page.selectOption('#quality','balanced');
+  await page.keyboard.press('Escape');
   await page.locator('#playBtn').click();
   await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0,{timeout:60000});
   assert.equal(await page.locator('#overlay').evaluate(el=>el.classList.contains('hidden')),true);
