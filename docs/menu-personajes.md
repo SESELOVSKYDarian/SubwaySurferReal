@@ -32,3 +32,14 @@ Las capturas y pruebas usan el servidor local de Playwright. Se revisan menú
 Los originales subidos no se copian al repositorio; solo las mallas adaptadas.
 
 El trabajo local anterior del rostro del profesor queda separado de esta revisión.
+
+## Fondo y cámara local
+
+El fondo actual es exactamente el JPG 1000239166.jpg aportado por el usuario.
+MediaPipe 0.10.14, WASM SIMD/no-SIMD y modelos full/lite se sirven desde
+vendor/mediapipe. Tanto el worker como el respaldo del hilo principal usan
+URLs locales: activar cámara no depende de jsDelivr ni de Google Storage.
+Se mantiene el stream al reintentar; los permisos siguen a cargo del navegador.
+Pruebas: arranque con cámara virtual, descargas HTTPS externas bloqueadas y
+worker forzado a fallar para comprobar el respaldo. No equivale a una prueba
+de seguimiento de una persona en una cámara física.

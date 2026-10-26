@@ -1,7 +1,8 @@
 # Menú El Guardapolvo
 
-Fondo de escuela generado para este proyecto con Image Gen, inspirado en la
-composición aportada por el usuario. No es una fotografía documental de la escuela.
+Fondo actual: 1000239166.jpg, aportado por el usuario. Se copia sin editar
+como school-reference.jpg. La ilustración generada anterior school.png permanece
+en el historial y no se usa como fondo actual.
 
 Iconos Tabler Icons, copyright Paweł Kuna y colaboradores, licencia MIT.
 https://github.com/tabler/tabler-icons/blob/main/LICENSE

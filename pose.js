@@ -3,10 +3,8 @@ import { armTargets } from './arm-tracking.js';
 // La red neuronal corre en un Web Worker (pose-worker.js); si el navegador no lo
 // permite, se usa el hilo principal como respaldo.
 
-const VERSION = '0.10.14';
-const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
-const MODEL = (kind) =>
-  `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_${kind}/float16/1/pose_landmarker_${kind}.task`;
+const BASE = new URL('./vendor/mediapipe/', import.meta.url).href.replace(/\/$/, '');
+const MODEL = kind => `${BASE}/models/pose_landmarker_${kind}.task`;
 
 // Índices de los puntos del esqueleto de MediaPipe
 const NOSE = 0, L_SHOULDER = 11, R_SHOULDER = 12, L_WRIST = 15, R_WRIST = 16, L_HIP = 23, R_HIP = 24;

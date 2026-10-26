@@ -137,7 +137,7 @@ async function activateCamera() {
     btn.disabled = false;
     btn.textContent = '📷 Reintentar cámara';
     if (session.pending) $('retryCam').classList.remove('hidden');
-    $('pose-status').textContent = `Error: ${err.message}`;
+    $('pose-status').textContent = /fetch|network|load/i.test(err.message) ? 'No se pudo cargar el detector de movimiento. Recargá el juego y reintentá con conexión.' : `Error: ${err.message}`;
   }
 }
 $('camBtn').addEventListener('click', activateCamera);

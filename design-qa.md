@@ -51,3 +51,11 @@ del fondo son una interpretación. No se verificó rendimiento en GPU física.
 El archivo de caminata que excede 32 MiB no se agregó ni se muestra disponible.
 
 final result: passed
+
+## Revisión del fondo aportado posteriormente
+
+Se reemplazó el fondo ilustrado por el archivo exacto
+`/tmp/codex-remote-attachments/01a165ca-2043-7431-96fb-47ce77df202e/f0ee325d-1f2d-4537-9caf-ffc133c542dd/1-1000239166.jpg`
+(1280×720), copiado a assets/menu/school-reference.jpg sin editar.
+Capturas de menú renovadas a 1600×900 y 390×844, manteniendo cover proporcional.
+La comprobación visual mantiene legibles botones y texto sobre la nueva foto.

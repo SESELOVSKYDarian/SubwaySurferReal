@@ -1,0 +1,7 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {harness}=require('./harness.cjs');
+for(const fallback of [false,true])test((fallback?'respaldo sin worker: ':'worker: ')+'cámara real con dispositivo simulado: detector local sin descargas externas',{timeout:180000},async()=>{
+ process.env.FAKE_CAMERA='1';const env=await harness();const context=await env.browser.newContext({permissions:['camera']});const page=await context.newPage();const external=[];
+ if(fallback)await page.route('**/pose-worker.js',r=>r.abort());
+ await page.route('https://**',r=>{external.push(r.request().url());return r.abort();});await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{await page.goto(env.url);const result=await page.evaluate(async()=>{const {PoseController}=await import('./pose.js');const p=new PoseController(document.querySelector('#video'),document.querySelector('#skeleton'));p.scheduleFrame=()=>{};await p.start();const track=p.stream.getVideoTracks()[0];const result={running:p.running,live:track.readyState,detector:!!(p.worker||p.landmarker)};p.running=false;clearInterval(p.watchdog);p.worker?.terminate();p.landmarker?.close();p.stream.getTracks().forEach(t=>t.stop());return result;});assert.deepEqual(result,{running:true,live:'live',detector:true});assert.deepEqual(external,[]);}finally{await context.close();await env.close();}
+});

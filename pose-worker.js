@@ -1,11 +1,9 @@
 // Detección del esqueleto en un hilo aparte: así el juego no se congela mientras
 // MediaPipe analiza cada fotograma de la cámara.
 // Es un worker "clásico" (no de módulo) porque MediaPipe carga su WASM con importScripts.
-const VERSION = '0.10.14';
-const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
-// Con GPU usamos el modelo "full" (más preciso); sin GPU, el "lite" (más rápido)
-const MODEL = (kind) =>
-  `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_${kind}/float16/1/pose_landmarker_${kind}.task`;
+const BASE = new URL('./vendor/mediapipe/', self.location.href).href.replace(/\/$/, '');
+const MODEL = kind => `${BASE}/models/pose_landmarker_${kind}.task`;
+
 // Detectamos varias personas para poder quedarnos con el jugador e ignorar
 // a quien pase por detrás
 const OPTIONS = {

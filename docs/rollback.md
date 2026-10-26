@@ -151,3 +151,12 @@ git pull --ff-only origin main
 git revert --no-edit menu-replay-v1 menu-characters-v1
 git push origin main
 ```
+
+## Deshacer fondo de referencia y cámara local
+
+Respaldo remoto: `backup/main-before-camera-local-20ea593`.
+
+```sh
+git revert --no-edit camera-local-v1
+git push origin main
+```
