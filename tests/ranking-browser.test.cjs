@@ -35,6 +35,8 @@ test('ranking desde el menú, iniciales sin activar controles y persistencia tra
     await page.keyboard.press('KeyD');
     assert.equal(await page.evaluate(()=>window.testGame.state),'playing');
     await page.evaluate(()=>window.testGame.finish(1234,12));
+    assert.equal(await page.locator('#playBtn img').count(),2);
+    assert.match(await page.locator('#playBtn small').textContent(),/Otra carrera/);
     await page.keyboard.press('KeyD'); // Tampoco puede saltarse la espera del formulario.
     await page.waitForFunction(()=>document.querySelector('#score-dialog').open);
     assert.equal(await page.locator('#score-initials').evaluate(e=>e===document.activeElement),true);

@@ -148,6 +148,6 @@ Respaldo remoto: `backup/main-before-menu-d804ced`.
 ```sh
 git switch main
 git pull --ff-only origin main
-git revert --no-edit menu-characters-v1
+git revert --no-edit menu-replay-v1 menu-characters-v1
 git push origin main
 ```

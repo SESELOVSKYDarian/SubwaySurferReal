@@ -39,7 +39,9 @@ const game = new Game($('game'), {
     $('title').textContent = reason === 'caught' ? '¡Te atrapó el profesor! 👨‍🏫' : '¡Choque! 💥';
     $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — jugá otra vez con el botón o levantando las dos manos`;
     $('howto').style.display = 'none';
-    $('playBtn').textContent = '↻ Otra vez';
+    const replayLabel = $('playBtn').querySelector('small');
+    if (replayLabel) replayLabel.textContent = 'Otra carrera · ¡esta vez llegás!';
+    else $('playBtn').textContent = '↻ Otra vez';
     leaderboard.offerScore(score, coins);
   },
 });
