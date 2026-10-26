@@ -81,3 +81,11 @@ the geometry/UV/weight processing code is authored for this project.
 4.3.2 y sus materiales empaquetados. La textura de barba `professor-beard.png`
 y el cuello de punto se generaron para este proyecto. El archivo no contiene
 fotografías originales del profesor ni una textura presentada como su rostro real.
+
+## teen-boy (jugador)
+
+Autor: theskipper. Fuente: https://sketchfab.com/3d-models/teen-boy-fff65cd5b0934eff8e3a281766a52bf5
+Licencia: Creative Commons Attribution 4.0, https://creativecommons.org/licenses/by/4.0/
+Archivo original proporcionado por el usuario en `source/teen-boy/original.glb`.
+Adaptaciones: escala, postura de brazos, transferencia de pesos al rig del juego
+con Blender y generación de un nivel de detalle reducido. Texturas originales conservadas.

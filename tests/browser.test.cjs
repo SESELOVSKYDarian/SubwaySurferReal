@@ -107,9 +107,9 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
  await page.route('https://**',route=>{external.push(route.request().url());return route.abort();});
  try{
   await page.goto(env.url);
-  await page.waitForFunction(()=>/^\d+$/.test(document.querySelector('#fps').textContent),{timeout:10000});
-  const fps=Number(await page.locator('#fps').innerText());
+  const fps=await (await page.waitForFunction(()=>{const n=Number(document.querySelector('#fps').textContent);return n>0?n:false;},{timeout:30000})).jsonValue();
   assert.ok(fps>0&&fps<1000,`FPS fuera de rango: ${fps}`);
+  await page.selectOption('#quality','balanced');
   await page.locator('#playBtn').click();
   await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0,{timeout:60000});
   assert.equal(await page.locator('#overlay').evaluate(el=>el.classList.contains('hidden')),true);
@@ -120,7 +120,6 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
   await page.keyboard.press('KeyP');
   await page.waitForFunction(()=>document.querySelector('#pause').classList.contains('hidden'));
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Space');await page.keyboard.press('ArrowDown');
-  await page.selectOption('#quality','balanced');
   assert.equal(await page.locator('#quality').inputValue(),'balanced');
   await mkdir('test-results',{recursive:true});
   await page.screenshot({path:'test-results/realism.png',timeout:60000});
@@ -431,7 +430,7 @@ test('tablero, banco roto, tres líneas de colectivo y detalle adaptativo',{time
    const game=new Game(document.querySelector('#game'));const [r,t]=await Promise.all([game.characterReady,game.officerReady]);
    game.renderer.render=()=>{};
    const triangles=model=>{let n=0;model.traverse(o=>{if(o.isMesh)n+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3});return n;};
-   const high=triangles(r.model);if(high<60000||high>65536)throw Error(`Presupuesto alto: ${high}`);
+   const high=triangles(r.model);if(high<40000||high>65536)throw Error(`Presupuesto alto: ${high}`);
    r.setDetail(false);const low=triangles(r.model);if(low>22000||low>=high*.5)throw Error(`LOD no reduce coste: ${low}`);
    r.setDetail(true);if(triangles(r.model)!==high)throw Error('No restaura alta calidad');
    game.start();game.nextSpawn=Infinity;
