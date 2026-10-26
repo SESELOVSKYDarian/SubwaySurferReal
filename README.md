@@ -53,6 +53,9 @@ hasta 2×, sombras suaves de mayor detalle y más distancia de dibujado; el modo
 automático ajusta la resolución entre 0,55× y 1,5× según el rendimiento.
 Equilibrada prioriza la fluidez. El rendimiento depende del equipo: no se
 garantizan 60 FPS.
+Los edificios y muros visibles proyectan y reciben sombras al reciclarse; el
+volumen de sombras del sol cubre el tramo próximo de la avenida y se actualiza
+cada cuadro. El modo automático conserva las sombras y adapta la resolución.
 
 ## Cámara corporal
 

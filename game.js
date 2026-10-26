@@ -55,13 +55,14 @@ export class Game {
     // Luz de tarde: sol cálido y bajo + cielo azulado
     this.scene.add(new THREE.HemisphereLight(0xb9cce1, 0x40382f, 1.2));
     const sun = (this.sun = new THREE.DirectionalLight(0xffd5a0, 3.4));
-    sun.position.set(-18, 19, -8);
-    sun.target.position.set(0, 0, -8);
+    sun.position.set(-18, 19, -24);
+    sun.target.position.set(0, 0, -24);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.03;
-    Object.assign(sun.shadow.camera, { left: -13, right: 13, top: 13, bottom: -13, near: 1, far: 70 });
+    Object.assign(sun.shadow.camera, { left: -64, right: 64, top: 28, bottom: -28, near: 1, far: 110 });
+    sun.shadow.camera.updateProjectionMatrix();
     this.scene.add(sun, sun.target);
 
     this.world = new World(this.scene);
@@ -76,7 +77,7 @@ export class Game {
     uniforms.rayleigh.value = 1.5;
     uniforms.mieCoefficient.value = 0.005;
     uniforms.mieDirectionalG.value = 0.8;
-    uniforms.sunPosition.value.copy(sun.position).normalize();
+    uniforms.sunPosition.value.copy(sun.position).sub(sun.target.position).normalize();
     const skyScene = new THREE.Scene();
     skyScene.add(sky);
     const pmrem = new THREE.PMREMGenerator(r);
@@ -140,7 +141,6 @@ export class Game {
     if (next !== this.pixelRatio) {
       this.pixelRatio = next;
       this.renderer.setPixelRatio(next);
-      this.sun.castShadow = next > 0.6;
       this.resize();
     }
   }

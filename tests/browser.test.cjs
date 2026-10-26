@@ -28,6 +28,16 @@ test('Juan B. Justo repite fachadas y muros, reinicia en la costa y mantiene rec
    let maxMeshes=0,maxTriangles=0,totalTriangles=0,frames=0;
    for(let distance=0;distance<ROUTE_LENGTH*3;distance+=LOT_LENGTH){
     world.update(0,distance);
+    for(const segment of world.segments){
+     const shadowVisible=segment.group.visible&&segment.group.position.z>-82&&segment.group.position.z<34;
+     if(segment.wall.castShadow!==shadowVisible||segment.top.castShadow!==shadowVisible)
+      throw Error('Las sombras de los muros no siguen el reciclado visible');
+    }
+    for(const building of world.buildings){
+     const shadowVisible=building.group.visible&&building.group.position.z>-82&&building.group.position.z<34;
+     if(building.box.castShadow!==shadowVisible||building.facade.receiveShadow!==shadowVisible)
+      throw Error('Las sombras de las fachadas no siguen los edificios visibles');
+    }
     const visible=world.buildings.filter(b=>b.group.visible);
     if(new Set(visible.map(b=>`${b.s}:${b.slot}`)).size!==visible.length)throw Error('Hito de varios lotes dibujado dos veces');
     let meshes=0,triangles=0;
@@ -135,6 +145,9 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    const THREE=await import('three');const {Game}=await import('./game.js');
    const game=new Game(document.querySelector('#game'));const runner=await game.characterReady;
    if(!runner)throw Error('No cargó el modelo');
+   const shadowCamera=game.sun.shadow.camera;
+   if(!game.sun.shadow.autoUpdate||shadowCamera.left>-64||shadowCamera.right<64||shadowCamera.far<110)
+    throw Error('Las sombras no cubren ni se actualizan con el tramo visible');
    let skins=0;runner.model.traverse(object=>{if(object.isSkinnedMesh)skins++;});
    const height=new THREE.Box3().setFromObject(runner.model).getSize(new THREE.Vector3()).y;
    if(height<1.8||height>2.3)throw Error(`Escala incorrecta: ${height}`);
@@ -171,7 +184,7 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    game.setQuality('balanced');
    if(game.world.viewDistance>=far||game.sun.shadow.mapSize.x!==1024)throw Error('Calidad equilibrada');
    game.setQuality('auto');for(let i=0;i<400;i++)game.adaptQuality(0.04);
-   if(Math.abs(game.pixelRatio-0.55)>0.001||game.sun.castShadow)throw Error('Calidad automática');
+   if(Math.abs(game.pixelRatio-0.55)>0.001||!game.sun.castShadow)throw Error('Calidad automática debe conservar sombras sincronizadas');
    game.addObstacle('high',game.lane,0);game.update(1/60);if(game.state!=='over')throw Error('Colisión');
    game.start();if(game.state!=='playing'||game.obstacles.length)throw Error('Reinicio');
    game.renderer.render=render;game.update(1/60);

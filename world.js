@@ -16,6 +16,8 @@ const SEG = 24;               // largo de cada tramo de muro
 const WALL_X = 6.4;
 const WALL_H = 3.6;           // el nivel de la calle está encima del muro
 const BUILD_X = 10.5;
+const SHADOW_NEAR_Z = -82;
+const SHADOW_FAR_Z = 34;
 
 // El escenario usa materiales Lambert (mucho más baratos de dibujar que los PBR);
 // solo los metales usan MeshStandardMaterial para tener reflejos.
@@ -158,7 +160,8 @@ export class World {
         graffiti.rotation.y = -s * Math.PI / 2;
         graffiti.position.set(s * (WALL_X - 0.356), WALL_H / 2, 0);
         g.add(graffiti);
-        g.add(mesh(topGeo[s], this.concrete));
+        const top = mesh(topGeo[s], this.concrete, { cast: true, receive: true });
+        g.add(top);
         const fence = new THREE.Mesh(fenceGeo, fenceMat);
         fence.position.set(s * WALL_X, WALL_H + 1.3, 0);
         g.add(fence);
@@ -178,7 +181,7 @@ export class World {
         tree.position.set(s * (WALL_X + 2.2), WALL_H, 0);
         g.add(tree);
 
-        const seg = { s, group: g, wall, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats };
+        const seg = { s, group: g, wall, top, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats };
         g.position.z = NEAR_Z - SEG / 2 - i * SEG;
         this.scene.add(g);
         this.segments.push(seg);
@@ -219,14 +222,14 @@ export class World {
       for (let i = 0; i < this.buildingCount; i++) {
         const group = new THREE.Group();
         group.name = 'JuanBJustoBuilding';
-        const box = mesh(unit, this.concrete);
-        const facade = mesh(plane, this.concrete);
+        const box = mesh(unit, this.concrete, { cast: true, receive: true });
+        const facade = mesh(plane, this.concrete, { cast: true, receive: true });
         facade.rotation.y = -s * Math.PI / 2;
-        const cornice = mesh(unit, this.roofMaterial);
+        const cornice = mesh(unit, this.roofMaterial, { cast: true, receive: true });
         const windows = mesh(unit, this.trimMaterial);
         windows.scale.x = s;
         const awning = mesh(unit, this.darkTrimMaterial);
-        const roof = mesh(unit, this.roofMaterial);
+        const roof = mesh(unit, this.roofMaterial, { cast: true, receive: true });
         const sign = mesh(plane, this.concrete);
         const post = mesh(unit, this.darkTrimMaterial);
         sign.scale.set(6.5, 1.6, 1);
@@ -381,7 +384,8 @@ export class World {
       const slot = firstSlot + i % this.segCount;
       seg.group.position.z = distance - (slot + .5) * SEG;
       seg.group.visible = seg.group.position.z > -this.viewDistance;
-      seg.wall.castShadow = seg.group.position.z > -45;
+      const shadowVisible = seg.group.visible && seg.group.position.z > SHADOW_NEAR_Z && seg.group.position.z < SHADOW_FAR_Z;
+      seg.wall.castShadow = seg.wall.receiveShadow = seg.top.castShadow = seg.top.receiveShadow = shadowVisible;
       if (seg.slot !== slot) {
         seg.slot = slot;
         this.randomizeSegment(seg, slot);
@@ -391,11 +395,19 @@ export class World {
       const b = this.buildings[i];
       const slot = firstSlot + i % this.buildingCount;
       const lot = buildingAt(slot, b.s);
-      if (lot.offset && slot !== firstSlot) { b.group.visible = false; continue; }
+      if (lot.offset && slot !== firstSlot) {
+        b.group.visible = false;
+        for (const part of [b.box, b.facade, b.cornice, b.windows, b.awning, b.roof]) part.castShadow = part.receiveShadow = false;
+        continue;
+      }
       const anchor = slot - lot.offset;
       if (b.slot !== anchor) this.setBuilding(b, anchor);
       b.group.position.z = distance - (anchor + lot.span / 2) * LOT_LENGTH;
       b.group.visible = b.group.position.z + lot.span * LOT_LENGTH / 2 > -this.viewDistance;
+      const shadowVisible = b.group.visible && b.group.position.z > SHADOW_NEAR_Z && b.group.position.z < SHADOW_FAR_Z;
+      for (const part of [b.box, b.facade, b.cornice, b.windows, b.awning, b.roof]) {
+        part.castShadow = part.receiveShadow = shadowVisible;
+      }
       b.windows.visible = !!b.windows.geometry && (b.group.position.z > -90 || isLandmarkKind(lot.appearance.kind));
     }
   }
