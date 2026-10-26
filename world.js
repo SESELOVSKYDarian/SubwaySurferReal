@@ -34,7 +34,7 @@ function placed(geo, x, y, z, rx = 0, ry = 0, rz = 0) {
   return g;
 }
 
-// Por defecto nada del escenario proyecta ni recibe sombras: es lo más caro de dibujar
+// Las sombras se activan solo en los tramos visibles que recicla el recorrido.
 function mesh(geo, material, { cast = false, receive = false } = {}) {
   const m = new THREE.Mesh(geo, material);
   m.castShadow = cast;
@@ -61,12 +61,7 @@ export class World {
 
     const roadTex = T.asphalt();
     roadTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
-    this.roadMaterial = new THREE.MeshStandardMaterial({
-      map: roadTex,
-      roughness: 0.94,
-      ...surface('asphalt'),
-    });
-    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), this.roadMaterial, { receive: true });
+    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), mat({ map: roadTex }), { receive: true });
     ground.name='AsphaltRoad';ground.rotation.x = -Math.PI / 2;
     ground.position.z = NEAR_Z - len / 2;this.track.add(ground);
     const perLane = Math.floor(len / TILE);
@@ -163,7 +158,8 @@ export class World {
         graffiti.rotation.y = -s * Math.PI / 2;
         graffiti.position.set(s * (WALL_X - 0.356), WALL_H / 2, 0);
         g.add(graffiti);
-        g.add(mesh(topGeo[s], this.concrete));
+        const top = mesh(topGeo[s], this.concrete, { cast: true, receive: true });
+        g.add(top);
         const fence = new THREE.Mesh(fenceGeo, fenceMat);
         fence.position.set(s * WALL_X, WALL_H + 1.3, 0);
         g.add(fence);
@@ -183,7 +179,7 @@ export class World {
         tree.position.set(s * (WALL_X + 2.2), WALL_H, 0);
         g.add(tree);
 
-        const seg = { s, group: g, wall, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats };
+        const seg = { s, group: g, wall, top, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats };
         g.position.z = NEAR_Z - SEG / 2 - i * SEG;
         this.scene.add(g);
         this.segments.push(seg);
@@ -224,14 +220,14 @@ export class World {
       for (let i = 0; i < this.buildingCount; i++) {
         const group = new THREE.Group();
         group.name = 'JuanBJustoBuilding';
-        const box = mesh(unit, this.concrete, { cast: true, receive: true });
-        const facade = mesh(plane, this.concrete, { receive: true });
+        const box = mesh(unit, this.concrete);
+        const facade = mesh(plane, this.concrete);
         facade.rotation.y = -s * Math.PI / 2;
-        const cornice = mesh(unit, this.roofMaterial, { cast: true, receive: true });
+        const cornice = mesh(unit, this.roofMaterial);
         const windows = mesh(unit, this.trimMaterial);
         windows.scale.x = s;
         const awning = mesh(unit, this.darkTrimMaterial);
-        const roof = mesh(unit, this.roofMaterial, { cast: true, receive: true });
+        const roof = mesh(unit, this.roofMaterial);
         const sign = mesh(plane, this.concrete);
         const post = mesh(unit, this.darkTrimMaterial);
         sign.scale.set(6.5, 1.6, 1);
@@ -386,24 +382,40 @@ export class World {
       const slot = firstSlot + i % this.segCount;
       seg.group.position.z = distance - (slot + .5) * SEG;
       seg.group.visible = seg.group.position.z > -this.viewDistance;
-      seg.wall.castShadow = seg.group.position.z > -45;
       if (seg.slot !== slot) {
         seg.slot = slot;
         this.randomizeSegment(seg, slot);
       }
+      seg.wall.castShadow = seg.wall.receiveShadow = seg.group.visible;
+      seg.top.castShadow = seg.top.receiveShadow = seg.group.visible;
+      seg.frame.castShadow = seg.group.visible && seg.frame.visible;
+      seg.frame.receiveShadow = seg.group.visible;
+      seg.tree.traverse(object => {
+        if (!object.isMesh) return;
+        object.castShadow = seg.group.visible && seg.tree.visible;
+        object.receiveShadow = object.castShadow;
+      });
+      seg.lamp.traverse(object => {
+        if (!object.isMesh) return;
+        object.castShadow = seg.group.visible && seg.lamp.visible;
+      });
     }
     for (let i = 0; i < this.buildings.length; i++) {
       const b = this.buildings[i];
       const slot = firstSlot + i % this.buildingCount;
       const lot = buildingAt(slot, b.s);
-      if (lot.offset && slot !== firstSlot) { b.group.visible = false; continue; }
+      if (lot.offset && slot !== firstSlot) {
+        b.group.visible = false;
+        b.box.castShadow = b.cornice.castShadow = b.roof.castShadow = false;
+        b.box.receiveShadow = b.facade.receiveShadow = b.cornice.receiveShadow = b.roof.receiveShadow = false;
+        continue;
+      }
       const anchor = slot - lot.offset;
       if (b.slot !== anchor) this.setBuilding(b, anchor);
       b.group.position.z = distance - (anchor + lot.span / 2) * LOT_LENGTH;
       b.group.visible = b.group.position.z + lot.span * LOT_LENGTH / 2 > -this.viewDistance;
-      const shadowing = b.group.visible && b.group.position.z > -60;
-      b.box.castShadow = b.cornice.castShadow = b.roof.castShadow = shadowing;
-      b.box.receiveShadow = b.facade.receiveShadow = b.cornice.receiveShadow = b.roof.receiveShadow = shadowing;
+      b.box.castShadow = b.cornice.castShadow = b.roof.castShadow = b.group.visible;
+      b.box.receiveShadow = b.facade.receiveShadow = b.cornice.receiveShadow = b.roof.receiveShadow = b.group.visible;
       b.windows.visible = !!b.windows.geometry && (b.group.position.z > -90 || isLandmarkKind(lot.appearance.kind));
     }
   }
