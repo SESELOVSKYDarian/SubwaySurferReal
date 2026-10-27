@@ -28,7 +28,21 @@ const game = new Game($('game'), {
     $('coins').textContent = `🪙 ${coins}`;
   },
   onCoin() {sound('coin');},
-  onStumble: () => { sound('lose');flash('¡TROPIEZO! 👨‍🏫', '#ff5a5a'); },
+  onStumble() {
+    sound('lose');
+    flash('¡TROPIEZO! 👨‍🏫', '#ff5a5a');
+    $('chase-announcement').textContent = 'Profesor cerca. Otro tropiezo en los próximos cinco segundos y te atrapa.';
+  },
+  onChase(fraction) {
+    $('chase').hidden = fraction <= 0;
+    $('chase-fill').style.width = `${fraction * 100}%`;
+    $('chase-progress').setAttribute('aria-valuenow', String(Math.round(fraction * 100)));
+    $('chase-text').textContent = fraction > 0 ? `Otro tropiezo te atrapa · ${Math.ceil(fraction * 5)} s` : '';
+  },
+  onEscape() {
+    flash('¡TE ESCAPASTE!', '#7dff9a');
+    $('chase-announcement').textContent = 'Te escapaste del profesor.';
+  },
   onJetpack: () => flash('¡JETPACK! 🚀', '#ffb42e'),
   onPower(fraction) {
     $('power').classList.toggle('show', fraction > 0);

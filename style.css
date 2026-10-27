@@ -39,6 +39,19 @@ html, body {
 #route-zone { display: block; color: #e3dfcf; }
 #score { font-size: 42px; }
 #coins { font-size: 26px; color: #ffd84a; }
+#chase {
+  width: min(240px, calc(100vw - 40px));
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ff9d87;
+  border-radius: 10px;
+  background: rgba(48, 15, 13, .92);
+  text-align: left;
+}
+#chase strong { display: block; color: #ffb5a5; font-size: 16px; }
+#chase-text { display: block; margin-top: 4px; font-size: 12px; }
+#chase-progress { height: 7px; margin-top: 8px; border-radius: 4px; background: #663d37; overflow: hidden; }
+#chase-fill { height: 100%; background: #ffb5a5; }
 #power {
   display: none;
   align-items: center;
@@ -64,10 +77,13 @@ html, body {
 
 #action {
   position: fixed;
-  top: 30%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 72px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  text-align: center;
+  font-size: clamp(24px, 6vw, 72px);
   font-weight: 900;
   opacity: 0;
   pointer-events: none;

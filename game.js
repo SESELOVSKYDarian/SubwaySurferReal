@@ -11,6 +11,7 @@ import { buildBusAssets } from './bus.js';
 import { World, LANE_X, NEAR_Z } from './world.js';
 import * as T from './textures.js';
 import { surface, contactShadow } from './materials.js';
+import { PLAYER_HALF_DEPTH, CONTACT_HALF_WIDTH, LANE_RESPONSE, obstacleContact, overlapsObstacle } from './collisions.js';
 
 const SPAWN_Z = -150;
 const GRAVITY = 38;
@@ -18,7 +19,6 @@ const JUMP_SPEED = 13;
 const ROLL_TIME = 0.8;
 const START_SPEED = 14;
 const MAX_SPEED = 34;
-const PLAYER_HALF_DEPTH = 0.3;
 const STAND_HEIGHT = 2.1;
 const ROLL_HEIGHT = 1.2;
 const TRAIN_TOP = 3.3;      // techo de los vagones: se puede correr encima
@@ -27,6 +27,7 @@ const RAMP_LEN = 6;
 const FLY_Y = 9;            // altura de vuelo con jetpack (por encima de las catenarias)
 const FLY_TIME = 7;
 const CHASE_TIME = 5;       // segundos que el guardia te pisa los talones tras tropezar
+const STUMBLE_TIME = 0.55;
 
 const std = (o = {}) => new THREE.MeshStandardMaterial({ roughness: 0.8, ...o });
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -419,7 +420,6 @@ export class Game {
     this.nextJetpack = 350;
     this.coinCount = 0;
     this.lane = 1;
-    this.prevLane = 1;
     this.x = 0;
     this.y = 0;
     this.vy = 0;
@@ -428,6 +428,8 @@ export class Game {
     this.rollTimer = 0;
     this.flyTimer = 0;
     this.invuln = 0;
+    this.stumbleTimer = 0;
+    this.stumbleContacts = new Set();
     this.chase = 3;          // al empezar el guardia sale corriendo detrás
     this.danger = false;     // tropezar con el guardia cerca = te atrapa
     this.caughtReason = null;
@@ -445,6 +447,7 @@ export class Game {
     this.jetpack.visible = false;
     this.emitScore();
     this.cb.onPower?.(0);
+    this.cb.onChase?.(0);
   }
 
   start() {
@@ -479,7 +482,6 @@ export class Game {
     if (this.state !== 'playing') return;
     lane = Math.max(0, Math.min(2, lane));
     if (lane === this.lane) return;
-    this.prevLane = this.lane;
     this.lane = lane;
   }
   left() { this.setLane(this.lane - 1); }
@@ -641,16 +643,19 @@ export class Game {
     return { h, ramp, obstacle };
   }
 
-  stumble() {
+  stumble(obstacle) {
+    if (this.state !== 'playing' || (obstacle && this.stumbleContacts.has(obstacle))) return;
+    if (obstacle) this.stumbleContacts.add(obstacle);
     if (this.danger) {
       this.gameOver('caught');
       return;
     }
     this.danger = true;
     this.chase = CHASE_TIME;
-    this.invuln = 0.8;
+    this.stumbleTimer = STUMBLE_TIME;
     this.shake = 0.5;
     this.cb.onStumble?.();
+    this.cb.onChase?.(this.chase / CHASE_TIME);
   }
 
   // --- Bucle principal ---
@@ -673,8 +678,12 @@ export class Game {
         this.nextSpawn += 22 + Math.random() * 14 - (this.speed - START_SPEED) * 0.25;
       }
       this.invuln = Math.max(0, this.invuln - dt);
+      this.stumbleTimer = Math.max(0, this.stumbleTimer - dt);
+      const wasDanger = this.danger;
       this.chase = Math.max(0, this.chase - dt);
       if (this.chase === 0) this.danger = false;
+      if (wasDanger && !this.danger) this.cb.onEscape?.();
+      this.cb.onChase?.(this.danger ? this.chase / CHASE_TIME : 0);
     }
 
     this.world.update(move, this.distance);
@@ -740,6 +749,7 @@ export class Game {
       this.runner.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7);
       if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed, verticalSpeed: this.vy,
         turn: THREE.MathUtils.clamp((LANE_X[this.lane]-this.x)/2.2,-1,1),
+        stumble: this.stumbleTimer / STUMBLE_TIME,
         arms: performance.now() - this.armSeenAt < 350 ? this.armTargets : null });
 
     }
@@ -763,7 +773,9 @@ export class Game {
 
   updatePhysics(dt, move) {
     const previousX = this.x;
-    this.x = THREE.MathUtils.damp(this.x, LANE_X[this.lane], 18, dt);
+    const previousY = this.y;
+    const targetX = LANE_X[this.lane];
+    this.x = THREE.MathUtils.damp(this.x, targetX, LANE_RESPONSE, dt);
 
     if (this.flyTimer > 0) {
       this.flyTimer = Math.max(0, this.flyTimer - dt);
@@ -776,7 +788,6 @@ export class Game {
         this.invuln = 1.5; // margen para aterrizar tranquilo
       }
     } else {
-      const previousY = this.y;
       const wasGrounded = this.grounded;
       this.y += this.vy * dt - 0.5 * GRAVITY * dt * dt;
       this.vy -= GRAVITY * dt;
@@ -809,32 +820,48 @@ export class Game {
     if (this.jumpBuffer > 0 && this.grounded) this.jump();
 
     if (this.invuln > 0 || this.flyTimer > 0) return;
+    for (const o of this.stumbleContacts) {
+      if (!this.obstacles.includes(o) || !overlapsObstacle(o, previousX, -move)) this.stumbleContacts.delete(o);
+    }
     const height = this.playerHeight;
+    const stumbles = [];
     for (const o of this.obstacles) {
-      const oz = o.mesh.position.z;
-      const front = oz + o.depth / 2;
-      const hitX = Math.abs(o.mesh.position.x - this.x) < 1.1;
-      const hitZ = Math.abs(oz) < o.depth / 2 + PLAYER_HALF_DEPTH;
-      if (!hitX || !hitZ) continue;
+      const contact = obstacleContact(o, previousX, this.x, targetX, dt, move);
+      if (!contact || this.stumbleContacts.has(o)) continue;
+      const impactY = THREE.MathUtils.lerp(previousY, this.y, contact.time);
 
       if (o.type === 'train') {
-        if (this.y >= TRAIN_TOP - SURFACE_EPS) continue; // vamos por encima
-        // Si el frente del vagón acaba de llegar es un choque de frente;
-        // si no, nos hemos metido de lado al cambiar de carril
-        const headOn = front + PLAYER_HALF_DEPTH < move + 0.6;
-        if (!headOn && this.prevLane !== this.lane) {
-          this.lane = this.prevLane;
-          this.stumble();
+        // Al salir por el borde trasero podemos empezar a caer en este mismo
+        // cuadro: cuenta la altura durante el contacto, no solo la del final.
+        if (impactY >= TRAIN_TOP - SURFACE_EPS || this.y >= TRAIN_TOP - SURFACE_EPS) continue;
+        if (contact.side) {
+          stumbles.push({ obstacle: o, side: true });
         } else {
           this.gameOver('crash');
+          return;
         }
-        return;
+        continue;
       }
-      if (this.y < o.yMax && this.y + height > o.yMin) {
-        if (o.type === 'low') this.stumble(); // tropiezas con la valla baja
-        else this.gameOver('crash');
-        return;
+      const exitY = THREE.MathUtils.lerp(previousY, this.y, contact.exit);
+      if (Math.min(impactY, exitY) < o.yMax && Math.max(impactY, exitY) + height > o.yMin) {
+        if (o.type === 'low') stumbles.push({ obstacle: o, side: false });
+        else {
+          this.gameOver('crash');
+          return;
+        }
       }
+    }
+    // Resolver primero los choques mortales: el orden de los objetos no debe
+    // permitir que un tropiezo oculte un banco o un colectivo.
+    for (const { obstacle, side } of stumbles) {
+      if (side) {
+        const busX = obstacle.mesh.position.x;
+        this.x = busX + Math.sign(previousX - busX) * (CONTACT_HALF_WIDTH + 0.02);
+        this.lane = LANE_X.reduce((best, x, lane) =>
+          Math.abs(x - previousX) < Math.abs(LANE_X[best] - previousX) ? lane : best, 0);
+      }
+      this.stumble(obstacle);
+      if (this.state === 'over') break;
     }
   }
 
@@ -896,6 +923,12 @@ export class Game {
     r.ball.rotation.x = 0;
     r.ball.scale.setScalar(1);
     this.pose(r, t, mode);
+    if (this.stumbleTimer > 0) {
+      const reaction = this.stumbleTimer / STUMBLE_TIME;
+      r.torso.rotation.x -= reaction * 0.5;
+      r.armL.rotation.x += reaction * 0.7;
+      r.armR.rotation.x += reaction * 0.7;
+    }
     if (rolling) r.body.position.y = -0.12;
   }
 
@@ -941,6 +974,8 @@ export class Game {
     this.shake = 1;
     this.flyTimer = 0;
     this.jetpack.visible = false;
+    this.stumbleTimer = 0;
+    this.cb.onChase?.(0);
     this.rig.root.visible = true;
     this.rig.root.rotation.x = 0.35;
     this.cb.onPower?.(0);

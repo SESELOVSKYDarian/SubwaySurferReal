@@ -25,6 +25,12 @@
   <div id="hud">
     <div id="score">0</div>
     <div id="coins">🪙 0</div>
+    <div id="chase" hidden>
+      <strong>¡Profesor cerca!</strong>
+      <span id="chase-text"></span>
+      <div id="chase-progress" role="progressbar" aria-label="Tiempo para escapar del profesor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="chase-fill"></div></div>
+    </div>
+    <span id="chase-announcement" class="sr-only" role="status"></span>
     <div id="power"><span>🚀</span><div class="bar"><div id="power-fill"></div></div></div>
   </div>
 
@@ -83,7 +89,7 @@
         <li><b>Agáchate</b> → pasar por debajo de los bancos rotos</li>
         <li><b>Rampas</b> → súbete a los colectivos y corre por encima</li>
         <li><b>🚀 Jetpack</b> → cógelo y vuela unos segundos</li>
-        <li><b>¡Cuidado con el profesor!</b> Si tropiezas dos veces seguidas, te atrapa</li>
+        <li><b>¡Cuidado con el profesor!</b> Otro tropiezo en los siguientes 5 segundos y te atrapa. La barra indica cuándo escapás</li>
         <li><b>Levanta las dos manos</b> → empezar / reiniciar</li>
       </ul>
       <label id="quality-control">Calidad gráfica

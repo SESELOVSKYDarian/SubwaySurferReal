@@ -36,8 +36,11 @@ servicios externos para jugar con teclado.
 
 Hay tableros de dibujo para saltar, bancos escolares rotos para pasar agachado,
 rampas para subir a colectivos, monedas y jetpack. El primer tropiezo acerca a
-Estanga, el profesor que persigue al alumno; otro tropiezo durante la
-persecución termina la partida. Los bancos
+Estanga, el profesor que persigue al alumno; otro tropiezo durante los siguientes
+cinco segundos termina la partida.
+Una barra muestra el tiempo restante y un aviso confirma cuando escapás. El
+alumno reacciona inclinando el torso y levantando los brazos. Cada contacto se
+cuenta una sola vez, sin dar inmunidad frente a otros obstáculos. Los bancos
 y los choques frontales con colectivos también terminan la partida.
 
 ## Animación y colisiones
@@ -130,7 +133,6 @@ Perfil del profesor con gorra de policía: [modelo, referencias y comprobaciones
 Profesor modelado en Blender: [modelo editable, materiales y reconstrucción](docs/realism-materials.md).
 Incluye piel UV, barba, ropa y dos niveles de detalle animados. El rostro es una
 aproximación con piel CC0; el parecido fotográfico exacto sigue pendiente.
-<<<<<<< HEAD
 
 Menú El Guardapolvo, sonido y cuatro personajes seleccionables: [detalles y límites](docs/menu-personajes.md).
 
@@ -148,5 +150,3 @@ Escenario renovado: calzada con huellas y fisuras selladas, tapas y rejillas,
 veredas de baldosa, paredones de hormigón encofrado con pilastras, farolas LED,
 tanques de agua y antenas en los techos, torres al fondo y colectivos nuevos con
 vidrios, puertas, cartel de LED y ruedas. [Detalles](docs/escenario.md).
-=======
->>>>>>> 13091e41cf732436a5271a745c79564a2b875d66
