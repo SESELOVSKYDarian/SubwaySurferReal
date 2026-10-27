@@ -922,13 +922,9 @@ export class Game {
     this.officerAnchor.position.copy(g.root.position);
     this.officerAnchor.visible = g.root.visible;
     if (this.officer) {
-<<<<<<< HEAD
-      this.officer.setDetail(this.profile.detail && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
+      this.officer.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
       // Mira al alumno: el modelo avanza hacia -Z y el jugador está delante.
       const look = -Math.atan2(this.x - this.guardX, Math.max(.5, this.guardZ));
-=======
-      this.officer.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
->>>>>>> 13091e41cf732436a5271a745c79564a2b875d66
       if (this.state !== 'paused') this.officer.update(dt, {
         running: !still && !reached, airborne: false, rolling: false,
         speed: this.speed, grabbing: reached, look,

@@ -201,7 +201,6 @@ export class World {
     this.track = new THREE.Group();
     const center = NEAR_Z - len / 2;
 
-<<<<<<< HEAD
     // Calzada: una textura de todo el ancho (12,8 m × 8 m) con huellas de
     // rodadura por carril, fisuras selladas y cordón cuneta.
     const road = S.roadSurface(LANE_X, GUTTER_X);
@@ -226,19 +225,6 @@ export class World {
     for (const x of [-1.1, 1.1]) for (let k = 0; k < dashes; k++) {
       matrix.compose(new THREE.Vector3(x, .008, NEAR_Z - k * 4), q, new THREE.Vector3(1, 1, 1));
       markings.setMatrixAt(i++, matrix);
-=======
-    const roadTex = T.asphalt();
-    roadTex.repeat.set((WALL_X * 2) / TILE, len / TILE);
-    const ground = mesh(new THREE.PlaneGeometry(WALL_X * 2, len), mat({ map: roadTex }), { receive: true });
-    ground.name='AsphaltRoad';ground.rotation.x = -Math.PI / 2;
-    ground.position.z = NEAR_Z - len / 2;this.track.add(ground);
-    const perLane = Math.floor(len / TILE);
-    const markings = new THREE.InstancedMesh(new THREE.PlaneGeometry(.075,2),mat({color:0xcac7ae}),perLane*2);
-    markings.name='LaneMarkings';const matrix=new THREE.Matrix4(),q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
-    let i=0;
-    for(const x of [-1.1,1.1])for(let k=0;k<perLane;k++){
-      matrix.compose(new THREE.Vector3(x,.008,NEAR_Z-k*TILE),q,new THREE.Vector3(1,1,1));markings.setMatrixAt(i++,matrix);
->>>>>>> 13091e41cf732436a5271a745c79564a2b875d66
     }
     this.track.add(markings);
     const edgeLine = new THREE.PlaneGeometry(.12, len).rotateX(-Math.PI / 2);
@@ -416,7 +402,6 @@ export class World {
         tree.position.set(s * (WALL_X + 2.2), WALL_H, 0);
         g.add(tree);
 
-<<<<<<< HEAD
         const decals = mesh(this.decalVariants[s][0], decalMat, { receive: true });
         decals.name = 'RoadDetails';
         g.add(decals);
@@ -424,10 +409,7 @@ export class World {
         furniture.name = 'StreetFurniture';
         g.add(furniture);
 
-        const seg = { s, group: g, wall, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats, decals, furniture };
-=======
-        const seg = { s, group: g, wall, top, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats };
->>>>>>> 13091e41cf732436a5271a745c79564a2b875d66
+        const seg = { s, group: g, wall, top, graffiti, fence, frame, lamp, tree, foliage, foliageMats, graffitiMats, decals, furniture };
         g.position.z = NEAR_Z - SEG / 2 - i * SEG;
         this.scene.add(g);
         this.segments.push(seg);
