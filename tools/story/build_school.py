@@ -24,15 +24,28 @@ for x in range(-10,10):
  for y in range(-14,13):box('Baldosa', (x+.5,y+.5,-.045),(.993,.993,.09),floor,.002)
 for x in [-10,10]:
  box('Muro lateral', (x,0,3.8),(.2,26,7.6),white);box('Friso gris',(x-.012*(1 if x>0 else -1),0,.65),(.24,26,1.3),grey)
-box('Frente interior',(0,12.8,3.6),(20,.2,7.2),white);box('Zócalo frente',(0,12.65,.65),(20,.16,1.3),grey)
+box('Volumen frontal',(-3,12.8,3.1),(13,.2,6.2),white);box('Zócalo frente',(-3,12.65,.65),(13,.16,1.3),grey)
+# Continuación lateral observada a la derecha del bloque de las tres ventanas.
+box('Pasillo continuación',(6,18,-.05),(6,11,.1),floor)
+box('Fondo pasillo',(6,23.5,2),(6,.15,4),white)
+box('Jamba paso',(9.3,12.8,2),(.3,.3,4),white)
+box('Dintel paso',(6.4,12.8,4.1),(6.1,.3,.25),white)
+# Cubierta de bóveda: el vídeo confirma perfiles curvos, no faldones planos.
+def crown(x):return 7.4+2.2*math.sqrt(max(0,1-(x/10)**2))
 for y in range(-12,14,4):
  for x in [-10,10]:box('Columna',(x,y,3.7),(.22,.22,7.4),white)
- for a,b in [((-10,y,7.4),(0,y,9)),((0,y,9),(10,y,7.4)),((-10,y,7.4),(10,y,7.4))]:beam('Cercha',a,b,.09,steel)
- for x in range(-9,10,2):beam('Diagonal cercha',(x,y,7.4),(x+1,y,8.8-abs(x+1)*.14),.045,steel)
-for x in [-5,5]:
- o=box('Faldón chapa',(x,0,8.2),(10.2,27,.07),roof);o.rotation_euler.y=(1 if x>0 else -1)*math.atan(.16)
- for y in [-8,0,8]:box('Claraboya',(x,y,8.24),(1.2,3,.08),glass)
-for x in range(-10,11):beam('Correa',(x,-13,9-abs(x)*.16),(x,13,9-abs(x)*.16),.035,steel)
+ for i in range(24):
+  x0=-10+20*i/24;x1=-10+20*(i+1)/24
+  beam('Arco cercha',(x0,y,crown(x0)),(x1,y,crown(x1)),.095,steel)
+  beam('Cordón inferior curvo',(x0,y,crown(x0)-.40),(x1,y,crown(x1)-.40),.06,steel)
+  beam('Celosía curva',(x0,y,crown(x0)-.40),(x1,y,crown(x1)),.035,steel)
+for i in range(24):
+ x0=-10+20*i/24;x1=-10+20*(i+1)/24
+ for y0,y1,transparent in [(-13,-8,False),(-8,-7,True),(-7,0,False),(0,1,True),(1,8,False),(8,9,True),(9,13,False)]:
+  vertices=[(x0,y0,crown(x0)+.04),(x1,y0,crown(x1)+.04),(x1,y1,crown(x1)+.04),(x0,y1,crown(x0)+.04)]
+  mesh=bpy.data.meshes.new('Bóveda');mesh.from_pydata(vertices,[],[(0,1,2,3)]);o=bpy.data.objects.new('Franja translúcida' if transparent else 'Chapa curva',mesh);bpy.context.collection.objects.link(o);mesh.materials.append(glass if transparent else roof)
+for x in range(-10,11):beam('Correa',(x,-13,crown(x)),(x,13,crown(x)),.035,steel)
+box('Cierre provisional fondo',(0,25,5),(20,.2,10),white)
 # Oficina vidriada derecha, cara principal mirando hacia el hall.
 box('Oficina piso alto',(8,1,3.1),(4,13,.14),grey);box('Oficina antepecho',(6,1,.55),(.13,13,1.1),grey)
 for y in range(-5,9):
@@ -58,8 +71,8 @@ for z in [1.2,1.8,2.4,2.85]:box('Estante vitrina',(-1,12.2,z),(4.5,.7,.035),whit
 for x in range(-6,3):
  for z in [1.35,1.95,2.55]:
   bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=.09,location=(x*.4,12,z+.13));bpy.context.object.data.materials.append(gold);box('Base trofeo',(x*.4,12,z),(.14,.13,.05),wood)
-text('Marca técnica','E5',(3,12.47,2.1),1.7,green)
-for x in [-7,1,7]:box('Ventana superior',(x,12.63,5.2),(1.3,.05,1.25),glass)
+text('Marca técnica','E5',(1.65,12.47,2.1),1.2,green)
+for x in [-7,-3,1]:box('Ventana superior',(x,12.63,5.2),(1.3,.05,1.25),glass)
 for y in [-5,2,8]:
  box('Banco asiento',(1,y,.47),(2.4,.4,.08),wood)
  for x in [0,2]:box('Pata banco',(x,y,.23),(.06,.32,.46),steel)

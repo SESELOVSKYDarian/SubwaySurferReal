@@ -57,3 +57,47 @@ Generador: tools/story/build_school.py. Salidas: assets/story/school-layout.blen
 school-layout.glb y school-layout-preview.png. Cámara de 240 cuadros a 24 FPS.
 El GLB es una exportación de la estructura: los materiales procedurales de Blender
 requieren horneado PBR antes de usarse con la misma apariencia en Three.js.
+
+## Nueva referencia de Google Maps
+
+Se pudo descargar la imagen pública del enlace enviado posteriormente por el usuario
+como references/google-hall-front.jpg (1600×1060). Se obtuvo una vista amplia,
+no un modelo 3D ni el panorama completo navegable.
+
+Esta evidencia muestra errores importantes de la primera base: la cubierta es
+curva, con cerchas y franjas de iluminación siguiendo la bóveda; el volumen
+frontal tiene tres ventanas altas, vitrina/mural y logotipo, y una conexión
+vidriada a su derecha. No corresponde mantener un techo genérico a dos aguas ni
+un muro trasero plano simplificado. Hay que registrar la cámara de referencia
+antes de ajustar volúmenes y profundidades.
+
+La imagen de Maps muestra franjas amarillas en paredes; las fotos recientes del
+usuario muestran gris. Para el acabado se priorizarán sus fotos recientes, usando
+esta vista amplia para estructura y relaciones espaciales. No se afirma haber
+extraído medidas reales o geometría métrica de la foto.
+
+## Vídeo recibido: 2026-10-27 20-19-18.mp4
+
+Archivo original de referencia disponible en los adjuntos locales, 4.877.177 bytes,
+1920×1080, 60 FPS, duración 15,5167 s. Se revisaron vistas a intervalos de 2 s.
+Es una grabación del giro de un panorama desde un punto interior: aporta
+orientaciones relacionadas, pero no un desplazamiento continuo desde la calle
+ni profundidad métrica por fotogrametría.
+
+- 0–2 s: oficina vidriada, baranda superior, sector de bicicletas y escalera.
+- 2–4 s: pared lateral y encuentro con oficina y planta/jardinera.
+- 4–8 s: giro hacia volumen frontal, tres ventanas altas, vitrina y logotipo.
+- 8–10 s: vista más frontal; paso a la derecha del volumen y cubierta de bóveda.
+- 10–14 s: regreso hacia bicicletero y lateral de ingreso.
+
+Se corrigió el generador: bóveda y cerchas curvas, franjas translúcidas, tres
+ventanas del mismo volumen frontal y paso lateral en lugar de muro ciego.
+No se considera validada todavía la ubicación exacta de la cámara, las dimensiones
+ni la continuidad de la entrada exterior. Se conservan los grises de las fotos
+recientes como acabado objetivo. El video antiguo muestra amarillo.
+
+Pendientes explícitos de esta revisión: registro de cámara frente al vídeo,
+proporciones de oficinas y escaleras, puertas y circulación, logotipo fiel
+(en la base aún se usa texto provisional), detalles y texturas. El cierre
+posterior de la base es provisional y no representa un muro medido del lugar.
+No se publicará esta base como una reconstrucción idéntica ni como final del modo historia.

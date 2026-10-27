@@ -1,0 +1,22 @@
+{
+  "filename": "2026-10-27 20-19-18.mp4",
+  "bytes": 4877177,
+  "sha256": "67b5413a4184ebb7f5c7b3a2c027c0e813c0aab86500ff8c902d8369b5cd2903",
+  "duration_seconds": 15.516667,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps": 60,
+  "reviewed_seconds": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    12,
+    14
+  ],
+  "observation": "Grabación de giro de panorama desde el interior; no permite deducir recorrido métrico de entrada desde la calle."
+}
