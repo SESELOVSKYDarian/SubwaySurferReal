@@ -100,3 +100,26 @@ Adaptaciones: unión de piezas del escaneo, soldadura de costuras, reducción de
 polígonos, mapas a 1024 px, normalización y pesos del esqueleto del juego.
 Las versiones `classic-student` conservan el alumno de MakeHuman y guardapolvo
 propios ya documentados en este archivo.
+
+## Estanga (perseguidor actual)
+
+`estanga.glb` y `estanga-low.glb` reemplazan al profesor con gorra como
+perseguidor. Se construyen desde la hoja de personaje aportada por el usuario
+(`source/estanga/reference-sheet.png`), usada como referencia y como fuente de
+las texturas proyectadas (`textures/estanga-*`). Anatomía, pesos, ojos y
+calzado base: recursos MakeHuman CC0 listados arriba; piel normal y rugosidad
+reutilizan `professor-skin-normal.png` y `professor-skin-mr.png` (mismo atlas
+UV de MakeHuman). Ropa, pelo, barba, anteojos, reloj, botas, rig de unión y
+texturas son de este proyecto. Los puntos faciales se obtuvieron con
+MediaPipe Face Mesh (Apache-2.0) solo durante la reconstrucción; el modelo no
+incluye código ni datos de MediaPipe. Detalles: `docs/estanga.md`.
+
+## Esqueleto detallado (52 huesos)
+
+`classic-student` se reconstruyó con la anatomía MakeHuman CC0 listada arriba y
+un guardapolvo, camisa, pantalón, zapatillas y pelo modelados para este
+proyecto (`tools/build_classic.py`). `technical-student` usa el rig Mixamo
+original incluido en el teen-boy (CC BY 4.0, theskipper). `hoodie-student` y
+`phone-student` conservan su malla y texturas y reciben pesos transferidos desde
+el cuerpo MakeHuman CC0 ajustado a cada escaneo. Detalles en
+`docs/personajes-detallados.md`.

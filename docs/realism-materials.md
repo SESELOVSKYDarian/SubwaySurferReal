@@ -1,5 +1,9 @@
 # Profesor: modelado en Blender y materiales UV
 
+> Reemplazado: el perseguidor actual es Estanga, reconstruido desde la hoja de
+> referencia sin gorra ([docs/estanga.md](estanga.md)). Este modelo queda como
+> fuente histórica y el juego ya no lo carga.
+
 Modelo editado y exportado con Blender 4.3.2, integrado como malla esquelética
 en el juego. El archivo editable está en `assets/characters/blender/professor.blend`,
 con texturas empaquetadas, rig y luces de estudio.

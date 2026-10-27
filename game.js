@@ -7,7 +7,7 @@ import { mintCoin, buildShepherd } from './props.js';
 import { schoolProps } from './school-props.js';
 import { updateChaseCamera, disposeBusView } from './camera-rig.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { buildBusAssets } from './bus.js';
 import { World, LANE_X, NEAR_Z } from './world.js';
 import * as T from './textures.js';
 import { surface, contactShadow } from './materials.js';
@@ -175,17 +175,10 @@ export class Game {
     const dark = std({ color: 0x222426, metalness: 0.4 });
     const headlight = std({ color: 0xfff6d8, emissive: 0xfff0c0, emissiveIntensity: 3 });
 
-    const busLines = [
-      { line: '542', color: '#b8262e', stripe: '#ece3d1' },
-      { line: '720', color: '#268342', stripe: '#f4cf28' },
-      { line: '563', color: '#245caf', stripe: '#e7e7df' },
-    ];
-    const trains = busLines.map(({line, color, stripe}) => {
-      const side = std({ map: T.trainSide(color, line, stripe), metalness: .3, roughness: .53 });
-      const front = std({ map: T.trainFront(color, line, stripe), metalness: .3, roughness: .53 });
-      const back = std({ map: T.trainFront(color, line, stripe, true), metalness: .3, roughness: .53 });
-      return [side, side, gray, dark, front, back];
-    });
+    // Colectivos: carrocería, vidrios, metal, goma y luces compartidos por línea.
+    const bus = buildBusAssets();
+    const busLines = bus.lines.map(({ line }) => ({ line }));
+    const trains = bus.lines.map(line => line.body);
     const school = schoolProps();
 
     const minted = mintCoin();
@@ -198,38 +191,13 @@ export class Game {
       .rotateY(-Math.PI / 2)
       .translate(0.95, 0, 0);
 
-    // Ejes y ruedas comparten una sola geometría, incluso al repetir trenes.
-    const undercarriage = [box(1.4, 0.16, 8.6).translate(0, 0.12, 0)];
-    for (const z of [-3.4, 3.4]) {
-      undercarriage.push(box(1.65, 0.25, 1.5).translate(0, 0, z));
-      for (const x of [-0.92, 0.92]) {
-        undercarriage.push(new THREE.CylinderGeometry(0.37, 0.37, 0.18, 20).rotateZ(Math.PI / 2).translate(x, 0, z));
-      }
-    }
-    const bogieGeometry = mergeGeometries(undercarriage);
-    undercarriage.forEach(geometry => geometry.dispose());
-    const busTrimParts = [new RoundedBoxGeometry(2.06,.20,9.9,2,.07).translate(0,3.20,0)];
-    const mirrors=[];
-    for(const x of [-1.03,1.03]) {
-      for(const z of [-3.4,3.4])busTrimParts.push(new THREE.CylinderGeometry(.14,.14,.025,16).rotateZ(Math.PI/2).translate(x,.32,z));
-      busTrimParts.push(box(.30,.035,.035).translate(x*1.06,2.35,4.35));
-      mirrors.push(box(.12,.24,.20).translate(x*1.17,2.27,4.35));
-    }
-    for(const z of [-5.03,5.03])busTrimParts.push(box(2.14,.12,.12).translate(0,.70,z));
-    const merged = parts => {
-      const plain=parts.map(p=>p.index?p.toNonIndexed():p.clone());
-      const result=mergeGeometries(plain);parts.forEach(p=>p.dispose());plain.forEach(p=>p.dispose());return result;
-    };
-    const busTrim=merged(busTrimParts),busMirrors=merged(mirrors);
     this.A = {
-      yellowBlack, gray, dark, headlight, trains, busLines, school, busTrim, busMirrors,
+      yellowBlack, gray, dark, headlight, trains, busLines, school, bus,
       rampMats: [dark, yellowBlack],
       rampGeo,
       coinGeo: minted.geometry,
       coinFarGeo: minted.farGeometry,
       coinMat: minted.material,
-      trainBody: new RoundedBoxGeometry(2.1, 2.6, 10, 2, 0.08),
-      bogie: bogieGeometry,
       light: new THREE.SphereGeometry(0.11, 10, 6),
       halo: new THREE.TorusGeometry(0.75, 0.06, 8, 32),
       haloMat: new THREE.MeshBasicMaterial({ color: 0x7df9ff, transparent: true, opacity: 0.8 }),
@@ -353,16 +321,17 @@ export class Game {
     this.jetpack.visible = false;
     this.rig.torso.add(this.jetpack);
 
-    // Profesor genérico de respaldo; se reemplaza por el rig humano al cargar.
+    // Estanga de respaldo (si falla el GLB): suéter oliva, jean oscuro, botas
+    // marrones, pelo y barba canosos y anteojos negros, como en la referencia.
     const G = {
-      skin: std({ color: 0xd0ad98 }), top: std({ color: 0x34402b }),
-      pants: std({ color: 0x17191a }), shoe: std({ color: 0x705139 }), hair: std({ color: 0x9a9b96 }),
+      skin: std({ color: 0xd9ad98 }), top: std({ color: 0x3b4529 }),
+      pants: std({ color: 0x1d2130 }), shoe: std({ color: 0x7a5a3a }), hair: std({ color: 0xb9b6b0 }),
     };
     this.guard = this.buildRunner(G, { wide: 1.16, hat: (head, add) => {
-      const navy=std({color:0x101d35}),black=std({color:0x111417});
-      const cap=add(head,new THREE.CylinderGeometry(.205,.185,.10,16),navy,0,.28,.015);
-      cap.name='PoliceFallbackCap';
-      add(head,box(.29,.02,.20),black,0,.235,-.11);
+      const black=std({color:0x111417});
+      // Casco de canas con volumen arriba y atrás (sin tapar la cara).
+      const hair=add(head,new THREE.SphereGeometry(.205,16,10,0,Math.PI*2,0,Math.PI*.52),G.hair,0,.13,.035);
+      hair.scale.set(1.04,.9,1.06);hair.name='EstangaFallbackHair';
       for(const x of [-.09,.09])add(head,box(.14,.065,.014),black,x,.10,-.184);
       add(head,box(.05,.012,.014),black,0,.11,-.197);
       add(head,new THREE.SphereGeometry(.10,12,8),G.hair,0,.005,-.145).scale.set(1.2,.7,.35);
@@ -597,14 +566,15 @@ export class Game {
     } else {
       // Colectivo argentino: conserva rampas y techo transitable.
       const busIndex = Math.floor(Math.random() * A.trains.length);
-      const mats = A.trains[busIndex];
+      const { geometries, materials, lines } = A.bus;
+      const line = lines.find(l => l.line === A.busLines[busIndex].line) ?? lines[busIndex];
       g.name = `Colectivo${A.busLines[busIndex].line}`;
       g.userData.line = A.busLines[busIndex].line;
-      add(A.trainBody, mats, 0, 1.85);
-      add(A.busTrim, A.gray, 0, 0, 0, false);
-      add(A.busMirrors, A.dark, 0, 0, 0, false);
-      add(A.bogie, A.dark, 0, 0.32, 0, false);
-      for (const x of [-0.7, 0.7]) add(A.light, A.headlight, x, 1.0, 5.02, false);
+      add(geometries.body, A.trains[busIndex], 0, 0);
+      add(geometries.glass, materials.glass, 0, 0, 0, false);
+      add(geometries.metal, materials.metal, 0, 0, 0, false);
+      add(geometries.dark, materials.dark, 0, 0);
+      add(geometries.lights, line.lights, 0, 0, 0, false);
       yMax = TRAIN_TOP;
       depth = 10;
       z -= 4;
@@ -962,9 +932,11 @@ export class Game {
     this.officerAnchor.visible = g.root.visible;
     if (this.officer) {
       this.officer.setDetail(this.profile.detail && this.pixelRatio > .7 && Math.abs(this.camera.position.z - this.guardZ) < 10);
+      // Mira al alumno: el modelo avanza hacia -Z y el jugador está delante.
+      const look = -Math.atan2(this.x - this.guardX, Math.max(.5, this.guardZ));
       if (this.state !== 'paused') this.officer.update(dt, {
         running: !still && !reached, airborne: false, rolling: false,
-        speed: this.speed, grabbing: reached,
+        speed: this.speed, grabbing: reached, look,
       });
       g.root.visible = false;
     } else {

@@ -42,18 +42,6 @@ function wrapped(w, h, x, y, r, draw) {
   }
 }
 
-export function asphalt() {
-  const [c,g]=makeCanvas(512,512);
-  g.fillStyle='#34383a';g.fillRect(0,0,512,512);
-  for(let i=0;i<18000;i++) {
-    const value=Math.floor(rand(35,100));g.fillStyle=`rgba(${value},${value},${value},.45)`;
-    g.fillRect(rand(0,512),rand(0,512),rand(.5,2),rand(.5,2));
-  }
-  g.strokeStyle='rgba(14,17,18,.55)';g.lineWidth=1.4;
-  for(let i=0;i<7;i++) {g.beginPath();let x=rand(0,512),y=rand(0,512);g.moveTo(x,y);for(let k=0;k<5;k++){x+=rand(-17,17);y+=rand(5,23);g.lineTo(x,y);}g.stroke();}
-  return toTexture(c);
-}
-
 export function gravel() {
   const S = 512;
   const [c, g] = makeCanvas(S, S);
@@ -187,20 +175,22 @@ function graffitiPiece(g, x, y, size, label, palette) {
 }
 
 // Muro de hormigón con grafitis (y a veces hiedra colgando)
-export function graffitiWall(theme = 'mdp') {
+// paintOnly: solo la pintura sobre fondo transparente, para pintar sobre el
+// paredón de hormigón encofrado (street-textures.js) sin taparlo.
+export function graffitiWall(theme = 'mdp', paintOnly = false) {
   const W = 1024, H = 240;
   const [c, g] = makeCanvas(W*2, H*2);
   g.scale(2,2);
-  concreteBase(g, W, H, '#a49d90');
+  if (!paintOnly) concreteBase(g, W, H, '#a49d90');
   // Juntas de los paneles
-  for (let x = 0; x <= W; x += 256) {
+  for (let x = 0; x <= (paintOnly ? -1 : W); x += 256) {
     g.fillStyle = 'rgba(0,0,0,0.35)';
     g.fillRect(x - 2, 0, 3, H);
     g.fillStyle = 'rgba(255,255,255,0.15)';
     g.fillRect(x + 1, 0, 2, H);
   }
   // Manchas de agua
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < (paintOnly ? 0 : 25); i++) {
     const x = Math.random() * W;
     const grd = g.createLinearGradient(0, 0, 0, rand(60, 200));
     grd.addColorStop(0, 'rgba(40,35,25,0.3)');
@@ -235,11 +225,13 @@ export function graffitiWall(theme = 'mdp') {
     g.fillText(pick(WORDS).toLowerCase(), rand(0, W - 60), rand(221, 237));
   }
   // Suciedad abajo
-  const dirt = g.createLinearGradient(0, H - 60, 0, H);
-  dirt.addColorStop(0, 'rgba(50,40,30,0)');
-  dirt.addColorStop(1, 'rgba(50,40,30,0.25)');
-  g.fillStyle = dirt;
-  g.fillRect(0, H - 60, W, 60);
+  if (!paintOnly) {
+    const dirt = g.createLinearGradient(0, H - 60, 0, H);
+    dirt.addColorStop(0, 'rgba(50,40,30,0)');
+    dirt.addColorStop(1, 'rgba(50,40,30,0.25)');
+    g.fillStyle = dirt;
+    g.fillRect(0, H - 60, W, 60);
+  }
   // Hiedra
   if (Math.random() < 0.35) {
     const start = rand(0, W * 0.6), len = rand(150, 450);
@@ -422,96 +414,6 @@ export function stripes(a, b) {
   }
   grain(g, 256, 64, 18);
   return toTexture(c);
-}
-
-// Lateral de un vagón de metro (10 m de largo)
-export function trainSide(color, line = '542', stripe = '#e8e2cf') {
-  const W = 1024, H = 256;
-  const [c, g] = makeCanvas(W, H);
-  const grd = g.createLinearGradient(0, 0, 0, H);
-  grd.addColorStop(0, shade(color, 12));
-  grd.addColorStop(1, shade(color, -12));
-  g.fillStyle = grd;
-  g.fillRect(0, 0, W, H);
-  g.fillStyle = stripe;
-  g.fillRect(0, 168, W, 10);
-  g.fillStyle = '#2b2b2b';
-  g.fillRect(0, H - 28, W, 28);
-  const glass = (x, y, w, h) => {
-    const gr = g.createLinearGradient(x, y, x + w, y + h);
-    gr.addColorStop(0, '#9cc0d8');
-    gr.addColorStop(0.5, '#2b3d4d');
-    gr.addColorStop(1, '#141c24');
-    g.fillStyle = gr;
-    g.fillRect(x, y, w, h);
-    g.strokeStyle = '#d9d9d9';
-    g.lineWidth = 4;
-    g.strokeRect(x, y, w, h);
-  };
-  for (const dx of [250, 750]) {
-    g.fillStyle = shade(color, -18);
-    g.fillRect(dx - 60, 40, 120, H - 70);
-    g.strokeStyle = '#1a1a1a';
-    g.lineWidth = 3;
-    g.strokeRect(dx - 60, 40, 120, H - 70);
-    g.beginPath();
-    g.moveTo(dx, 40);
-    g.lineTo(dx, H - 30);
-    g.stroke();
-    glass(dx - 50, 55, 40, 80);
-    glass(dx + 10, 55, 40, 80);
-  }
-  for (const x of [40, 400, 560, 900]) glass(x, 50, 90, 90);
-  g.fillStyle='#e7e1cf';g.font='bold 36px Arial';g.textAlign='center';
-  g.fillText(line,510,216);
-  g.font='bold 15px Arial';g.fillText('MAR DEL PLATA',510,241);
-  g.strokeStyle='#555c5e';g.lineWidth=2;
-  for(const x of [120,450,830]){g.strokeRect(x,192,86,34);g.fillStyle='#14191b';g.fillRect(x+9,208,15,4);}
-  // Pasarruedas pintados, juntas y señalización de transporte argentino.
-  for(const x of [165,842]){g.fillStyle='#161a1b';g.beginPath();g.ellipse(x,255,39,32,0,Math.PI,2*Math.PI);g.fill();}
-  g.fillStyle='#d49d28';for(const x of [25,500,995])g.fillRect(x,228,8,5);
-
-  for (let i = 0; i < 20; i++) {
-    g.fillStyle = `rgba(40,30,20,${rand(0.05, 0.2)})`;
-    g.fillRect(rand(0, W), rand(150, H), rand(20, 120), rand(4, 30));
-  }
-  grain(g, W, H, 12);
-  const texture=toTexture(c);texture.name=`Colectivo-${line}`;return texture;
-}
-
-export function trainFront(color, line = '542', stripe = '#e8e2cf', rear = false) {
-  const S = 256;
-  const [c, g] = makeCanvas(S, S);
-  g.fillStyle = color;
-  g.fillRect(0, 0, S, S);
-  g.fillStyle = '#1d2830';
-  g.fillRect(20, 40, 216, 90);
-  const gr = g.createLinearGradient(20, 40, 120, 130);
-  gr.addColorStop(0, 'rgba(180,210,230,0.7)');
-  gr.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = gr;
-  g.fillRect(20, 40, 216, 90);
-  g.fillStyle = '#c9c9c9';
-  g.fillRect(124, 40, 8, 90);
-  g.fillStyle = '#111';
-  g.fillRect(12, 5, 232, 32);
-  g.fillStyle = '#ffb42e';
-  g.font = 'bold 22px monospace';
-  g.textAlign = 'center';
-  g.fillText(`${line} · ${rear ? 'MDP' : 'CENTRO'}`, 128, 29);
-  g.fillStyle = stripe;
-  g.fillRect(0, 168, S, 10);
-  g.fillStyle = '#2b2b2b';
-  g.fillRect(0, 220, S, 36);
-  // Parabrisas con limpiaparabrisas, ópticas y patente argentina.
-  g.strokeStyle='#14191d';g.lineWidth=3;
-  for(const x of [63,165]){g.beginPath();g.moveTo(x,125);g.lineTo(x+25,96);g.lineTo(x+46,101);g.stroke();}
-  g.fillStyle=rear?'#a32320':'#e2ddc5';g.fillRect(13,188,32,15);g.fillRect(211,188,32,15);
-  g.fillStyle='#121619';for(let y=186;y<218;y+=6)g.fillRect(70,y,116,2);
-  g.fillStyle='#dcded7';g.fillRect(101,230,54,15);g.fillStyle='#3388ac';g.fillRect(101,230,54,3);
-  g.font='bold 8px monospace';g.fillStyle='#242a30';g.fillText(`MDP ${line}`,128,242);
-  grain(g, S, S, 10);
-  const texture=toTexture(c);texture.name=`Colectivo-${line}`;return texture;
 }
 
 export function coinFace() {

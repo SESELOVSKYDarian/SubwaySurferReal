@@ -1,5 +1,9 @@
 # Profesor con gorra de policía, basado en las referencias
 
+> Reemplazado: el perseguidor actual es Estanga, reconstruido desde la hoja de
+> referencia sin gorra ([docs/estanga.md](estanga.md)). Este modelo queda como
+> fuente histórica y el juego ya no lo carga.
+
 El perseguidor conserva su papel de profesor y su comportamiento de juego, con
 una apariencia propia basada en las cuatro fotos aportadas. La interpretación
 mantiene suéter verde oliva, pantalón oscuro y zapatos marrones. Se añadieron

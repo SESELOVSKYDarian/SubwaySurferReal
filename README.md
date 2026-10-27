@@ -16,8 +16,11 @@ El recorrido está comprimido para el juego. [Criterio y referencias](docs/juan-
 ## Jugar
 
 ```bash
-python3 -m http.server 8000
+python3 tools/serve.py
 ```
+
+El servidor desactiva la caché: así el navegador no sigue usando archivos .js
+viejos después de un cambio (con `python3 -m http.server` puede pasar).
 
 Abrir el servidor local en un navegador con WebGL. También se publica desde `main`
 en GitHub Pages. Es una aplicación estática: no necesita compilación, Node ni
@@ -32,8 +35,9 @@ servicios externos para jugar con teclado.
 - La cámara se reutiliza entre partidas y se reconecta si el navegador conserva el permiso.
 
 Hay tableros de dibujo para saltar, bancos escolares rotos para pasar agachado,
-rampas para subir a colectivos, monedas y jetpack. El primer tropiezo acerca al
-profesor; otro tropiezo durante la persecución termina la partida. Los bancos
+rampas para subir a colectivos, monedas y jetpack. El primer tropiezo acerca a
+Estanga, el profesor que persigue al alumno; otro tropiezo durante la
+persecución termina la partida. Los bancos
 y los choques frontales con colectivos también terminan la partida.
 
 El menú **Ranking** muestra los diez mejores puntajes. Al finalizar cada partida
@@ -133,3 +137,18 @@ Incluye piel UV, barba, ropa y dos niveles de detalle animados. El rostro es una
 aproximación con piel CC0; el parecido fotográfico exacto sigue pendiente.
 
 Menú El Guardapolvo, sonido y cuatro personajes seleccionables: [detalles y límites](docs/menu-personajes.md).
+
+Estanga, el perseguidor, se reconstruyó desde la hoja de personaje aportada:
+siluetas medidas, rostro ajustado con 478 puntos faciales, texturas proyectadas,
+suéter oliva, jean, botas de trekking, anteojos y reloj, con marcha, reposo,
+mirada y agarre propios. [Proceso, validación y límites](docs/estanga.md).
+
+Los cinco personajes usan un esqueleto detallado de 52 huesos (hombros, tres
+vértebras y dedos) con carrera, salto, rodada y reposo nuevos; El técnico se
+reconstruyó con guardapolvo real y los escaneos se riggearon ajustando un cuerpo
+anatómico a cada uno. [Detalles](docs/personajes-detallados.md).
+
+Escenario renovado: calzada con huellas y fisuras selladas, tapas y rejillas,
+veredas de baldosa, paredones de hormigón encofrado con pilastras, farolas LED,
+tanques de agua y antenas en los techos, torres al fondo y colectivos nuevos con
+vidrios, puertas, cartel de LED y ruedas. [Detalles](docs/escenario.md).

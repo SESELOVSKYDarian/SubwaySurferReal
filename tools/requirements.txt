@@ -1,4 +1,9 @@
-# Solo para reconstruir el GLB; el juego no necesita Python/numpy en el navegador.
+# Solo para reconstruir los GLB; el juego no necesita Python/numpy en el navegador.
 numpy==2.3.5
 
 Pillow==12.3.0
+# Estanga (tools/estanga_*.py): siluetas, proyección y pesos.
+opencv-python-headless>=4.9
+scipy>=1.11
+# Opcional: solo para volver a ajustar el rostro (tools/estanga_face_fit.py).
+# mediapipe==0.10.14

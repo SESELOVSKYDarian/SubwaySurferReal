@@ -257,9 +257,9 @@ test('profesor esquelético independiente y monedas metálicas instanciadas',{ti
    officer.update(.25,{running:true,airborne:false,rolling:false,speed:14});
    if(previous.angleTo(runnerLeg.quaternion)>0.000001)throw Error('Animar el profesor mueve al jugador');
    let teacherMaterials=0;officer.model.traverse(object=>{
-    for(const material of [object.material].flat())if(material?.name==='TeacherSweater')teacherMaterials++;
+    for(const material of [object.material].flat())if(material?.name==='EstangaSweater')teacherMaterials++;
    });
-   if(teacherMaterials!==1)throw Error('Falta el uniforme');
+   if(teacherMaterials!==1)throw Error('Falta el suéter de Estanga');
    game.start();game.update(1/60);
    if(!game.officerAnchor.visible||game.guard.root.visible)throw Error('No reemplaza al profesor provisional');
    game.guardZ=16;game.chase=0;game.updateGuard(0);
@@ -628,31 +628,33 @@ test('carrera con apoyos alternados y cadencia ligada a la velocidad para ambos 
       peakLift=Math.max(peakLift,state.runLift);
      }
     }
-    if(!supported||flight<4||peakLift<.04)throw Error('La carrera rápida no distingue apoyo y fase aérea');
+    // Estanga trota con menos vuelo que el alumno (adulto corpulento), pero lo tiene.
+    if(!supported||flight<4||peakLift<(actor===teacher?.018:.04))throw Error('La carrera rápida no distingue apoyo y fase aérea');
    }
    g.renderer.render=render;g.renderer.dispose();
   });
  }finally{await page.close();}
 });
 
-test('profesor basado en fotos: cuerpo propio, accesorios y dos niveles animados',{timeout:120000},async()=>{
+test('Estanga reconstruido desde la hoja: cuerpo propio, accesorios y dos niveles animados',{timeout:120000},async()=>{
  const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
  try{
   await page.goto(env.url);await page.evaluate(async()=>{
    const THREE=await import('three'),{Game}=await import('./game.js');
    const g=new Game(document.querySelector('#game'));const [student,teacher]=await Promise.all([g.characterReady,g.officerReady]);
-   if(!teacher)throw Error('No cargó el perfil fotográfico');
+   if(!teacher)throw Error('No cargó a Estanga');
    const names=[];teacher.model.traverse(o=>{if(o.isMesh)names.push(o.name)});
-   for(const expected of ['PoliceCap','PoliceVisor','PoliceInsignia','Spectacles','FacialHair','Wristwatch'])
-    if(!names.some(name=>name.startsWith(expected)))throw Error(`Falta ${expected}`);
+   for(const expected of ['EstangaSkin','EstangaHair','EstangaBeard','Spectacles','Lenses','Wristwatch','EstangaSweater','EstangaCollar','EstangaJeans','EstangaBoots','EstangaSoles','EstangaLaces'])
+    if(!names.includes(expected))throw Error(`Falta ${expected}`);
+   if(names.some(name=>/Police/.test(name)))throw Error('La referencia no tiene gorra de policía');
    const studentMeshes=[];student.model.traverse(o=>{if(o.isMesh)studentMeshes.push(o)});
    teacher.model.traverse(o=>{if(o.isMesh&&studentMeshes.some(s=>s.geometry===o.geometry))throw Error('Reutiliza el cuerpo del alumno');});
    const triangles=()=>{let n=0;teacher.model.traverse(o=>{if(o.isMesh)n+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3});return n;};
-   const high=triangles();if(high>85000||high<40000)throw Error(`Presupuesto alto ${high}`);
+   const high=triangles();if(high>90000||high<45000)throw Error(`Presupuesto alto ${high}`);
    const playerHead=student.bones.Head.quaternion.clone();
    for(const detail of [false,true]){
     teacher.setDetail(detail);
-    if(!detail&&triangles()>34000)throw Error('LOD demasiado pesado');
+    if(!detail&&triangles()>36000)throw Error('LOD demasiado pesado');
     for(let i=0;i<90;i++)teacher.update(1/60,{running:true,speed:24});
     teacher.model.updateMatrixWorld(true);
     teacher.model.traverse(mesh=>{if(mesh.isSkinnedMesh)mesh.computeBoundingBox();});
@@ -660,44 +662,54 @@ test('profesor basado en fotos: cuerpo propio, accesorios y dos niveles animados
     if(!Number.isFinite(box.min.y)||box.min.y<-.05||box.max.y>2.25)throw Error('Postura o tamaño inválido');
    }
    if(playerHead.angleTo(student.bones.Head.quaternion)>1e-7)throw Error('La animación altera al alumno');
-   teacher.reset();const cap=teacher.model.getObjectByName('PoliceCap');
-   const before=cap.getVertexPosition(0,new THREE.Vector3());
+   teacher.reset();
+   // Reloj en la muñeca izquierda (lado -X del modelo, huesos Right*), como en la hoja.
+   const watch=teacher.model.getObjectByName('Wristwatch');watch.skeleton.update();
+   const center=new THREE.Vector3();const p=new THREE.Vector3();const n=watch.geometry.attributes.position.count;
+   for(let i=0;i<n;i++)center.add(watch.getVertexPosition(i,p));center.divideScalar(n);
+   if(center.x>-.1)throw Error('El reloj no está en la muñeca izquierda');
+   const before=watch.getVertexPosition(0,new THREE.Vector3());
+   teacher.bones.RightForeArm.rotation.x+=.5;teacher.model.updateMatrixWorld(true);
+   if(before.distanceTo(watch.getVertexPosition(0,new THREE.Vector3()))<.01)throw Error('El reloj no sigue al antebrazo');
+   teacher.reset();const frames=teacher.model.getObjectByName('Spectacles');
+   const a=frames.getVertexPosition(0,new THREE.Vector3());
    teacher.bones.Head.rotation.y=.3;teacher.model.updateMatrixWorld(true);
-   const after=cap.getVertexPosition(0,new THREE.Vector3());
-   if(before.distanceTo(after)<.01)throw Error('La gorra no sigue la cabeza');
+   if(a.distanceTo(frames.getVertexPosition(0,new THREE.Vector3()))<.01)throw Error('Los anteojos no siguen la cabeza');
    g.renderer.dispose();
   });
  }finally{await page.close();}
 });
 
-test('si falla el perfil del profesor sigue disponible el perseguidor de respaldo',{timeout:120000},async()=>{
+test('si falla el modelo de Estanga sigue disponible el perseguidor de respaldo',{timeout:120000},async()=>{
  const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
- await page.route('**/professor-police.glb',r=>r.abort());
+ await page.route('**/estanga.glb',r=>r.abort());
  try{
   await page.goto(env.url);await page.evaluate(async()=>{
    const {Game}=await import('./game.js');const g=new Game(document.querySelector('#game'));
    await Promise.all([g.characterReady,g.officerReady]);g.renderer.render=()=>{};g.start();g.nextSpawn=Infinity;g.update(1/60);
-   if(g.officer||!g.guard.root.visible||!g.guard.root.getObjectByName('PoliceFallbackCap'))throw Error('No muestra respaldo con gorra');
+   if(g.officer||!g.guard.root.visible||!g.guard.root.getObjectByName('EstangaFallbackHair'))throw Error('No muestra el respaldo de Estanga');
    if(g.state!=='playing')throw Error('El error bloquea la partida');g.renderer.dispose();
   });
  }finally{await page.close();}
 });
 
-test('materiales del profesor: UV de piel, normales, ojos con alfa, pelo y cuero',{timeout:120000},async()=>{
+test('materiales de Estanga: piel proyectada, normales, ojos con alfa, pelo, barba y botas',{timeout:120000},async()=>{
  const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
  try{
   await page.goto(env.url);await page.evaluate(async()=>{
    const {Game}=await import('./game.js');const g=new Game(document.querySelector('#game'));const t=await g.officerReady;
-   if(!t)throw Error('No cargó el profesor texturizado');
+   if(!t)throw Error('No cargó a Estanga texturizado');
    const mats=new Map();t.model.traverse(o=>{if(o.isMesh)for(const m of [o.material].flat())mats.set(m.name,m);});
-   const skin=mats.get('Skin'),eyes=mats.get('EyeWhite'),hair=mats.get('GrayHair'),shoes=mats.get('Shoes');
+   const skin=mats.get('Skin'),eyes=mats.get('EyeWhite'),hair=mats.get('EstangaHair'),shoes=mats.get('EstangaBoots'),beard=mats.get('EstangaBeard');
    if(!skin?.map||skin.map.image.width!==2048||!skin.normalMap||!skin.roughnessMap)throw Error('Faltan mapas UV/PBR de piel');
    if(skin.map.colorSpace!=='srgb'||skin.normalMap.colorSpace==='srgb')throw Error('Espacios de color incorrectos');
    if(!eyes?.map||eyes.alphaTest<.01||!hair?.map||hair.alphaTest<.1)throw Error('Ojos o pelo pierden sus máscaras alfa');
    const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');ctx.drawImage(eyes.map.image,0,0,1024,1024);
    if(ctx.getImageData(950,950,1,1).data[3]!==0)throw Error('La córnea tapa los iris: se perdió el alfa');
-   if(!shoes?.map||!shoes.normalMap)throw Error('Calzado sin textura de cuero y normal');
-   const sweater=mats.get('TeacherSweater');if(sweater.roughnessMap||sweater.roughness<.85)throw Error('La lana vuelve a verse plástica');
+   if(!shoes?.map)throw Error('Botas sin textura de nobuk');
+   if(!beard?.map||beard.alphaTest<.1)throw Error('Barba sin textura o sin máscara alfa');
+   const sweater=mats.get('EstangaSweater');if(!sweater.map||sweater.roughnessMap||sweater.roughness<.85)throw Error('La lana vuelve a verse plástica');
+   if(!sweater.bumpMap||sweater.bumpMap.repeat.x<2)throw Error('Falta el relieve de punto del suéter');
    for(const detail of [false,true]){
     t.setDetail(detail);for(let i=0;i<30;i++)t.update(1/60,{running:true,speed:24});
     if(!Number.isFinite(t.model.position.y))throw Error('Animación inválida al cambiar detalle');
@@ -712,18 +724,18 @@ test('exportación Blender: cuello estable, barba texturizada y esqueletos compa
  try{
   await page.goto(env.url);await page.evaluate(async()=>{
    const THREE=await import('three'),{GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
-   const loader=new GLTFLoader();const versions=await Promise.all(['professor-police.glb','professor-police-low.glb'].map(n=>loader.loadAsync('./assets/characters/'+n)));
+   const loader=new GLTFLoader();const versions=await Promise.all(['estanga.glb','estanga-low.glb'].map(n=>loader.loadAsync('./assets/characters/'+n)));
    const skeletons=[];
    for(const gltf of versions){
-    const collar=gltf.scene.getObjectByName('CrewNeck');if(!collar?.isSkinnedMesh)throw Error('Cuello sin rig');
+    const collar=gltf.scene.getObjectByName('EstangaCollar');if(!collar?.isSkinnedMesh)throw Error('Cuello sin rig');
     skeletons.push(collar.skeleton.bones.map(b=>b.name).join(','));
-    const beard=gltf.scene.getObjectByName('FacialHair');if(!beard.material.map||!beard.material.transparent)throw Error('Barba sin textura/alfa exportados');
+    const beard=gltf.scene.getObjectByName('EstangaBeard');if(!beard.material.map||!(beard.material.alphaTest>0))throw Error('Barba sin textura/alfa exportados');
     gltf.scene.updateMatrixWorld(true);collar.skeleton.update();
     const before=collar.getVertexPosition(0,new THREE.Vector3());
     const neckSamples=[];
     gltf.scene.traverse(o=>{if(o.isSkinnedMesh&&o.material?.name==='Skin'){
      o.skeleton.update();const a=o.geometry.attributes.position;
-     for(let i=0;i<a.count;i++)if(a.getY(i)>1.67&&a.getY(i)<1.75&&Math.abs(a.getX(i))<.095)
+     for(let i=0;i<a.count;i++)if(a.getY(i)>1.50&&a.getY(i)<1.57&&Math.abs(a.getX(i))<.07)
       neckSamples.push([o,i,o.getVertexPosition(i,new THREE.Vector3())]);
     }});
     if(!neckSamples.length)throw Error('Falta la piel del cuello');
@@ -734,6 +746,41 @@ test('exportación Blender: cuello estable, barba texturizada y esqueletos compa
     for(const [mesh,index,position] of neckSamples){mesh.skeleton.update();if(position.distanceTo(mesh.getVertexPosition(index,new THREE.Vector3()))>.0001)throw Error('El brazo arrastra la piel del cuello');}
    }
    if(skeletons[0]!==skeletons[1])throw Error('Los índices de huesos no coinciden al cambiar LOD');
+  });
+ }finally{await page.close();}
+});
+
+test('esqueleto detallado: 52 huesos, dedos y hombros animados en los cinco personajes',{timeout:240000},async()=>{
+ const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);await page.evaluate(async()=>{
+   const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');const loader=new GLTFLoader();
+   for(const name of ['technical-student','classic-student','hoodie-student','phone-student','estanga']){
+    for(const suffix of ['','-low']){
+     const gltf=await loader.loadAsync(`./assets/characters/${name}${suffix}.glb`);
+     let skeleton;gltf.scene.traverse(o=>{if(o.isSkinnedMesh)skeleton=o.skeleton;});
+     const bones=skeleton.bones.map(b=>b.name.replace(/^mixamorig/,''));
+     if(bones.length!==52)throw Error(`${name}${suffix}: ${bones.length} huesos`);
+     for(const need of ['LeftShoulder','RightShoulder','Spine1','LeftHandThumb3','RightHandPinky3','LeftToeBase'])
+      if(!bones.includes(need))throw Error(`${name}${suffix}: falta ${need}`);
+     // Reposo identidad: el IK de piernas y las posturas trabajan en ejes del modelo.
+     for(const b of skeleton.bones)if(Math.abs(1-Math.abs(b.quaternion.w))>1e-4)throw Error(`${name}: ${b.name} rota en reposo`);
+    }
+   }
+   const THREE=await import('three');const {Game}=await import('./game.js');
+   const g=new Game(document.querySelector('#game'));const [r,t]=await Promise.all([g.characterReady,g.officerReady]);
+   g.renderer.render=()=>{};
+   for(const actor of [r,t]){
+    actor.reset();for(let i=0;i<90;i++)actor.update(1/60,{running:true,speed:22});
+    const fist=actor.bones.LeftHandIndex2.quaternion.angleTo(new THREE.Quaternion());
+    if(fist<.4)throw Error('Los dedos no se cierran al correr');
+    let shoulder=0;const start=actor.bones.LeftShoulder.quaternion.clone();
+    for(let i=0;i<40;i++){actor.update(1/60,{running:true,speed:22});shoulder=Math.max(shoulder,start.angleTo(actor.bones.LeftShoulder.quaternion));}
+    if(shoulder<.03)throw Error('El hombro no acompaña el braceo');
+   }
+   r.reset();for(let i=0;i<30;i++)r.update(1/60,{running:true,airborne:true,verticalSpeed:4});
+   if(r.bones.LeftHandIndex2.quaternion.angleTo(new THREE.Quaternion())>.4)throw Error('Mano cerrada en el salto');
+   g.renderer.dispose();
   });
  }finally{await page.close();}
 });
