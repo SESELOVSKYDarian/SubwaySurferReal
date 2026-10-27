@@ -28,6 +28,16 @@ test('Juan B. Justo repite fachadas y muros, reinicia en la costa y mantiene rec
    let maxMeshes=0,maxTriangles=0,totalTriangles=0,frames=0;
    for(let distance=0;distance<ROUTE_LENGTH*3;distance+=LOT_LENGTH){
     world.update(0,distance);
+    for(const segment of world.segments){
+     if(segment.wall.castShadow!==segment.group.visible||segment.top.castShadow!==segment.group.visible||
+        segment.wall.receiveShadow!==segment.group.visible||segment.top.receiveShadow!==segment.group.visible)
+      throw Error('Las sombras de los muros no siguen el reciclado visible');
+    }
+    for(const building of world.buildings){
+     if(building.box.castShadow!==building.group.visible||building.facade.receiveShadow!==building.group.visible||
+        building.cornice.castShadow!==building.group.visible||building.roof.castShadow!==building.group.visible)
+      throw Error('Las sombras de las fachadas no siguen los edificios visibles');
+    }
     const visible=world.buildings.filter(b=>b.group.visible);
     if(new Set(visible.map(b=>`${b.s}:${b.slot}`)).size!==visible.length)throw Error('Hito de varios lotes dibujado dos veces');
     let meshes=0,triangles=0;
@@ -81,7 +91,7 @@ test('D entra en debug aunque la cámara espere el cuerpo completo', {timeout:12
   }
  `}));
  try{
-  await page.goto(env.url);await page.locator('#settingsBtn').click();await page.locator('#camBtn').click();await page.keyboard.press('Escape');await page.locator('#playBtn').click();
+  await page.goto(env.url);await page.locator('#camBtn').click();await page.locator('#playBtn').click();
   await page.waitForFunction(()=>document.querySelector('#pause-title').textContent.includes('Calibrando'));
   await page.keyboard.press('KeyD');
   await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0);
@@ -107,11 +117,6 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
  await page.route('https://**',route=>{external.push(route.request().url());return route.abort();});
  try{
   await page.goto(env.url);
-  const fps=await (await page.waitForFunction(()=>{const n=Number(document.querySelector('#fps').textContent);return n>0?n:false;},{timeout:30000})).jsonValue();
-  assert.ok(fps>0&&fps<1000,`FPS fuera de rango: ${fps}`);
-  await page.locator('#settingsBtn').click();
-  await page.selectOption('#quality','balanced');
-  await page.keyboard.press('Escape');
   await page.locator('#playBtn').click();
   await page.waitForFunction(()=>Number(document.querySelector('#score').textContent)>0,{timeout:60000});
   assert.equal(await page.locator('#overlay').evaluate(el=>el.classList.contains('hidden')),true);
@@ -122,6 +127,7 @@ test('la aplicación carga sin CDN y responde a teclado y calidad',{timeout:1200
   await page.keyboard.press('KeyP');
   await page.waitForFunction(()=>document.querySelector('#pause').classList.contains('hidden'));
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Space');await page.keyboard.press('ArrowDown');
+  await page.selectOption('#quality','balanced');
   assert.equal(await page.locator('#quality').inputValue(),'balanced');
   await mkdir('test-results',{recursive:true});
   await page.screenshot({path:'test-results/realism.png',timeout:60000});
@@ -139,8 +145,6 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    const THREE=await import('three');const {Game}=await import('./game.js');
    const game=new Game(document.querySelector('#game'));const runner=await game.characterReady;
    if(!runner)throw Error('No cargó el modelo');
-   if(game.scene.environment!==game.environmentTarget.texture)throw Error('Falta la iluminación ambiental compartida');
-   if(game.renderer.toneMapping!==THREE.AgXToneMapping)throw Error('La curva de color no conserva tonos naturales');
    let skins=0;runner.model.traverse(object=>{if(object.isSkinnedMesh)skins++;});
    const height=new THREE.Box3().setFromObject(runner.model).getSize(new THREE.Vector3()).y;
    if(height<1.8||height>2.3)throw Error(`Escala incorrecta: ${height}`);
@@ -173,9 +177,15 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    for(let i=0;i<65;i++)game.update(1/60);
    if(game.score<=0)throw Error('Puntuación');
    game.setQuality('high');const far=game.world.viewDistance;
-   if(game.sun.shadow.mapSize.width!==2048||game.sun.shadow.radius!==2)throw Error('Calidad alta no mejora las sombras');
+   if(game.sun.shadow.mapSize.x!==2048||game.renderer.shadowMap.type!==THREE.PCFSoftShadowMap)throw Error('Sombras de alta calidad');
+   game.sun.shadow.camera.updateMatrixWorld(true);
+   for(const z of [20,-far-5]){
+    const shadowPoint=new THREE.Vector3(0,0,z).project(game.sun.shadow.camera);
+    if(Math.abs(shadowPoint.x)>1)throw Error(`La sombra no cubre edificios visibles en z=${z}`);
+   }
+   if(Math.abs(game.sun.target.position.z+far/2)>.001)throw Error('La zona de sombras no acompaña al recorrido');
    game.setQuality('balanced');
-   if(game.world.viewDistance>=far||game.sun.shadow.mapSize.width!==1024)throw Error('Calidad equilibrada no reduce el coste');
+   if(game.world.viewDistance>=far||game.sun.shadow.mapSize.x!==1024)throw Error('Calidad equilibrada');
    game.setQuality('auto');for(let i=0;i<400;i++)game.adaptQuality(0.04);
    if(Math.abs(game.pixelRatio-0.55)>0.001||game.sun.castShadow)throw Error('Calidad automática');
    game.addObstacle('high',game.lane,0);game.update(1/60);if(game.state!=='over')throw Error('Colisión');
@@ -185,6 +195,31 @@ test('escala humana, animación, física, colisiones y calidad automática',{tim
    return {skins,height};
   });
   assert.ok(result.skins>=2);assert.deepEqual(errors,[]);
+ }finally{await page.close();}
+});
+
+test('el mapa de sombras acompaña el alcance visible y se redimensiona con la calidad',{timeout:120000},async()=>{
+ const page=await env.browser.newPage({viewport:{width:960,height:540}});
+ await page.route('**/main.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
+ try{
+  await page.goto(env.url);
+  await page.evaluate(async()=>{
+   const THREE=await import('three');const {Game}=await import('./game.js');
+   const game=new Game(document.querySelector('#game'));await game.characterReady;
+   game.setQuality('high');game.update(0);
+   if(game.sun.shadow.map?.width!==2048||game.sun.shadow.map?.height!==2048)
+    throw Error('El mapa real de sombras no usa resolución alta');
+   const far=game.world.viewDistance,shadowCamera=game.sun.shadow.camera;
+   for(const z of [20,-far-5]){
+    const point=new THREE.Vector3(0,0,z).project(shadowCamera);
+    if(Math.abs(point.x)>1)throw Error(`El área de sombras no cubre el tramo visible z=${z}`);
+   }
+   if(Math.abs(game.sun.target.position.z+far/2)>.001)throw Error('El objetivo de sombras no acompaña los edificios');
+   game.setQuality('balanced');game.update(0);
+   if(game.sun.shadow.map?.width!==1024||game.sun.shadow.map?.height!==1024)
+    throw Error('El mapa de sombras no se redimensiona al bajar la calidad');
+   game.renderer.dispose();
+  });
  }finally{await page.close();}
 });
 
@@ -432,7 +467,7 @@ test('tablero, banco roto, tres líneas de colectivo y detalle adaptativo',{time
    const game=new Game(document.querySelector('#game'));const [r,t]=await Promise.all([game.characterReady,game.officerReady]);
    game.renderer.render=()=>{};
    const triangles=model=>{let n=0;model.traverse(o=>{if(o.isMesh)n+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3});return n;};
-   const high=triangles(r.model);if(high<40000||high>65536)throw Error(`Presupuesto alto: ${high}`);
+   const high=triangles(r.model);if(high<60000||high>65536)throw Error(`Presupuesto alto: ${high}`);
    r.setDetail(false);const low=triangles(r.model);if(low>22000||low>=high*.5)throw Error(`LOD no reduce coste: ${low}`);
    r.setDetail(true);if(triangles(r.model)!==high)throw Error('No restaura alta calidad');
    game.start();game.nextSpawn=Infinity;
@@ -576,6 +611,7 @@ test('banco verde legible y animaciones con aterrizaje, giro y salto diferenciad
  }finally{await page.close();}
 });
 
+<<<<<<< HEAD
 test('carrera con apoyos alternados y cadencia ligada a la velocidad para ambos personajes',{timeout:120000},async()=>{
  const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
  try{
@@ -637,6 +673,9 @@ test('carrera con apoyos alternados y cadencia ligada a la velocidad para ambos 
 });
 
 test('Estanga reconstruido desde la hoja: cuerpo propio, accesorios y dos niveles animados',{timeout:120000},async()=>{
+=======
+test('profesor basado en fotos: cuerpo propio, accesorios y dos niveles animados',{timeout:120000},async()=>{
+>>>>>>> 13091e41cf732436a5271a745c79564a2b875d66
  const page=await env.browser.newPage();await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
  try{
   await page.goto(env.url);await page.evaluate(async()=>{

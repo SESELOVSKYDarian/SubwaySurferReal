@@ -40,13 +40,6 @@ Estanga, el profesor que persigue al alumno; otro tropiezo durante la
 persecución termina la partida. Los bancos
 y los choques frontales con colectivos también terminan la partida.
 
-El menú **Ranking** muestra los diez mejores puntajes. Al finalizar cada partida
-se solicitan tres iniciales; se guardan todas las partidas registradas como JSON
-en `localStorage` (`tecnica-run-ranking-v1`), con puntos, monedas y fecha. Los
-empates se ordenan por monedas y luego por antigüedad. El ranking persiste al
-recargar en ese navegador y origen; no se comparte entre dispositivos ni se
-escribe un archivo en GitHub Pages. Se puede omitir el guardado de una partida.
-
 ## Animación y colisiones
 
 Agacharse sostiene una postura baja: no gira el cuerpo ni reinicia una voltereta
@@ -59,10 +52,12 @@ integración balística para reducir diferencias entre tasas de cuadros. Pausar
 congela también las posturas, monedas, jetpack y cámara; no consume objetos.
 
 La cámara permanece detrás del alumno, encuadra los tres carriles y se aleja en
-pantallas verticales. El selector de calidad adapta resolución y distancia de
-visualización. El rendimiento depende del equipo: no se garantizan 60 FPS.
-La calidad alta usa sombras suaves de mayor resolución y hasta 2× de densidad de
-píxeles; automática y equilibrada limitan esos costes según el equipo.
+pantallas verticales. El selector ofrece calidad alta con resolución interna de
+hasta 2×, sombras suaves de mayor detalle y más distancia de dibujado; el modo
+automático ajusta la resolución entre 0,55× y 1,5× según el rendimiento.
+La zona de sombras sigue el tramo visible y se recicla junto con edificios y
+muros. Equilibrada prioriza la fluidez. El rendimiento depende del equipo: no
+se garantizan 60 FPS.
 
 ## Cámara corporal
 
@@ -135,6 +130,7 @@ Perfil del profesor con gorra de policía: [modelo, referencias y comprobaciones
 Profesor modelado en Blender: [modelo editable, materiales y reconstrucción](docs/realism-materials.md).
 Incluye piel UV, barba, ropa y dos niveles de detalle animados. El rostro es una
 aproximación con piel CC0; el parecido fotográfico exacto sigue pendiente.
+<<<<<<< HEAD
 
 Menú El Guardapolvo, sonido y cuatro personajes seleccionables: [detalles y límites](docs/menu-personajes.md).
 
@@ -152,3 +148,5 @@ Escenario renovado: calzada con huellas y fisuras selladas, tapas y rejillas,
 veredas de baldosa, paredones de hormigón encofrado con pilastras, farolas LED,
 tanques de agua y antenas en los techos, torres al fondo y colectivos nuevos con
 vidrios, puertas, cartel de LED y ruedas. [Detalles](docs/escenario.md).
+=======
+>>>>>>> 13091e41cf732436a5271a745c79564a2b875d66
