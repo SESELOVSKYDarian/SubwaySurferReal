@@ -148,9 +148,11 @@
     <h2 id="score-dialog-title">¡Partida terminada!</h2>
     <p id="final-score" class="final-score"></p>
     <form id="score-form">
-      <label for="score-initials">Tus tres iniciales</label>
-      <input id="score-initials" name="initials" type="text" minlength="3" maxlength="3" pattern="[A-Z]{3}" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="initials-hint score-error">
-      <p id="initials-hint" class="hint">Escribí tres letras, por ejemplo ABC.</p>
+      <div class="score-entry">
+        <label for="score-initials">Tus tres iniciales</label>
+        <input id="score-initials" name="initials" type="text" placeholder="AAA" minlength="3" maxlength="3" pattern="[A-Z]{3}" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="initials-hint score-error">
+        <p id="initials-hint" class="sr-only">Escribí tres letras, por ejemplo ABC.</p>
+      </div>
       <p id="score-error" class="ranking-error" role="alert"></p>
       <div class="buttons">
         <button id="save-score" type="submit" disabled>Guardar y ver ranking</button>
