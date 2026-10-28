@@ -18,12 +18,15 @@ const BONES = [
 // Los de salto y agacharse se dividen por la sensibilidad elegida en el menú.
 const LANE_ENTER = 0.52;   // anchos de hombro desplazado para cambiar de carril
 const LANE_EXIT = 0.35;    // histéresis para volver al centro
-const JUMP_UP = 0.10;      // subida del cuerpo (en largos de torso) para saltar
-const JUMP_EARLY = 0.045;   // ...o una subida menor pero rápida
-const JUMP_SPEED = 1.0;    // largos de torso por segundo
-const DUCK_DOWN = 0.38;    // bajada/encogimiento para agacharse ("hacerse bolita")
-const DUCK_DEEP = 0.6;     // tan agachado que no hace falta confirmar
-const DUCK_EXIT = 0.2;     // por debajo de esto se considera que te levantaste
+// Un salto real sube unos 15–40 cm (0,3–0,8 torsos); trotar en el lugar o respirar mueve ~5 cm.
+const JUMP_UP = 0.17;      // subida del cuerpo (en largos de torso) para saltar
+const JUMP_EARLY = 0.09;   // ...o una subida menor pero rápida
+const JUMP_SPEED = 1.4;    // largos de torso por segundo
+const JUMP_FRAMES = 2;     // fotogramas seguidos por encima del umbral (un solo cuadro con ruido no salta)
+const DUCK_DOWN = 0.3;     // bajada/encogimiento para agacharse ("hacerse bolita")
+const DUCK_DEEP = 0.5;     // tan agachado que no hace falta confirmar
+const DUCK_EXIT = 0.16;    // por debajo de esto se considera que te levantaste
+const DUCK_LOWERED = 0.15; // hombros así de bajos: agachándose, las caderas pueden salir de cuadro
 const CALIB_FRAMES = 20;   // frames quieto necesarios para calibrar
 const LOST_FRAMES = 12;    // ~1/3 s sin ver al jugador = lo hemos perdido (se pausa)
 const FORGET_FRAMES = 60;  // ~2 s sin verlo: se elige de nuevo a la persona más cercana
@@ -225,6 +228,7 @@ export class PoseController {
     this.jumpArmed = true;
     this.ducking = false;
     this.duckFrames = 0;
+    this.jumpFrames = 0;
     this.handsUpSince = 0;
     this.lastHandsUp = 0;
     this.lastJump = 0;
@@ -345,7 +349,8 @@ export class PoseController {
 
   // Medidas del cuerpo en este fotograma (null si no se ve esa parte)
   measure(lm, t) {
-    const vis = (i) => (lm[i].visibility ?? 1) > 0.5;
+    // Un punto fuera del cuadro (caderas al agacharse, pies al acercarse) es una estimación: no se usa.
+    const vis = (i) => (lm[i].visibility ?? 1) > 0.5 && lm[i].y > 0.003 && lm[i].y < 0.997;
     const m = {};
     if (vis(L_SHOULDER) && vis(R_SHOULDER)) {
       // x en espejo: moverte a tu derecha = moverte a la derecha en pantalla
@@ -447,9 +452,11 @@ export class PoseController {
     // Una cabeza aislada no sirve para controlar ni calibrar el cuerpo.
     // Ya calibrado, alcanza con ver los hombros: al llegar a un borde de la pantalla o al agacharse las
     // caderas pueden quedar fuera de cuadro y el carril se sigue leyendo igual.
-    // (solo en los extremos laterales: en el centro, unas caderas que no se ven = detección parcial).
+    // (en los extremos laterales o con los hombros bajados, es decir agachado; de pie en el centro,
+    // unas caderas que no se ven = detección parcial).
     const atSide = lm && (() => { const cx = (lm[L_SHOULDER].x + lm[R_SHOULDER].x) / 2; return cx < 0.14 || cx > 0.86; })();
-    const required = this.base && atSide ? [L_SHOULDER, R_SHOULDER] : [L_SHOULDER, R_SHOULDER, L_HIP, R_HIP];
+    const lowered = lm && this.base && ((lm[L_SHOULDER].y + lm[R_SHOULDER].y) / 2 - this.base.sy) / this.base.torso > DUCK_LOWERED;
+    const required = this.base && (atSide || lowered) ? [L_SHOULDER, R_SHOULDER] : [L_SHOULDER, R_SHOULDER, L_HIP, R_HIP];
     if (lm && !required.every(i =>
       (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.003 && lm[i].x < 0.997 && lm[i].y > 0.003 && lm[i].y < 0.997)) lm = null;
     this.draw(lm, poses);
@@ -532,12 +539,15 @@ export class PoseController {
       }
     }
 
-    // --- Salto: sube todo el cuerpo (cadera y hombros) y, si se ven, los dos pies ---
-    const bodyRise = [];
-    if (m.hy != null && b.hy != null) bodyRise.push((b.hy - m.hy) / T);
-    if (m.sy != null) bodyRise.push((b.sy - m.sy) / T);
-    let jump = bodyRise.length ? avg(bodyRise) : null;
-    if (jump != null && m.ay != null && b.ay != null) jump = (jump + (b.ay - m.ay) / T) / 2;
+    // --- Salto: sube todo el cuerpo a la vez ---
+    // Encoger o levantar los brazos sube solo los hombros; trotar en el lugar no despega los pies.
+    // Por eso cuenta la menor subida entre cadera y hombros y, si se ven los pies, la mediana con
+    // ellos: tienen que subir al menos dos de las tres partes.
+    const rises = [];
+    if (m.hy != null && b.hy != null) rises.push((b.hy - m.hy) / T);
+    if (m.sy != null) rises.push((b.sy - m.sy) / T);
+    let jump = rises.length ? Math.min(...rises) : null;
+    if (jump != null && m.ay != null && b.ay != null) jump = median([...rises, (b.ay - m.ay) / T]);
 
     // --- Agacharse / hacerse bolita: baja la cabeza o los hombros, o se encoge el torso ---
     const duckCues = [];
@@ -565,11 +575,15 @@ export class PoseController {
     const sliding = this.sideSpeed > 3.5;
 
     if (jump != null && this.jumpArmed && !this.ducking) {
-      const big = jump > (JUMP_UP / sens) * (sliding ? 1.7 : 1);
-      // La detección temprana por velocidad no vale justo al levantarse de agacharse ni al desplazarse de lado
-      const early = !sliding && jump > JUMP_EARLY / sens && vUp > JUMP_SPEED && now - this.lastDuckEnd > 300;
-      if (big || early) {
+      const up = (JUMP_UP / sens) * (sliding ? 1.7 : 1);
+      // Al levantarse de agacharse el cuerpo pasa rápido por la altura de reposo: no es un salto.
+      const settled = now - this.lastDuckEnd > 350;
+      const early = !sliding && jump > JUMP_EARLY / sens && vUp > JUMP_SPEED;
+      this.jumpFrames = settled && (jump > up || early) ? this.jumpFrames + 1 : 0;
+      // Dos fotogramas seguidos, salvo una subida tan grande que no puede ser ruido.
+      if (this.jumpFrames >= JUMP_FRAMES || (settled && jump > up * 2)) {
         this.jumpArmed = false;
+        this.jumpFrames = 0;
         this.lastJump = now;
         this.h.onJump?.();
       }
@@ -578,7 +592,7 @@ export class PoseController {
 
     // Agacharse: hay que mantenerlo 2 fotogramas (así el pequeño amago antes de
     // saltar no cuenta), salvo que sea muy profundo. Se ignora el aterrizaje.
-    if (duck != null && now - this.lastJump > 500) {
+    if (duck != null && now - this.lastJump > 400) {
       if (!this.ducking) {
         this.duckFrames = duck > DUCK_DOWN / sens ? this.duckFrames + 1 : 0;
         if (this.duckFrames >= 2 || duck > DUCK_DEEP / sens) {
