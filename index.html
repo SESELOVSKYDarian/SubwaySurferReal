@@ -45,6 +45,18 @@
     <div id="pose-status">Cámara apagada</div>
   </div>
 
+  <div id="story-hud" class="hidden" aria-live="polite">
+    <b id="story-label"></b>
+    <div class="story-bar"><i id="story-fill"></i></div>
+    <span id="story-coins">🪙 0</span>
+  </div>
+  <div id="story-fade"></div>
+  <div id="story-video" class="hidden">
+    <video id="story-player" playsinline></video>
+    <p id="story-missing" hidden></p>
+    <button id="story-skip" type="button">SALTAR ▸</button>
+  </div>
+
   <div id="overlay" class="game-menu">
     <div class="menu-vignette"></div>
     <main class="menu-home" aria-label="Menú principal">
@@ -55,7 +67,7 @@
         <p class="menu-story">Te lo olvidaste en casa.<br>Volvé, agarralo y llegá a tiempo.</p>
         <div class="menu-modes">
           <button id="playBtn" class="paint-button primary"><img src="assets/menu/icons/run.svg" alt=""><span>MODO INFINITO<small>Corré por Juan B. Justo</small></span><img src="assets/menu/icons/arrow-right.svg" alt=""></button>
-          <button class="paint-button story-button" id="storyBtn" aria-describedby="story-note"><img src="assets/menu/icons/book.svg" alt=""><span>MODO HISTORIA<small id="story-note">Próximamente</small></span><img src="assets/menu/icons/arrow-right.svg" alt=""></button>
+          <button class="paint-button story-button" id="storyBtn" aria-describedby="story-note"><img src="assets/menu/icons/book.svg" alt=""><span>MODO HISTORIA<small id="story-note">Corré a casa, agarrá el guardapolvo y volvé</small></span><img src="assets/menu/icons/arrow-right.svg" alt=""></button>
         </div>
         <p class="selected-label">Vas con <b id="selected-name">El pibe</b> <button id="quick-character">CAMBIAR</button></p>
         <p id="menu-notice" role="status"></p>
@@ -143,6 +155,10 @@
 
   <dialog id="ranking-dialog" class="score-modal" aria-labelledby="ranking-title">
     <h2 id="ranking-title">🏆 Ranking</h2>
+    <div class="rank-tabs">
+      <button id="rank-tab-infinite" type="button" aria-pressed="true">Modo infinito</button>
+      <button id="rank-tab-story" type="button" aria-pressed="false">Modo historia</button>
+    </div>
     <p class="hint">Los diez mejores puntajes guardados en este navegador.</p>
     <p id="ranking-empty">Todavía no hay partidas guardadas. ¡Jugá para inaugurar el ranking!</p>
     <table id="ranking-table" hidden>

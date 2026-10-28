@@ -26,7 +26,6 @@ export function initMenu(game,session){
  const open=id=>{const d=$(id);if(!d.open)d.showModal();};
  $('settingsBtn').onclick=()=>open('settings-dialog');
  const showCharacters=()=>open('characters-dialog');$('charactersBtn').onclick=showCharacters;$('quick-character').onclick=showCharacters;
- $('storyBtn').onclick=()=>{$('menu-notice').textContent='El modo historia está en preparación. Ya podés jugar al modo infinito.';};
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
  document.querySelectorAll('.menu-dialog').forEach(d=>d.addEventListener('click',e=>{const r=d.getBoundingClientRect();if(e.target===d&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))d.close();}));
  for(const c of characters){const b=document.createElement('button');b.className='character-card';b.setAttribute('aria-pressed',String(c.id===selected));b.dataset.character=c.id;
@@ -37,5 +36,5 @@ export function initMenu(game,session){
  const drawAchievements=()=>{const best=read('menuBest',0);$('achievement-list').replaceChildren();for(const [name,goal,desc] of achievements){const row=document.createElement('div');row.className='achievement'+(best>=goal?' earned':'');const icon=document.createElement('img');icon.src='assets/menu/icons/trophy.svg';icon.alt=best>=goal?'Desbloqueado':'Pendiente';const content=document.createElement('div'),h=document.createElement('h3'),p=document.createElement('p');h.textContent=name;p.textContent=desc+' '+Math.min(best,goal)+' / '+goal;content.append(h,p);row.append(icon,content);$('achievement-list').append(row);}};
  $('achievementsBtn').onclick=()=>{drawAchievements();open('achievements-dialog');};
  window.addEventListener('runner:gameover',e=>{save('menuBest',Math.max(read('menuBest',0),Math.floor(e.detail.score)));sound('lose');});
- const home=document.createElement('button');home.id='return-menu';home.textContent='Volver al menú';home.onclick=()=>{session.cancel();session.pending=session.manual=false;game.reset();$('pause').classList.add('hidden');$('overlay').classList.remove('hidden');};document.querySelector('.pause-box').append(home);
+ const home=document.createElement('button');home.id='return-menu';home.textContent='Volver al menú';home.onclick=()=>{window.dispatchEvent(new Event('runner:menu'));session.cancel();session.pending=session.manual=false;game.reset();$('pause').classList.add('hidden');$('overlay').classList.remove('hidden');};document.querySelector('.pause-box').append(home);
 }

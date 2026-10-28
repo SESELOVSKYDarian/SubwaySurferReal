@@ -406,12 +406,19 @@ export class Game {
     this.coinFarInstances.instanceMatrix.needsUpdate = true;
   }
 
-  reset() {
+  // Quita lo que hay en pantalla y vuelve a sembrar la calzada desde la posición actual.
+  clearTrack() {
     this.coinInstances.count = this.coinFarInstances.count = 0;
     for (const list of [this.obstacles, this.coins, this.pickups]) {
       for (const o of list) { this.scene.remove(o.mesh); disposeBusView(o); }
       list.length = 0;
     }
+    this.nextSpawn = this.distance + 40;
+  }
+
+  reset() {
+    this.clearTrack();
+    this.legEnd = null;      // modo historia: distancia donde termina el tramo actual
     this.state = 'ready';
     this.speed = START_SPEED;
     this.distance = 0;
@@ -668,6 +675,11 @@ export class Game {
     if (playing) {
       this.speed = Math.min(MAX_SPEED, this.speed + dt * 0.35);
       this.distance += move;
+      if (this.legEnd != null && this.distance >= this.legEnd) {
+        this.legEnd = null;
+        this.state = 'waiting';     // el modo historia toma el control (video, siguiente tramo)
+        this.cb.onLegEnd?.();
+      }
       while (this.distance - SPAWN_Z > this.nextSpawn) {
         this.spawnRow(-(this.nextSpawn - this.distance));
         this.nextSpawn += 22 + Math.random() * 14 - (this.speed - START_SPEED) * 0.25;
@@ -911,7 +923,7 @@ export class Game {
     g.root.visible = this.guardZ < 12;
     const reached = over && this.guardZ < 1.6;
     const t = this.time * 11;
-    const still = this.state === 'ready' || this.state === 'paused';
+    const still = this.state === 'ready' || this.state === 'paused' || this.state === 'waiting';
     this.pose(g, t, reached ? 'grab' : still ? 'idle' : 'run');
 
     const d = this.dog;

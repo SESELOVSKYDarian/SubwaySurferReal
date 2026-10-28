@@ -13,7 +13,7 @@ from pathlib import Path
 class NoCache(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm',
-                      '.glb': 'model/gltf-binary'}
+                      '.glb': 'model/gltf-binary', '.mp4': 'video/mp4'}
 
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, must-revalidate')

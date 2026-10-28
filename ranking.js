@@ -1,4 +1,5 @@
 export const RANKING_KEY = 'tecnica-run-ranking-v1';
+export const STORY_RANKING_KEY = 'tecnica-run-story-ranking-v1';
 
 export function normalizeInitials(value) {
   return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
@@ -16,12 +17,13 @@ function sorted(entries) {
 }
 
 export class RankingStore {
-  constructor(storage = () => globalThis.localStorage) {
+  constructor(storage = () => globalThis.localStorage, key = RANKING_KEY) {
     this.storage = storage;
+    this.key = key;
   }
 
   read() {
-    const raw = this.storage().getItem(RANKING_KEY);
+    const raw = this.storage().getItem(this.key);
     if (raw === null) return [];
     const data = JSON.parse(raw);
     if (!data || data.version !== 1 || !Array.isArray(data.scores)) throw new Error('Formato de ranking inválido');
@@ -34,7 +36,7 @@ export class RankingStore {
     if (!Number.isSafeInteger(score) || score < 0 || !Number.isSafeInteger(coins) || coins < 0) throw new Error('Puntuación inválida');
     const entry = { id: globalThis.crypto.randomUUID(), initials, score, coins, date: new Date().toISOString() };
     const scores = sorted([...this.read(), entry]);
-    this.storage().setItem(RANKING_KEY, JSON.stringify({ version: 1, scores }));
+    this.storage().setItem(this.key, JSON.stringify({ version: 1, scores }));
     return entry;
   }
 }

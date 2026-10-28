@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Vista previa · Modo historia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111}canvas{display:block;width:100vw;height:100vh}#h{position:fixed;left:12px;bottom:10px;color:#fff;font:12px system-ui;opacity:.7}</style>
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head><body><canvas id="c"></canvas><div id="h">Arrastrá para mirar · W/S/A/D mover · ?shot=1..5</div>
+<script type="module">
+import * as THREE from 'three';
+import { buildSchoolInterior } from './school-interior.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+r.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1a1c1e);
+scene.fog = new THREE.Fog(0x1a1c1e, 30, 70);
+scene.add(buildSchoolInterior());
+const cam = new THREE.PerspectiveCamera(62, 1, .1, 200);
+const shots = {
+  1: [[1, 1.6, -17], [8, 3.2, -27]],     // cantina de frente
+  2: [[6, 1.6, -22], [-4, 3, -44]],       // pared con escudo
+  3: [[-6, 1.6, -22], [5, 3.5, -30]],     // entrepiso y reja
+  4: [[-9, 1.6, -26], [4, 3.5, -34]],     // esquina cantina/plantas
+  5: [[4, 1.6, -4], [-2, 3.8, -38]],      // vista de nave
+};
+let yaw = 0, pitch = 0; const keys = {};
+const s = shots[q.get('shot')];
+if (s) { cam.position.set(...s[0]); cam.lookAt(...s[1]); }
+else { cam.position.set(0, 1.6, 1); cam.lookAt(0, 3, -30); }
+const e = new THREE.Euler(0, 0, 0, 'YXZ'); e.setFromQuaternion(cam.quaternion); yaw = e.y; pitch = e.x;
+addEventListener('pointermove', ev => { if (ev.buttons) { yaw -= ev.movementX * .003; pitch = Math.max(-1.2, Math.min(1.2, pitch - ev.movementY * .003)); } });
+addEventListener('keydown', ev => keys[ev.code] = true); addEventListener('keyup', ev => keys[ev.code] = false);
+function resize() { r.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+let t0 = performance.now();
+r.setAnimationLoop(() => {
+  const now = performance.now(), dt = Math.min(.05, (now - t0) / 1000); t0 = now;
+  const f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), sd = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  cam.rotation.set(pitch, yaw, 0, 'YXZ');
+  const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  cam.position.addScaledVector(fwd, f * 5 * dt).addScaledVector(right, sd * 5 * dt);
+  r.render(scene, cam);
+});
+window.__ready = true;
+</script></body></html>

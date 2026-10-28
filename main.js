@@ -4,12 +4,14 @@ import { initMenu, sound } from './menu.js';
 import { PlaySession } from './session.js';
 import { routeState } from './avenue-route.js';
 import { Leaderboard } from './leaderboard.js';
+import { StoryMode } from './story.js';
 
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
 const actionEl = $('action');
 const leaderboard = new Leaderboard(() => overlay.classList.remove('hidden'));
 let actionTimer;
+let story = null;   // se crea después de la sesión de juego
 
 function flash(text, color = '#fff') {
   actionEl.textContent = text;
@@ -34,7 +36,9 @@ const game = new Game($('game'), {
     $('power').classList.toggle('show', fraction > 0);
     $('power-fill').style.width = `${fraction * 100}%`;
   },
+  onLegEnd() { story?.onLegEnd(); },
   onGameOver(score, coins, reason) {
+    if (story?.active) { sound('lose'); story.onCrash(); return; }
     window.dispatchEvent(new CustomEvent('runner:gameover',{detail:{score,coins}}));
     $('title').textContent = reason === 'caught' ? '¡Te atrapó el profesor! 👨‍🏫' : '¡Choque! 💥';
     $('subtitle').textContent = `Puntuación: ${score} · Monedas: ${coins} — jugá otra vez con el botón o levantando las dos manos`;
@@ -78,10 +82,18 @@ function showPause(title, text = '', count = false) {
 const session = new PlaySession(game, showPause, () => pauseEl.classList.add('hidden'));
 function play() {
   if (leaderboard.blocking || game.state === 'playing' || session.pending || session.manual) return;
+  if (story?.active && story.phase !== 'ida') return;   // los videos y el choque los maneja el modo historia
   overlay.classList.add('hidden');
   sound('start');
   session.request();
 }
+
+story = new StoryMode({ game, session, leaderboard, flash, sound });
+$('storyBtn').addEventListener('click', () => {
+  if (leaderboard.blocking || story.active || game.state === 'playing') return;
+  story.start();
+});
+window.addEventListener('runner:menu', () => story.cancel());
 
 const poseHandlers = {
   onArms: targets => { if (!session.keyboard) game.setArmTargets(targets); },
@@ -208,6 +220,7 @@ const routeZone = $('route-zone');
 function frame(now) {
   // El menú es una ilustración: no gastar GPU dibujando la escena detrás.
   if (overlay.classList.contains('hidden')) game.update((now - last) / 1000);
+  story?.updateHud();
   fpsFrames++;
   const fpsElapsed = now - fpsSampleStart;
   if (fpsElapsed >= 500) {
