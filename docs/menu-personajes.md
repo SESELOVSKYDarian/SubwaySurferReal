@@ -8,10 +8,11 @@ El modo historia se identifica como próximo; no simula contenido inexistente.
 
 Efectos sintetizados con Web Audio para botones, comienzo, moneda, salto,
 agachado y tropiezo. El contexto de audio se abre por gesto del usuario y el
-silencio y volumen persisten. La música instrumental de 8 bits elegida por el
-usuario se carga localmente al jugar; sigue la pausa y se silencia durante videos
+silencio y volumen persisten. Los MP3 de `assets/audio` se cargan localmente al
+jugar y se alternan al azar en bucle; siguen la pausa y se silencian durante videos
 y al ocultar la pestaña. Comparte el volumen y el botón de sonido del menú.
-La pista y sus créditos están en [assets/audio](../assets/audio/README.md).
+Las instrucciones para agregar temas y los créditos están en
+[assets/audio](../assets/audio/README.md).
 
 Los personajes son el joven teen-boy, el técnico con guardapolvo, la chica de
 buzo gris y la chica con teléfono. Las nuevas mallas estaban sin rig. Blender

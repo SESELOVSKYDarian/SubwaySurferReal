@@ -20,7 +20,7 @@ class NoCache(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if urlsplit(self.path).path == '/assets/audio/playlist.json':
-            data = json.dumps(playlist(root)).encode('utf8')
+            data = json.dumps(playlist(Path(self.directory))).encode('utf8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Content-Length', str(len(data)))
@@ -35,10 +35,11 @@ class NoCache(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-root = Path(__file__).resolve().parents[1]
-handler = lambda *a, **k: NoCache(*a, directory=str(root), **k)
-socketserver.ThreadingTCPServer.allow_reuse_address = True
-with socketserver.ThreadingTCPServer(('127.0.0.1', port), handler) as server:
-    print(f'Técnica Run en http://127.0.0.1:{port}/ (sin caché)')
-    server.serve_forever()
+if __name__ == '__main__':
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    root = Path(__file__).resolve().parents[1]
+    handler = lambda *a, **k: NoCache(*a, directory=str(root), **k)
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    with socketserver.ThreadingTCPServer(('127.0.0.1', port), handler) as server:
+        print(f'Técnica Run en http://127.0.0.1:{server.server_address[1]}/ (sin caché)')
+        server.serve_forever()

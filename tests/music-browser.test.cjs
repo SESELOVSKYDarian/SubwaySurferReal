@@ -26,8 +26,10 @@ test('MP3 elegido: reproducción real, pausa, volumen, pestaña oculta y videos'
   await page.keyboard.press('KeyD');
   await page.waitForFunction(()=>!track.paused&&track.readyState>=2&&track.currentTime>.05);
   const info=await page.evaluate(()=>({duration:track.duration,loop:track.loop,src:track.src}));
-  assert.ok(info.duration>30&&Number.isFinite(info.duration));assert.equal(info.loop,true);
-  assert.match(info.src,/mi-perro-dinamita-8bit.mp3$/);assert.ok(requests.length>0);
+  assert.ok(info.duration>30&&Number.isFinite(info.duration));assert.ok(requests.length>0);
+  const names=await page.evaluate(async()=>(await (await fetch('assets/audio/playlist.json')).json()).tracks);
+  const urls=names.map(name=>new URL(`assets/audio/${name}`,env.url).href);
+  assert.ok(urls.includes(info.src));assert.equal(info.loop,names.length===1);
   await page.keyboard.press('KeyP');await page.waitForFunction(()=>track.paused);
   const position=await page.evaluate(()=>track.currentTime);await page.waitForTimeout(250);
   assert.ok(Math.abs(await page.evaluate(()=>track.currentTime)-position)<.03);
@@ -64,4 +66,34 @@ test('silencio y volumen guardados se respetan al cargar el juego',async()=>{
   });
   assert.equal(result.paused,true);assert.equal(result.muted,true);assert.ok(Math.abs(result.volume-.07)<.001);
  }finally{await context.close();}
+});
+
+test('playlist: finales naturales alternan temas indefinidamente sin repetir el anterior',{timeout:30000},async()=>{
+ const page=await env.browser.newPage();
+ await page.route('**/main.js',r=>r.fulfill({contentType:'text/javascript',body:''}));
+ await page.route('**/assets/audio/playlist.json',r=>r.fulfill({json:{tracks:['first.mp3','second.mp3']}}));
+ // Una señal breve permite recorrer varias canciones con finales naturales,
+ // sin depender de búsquedas HTTP Range ni esperar la duración de cada MP3 real.
+ const samples=4410,wav=Buffer.alloc(44+samples*2);
+ wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);
+ wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(22050,24);wav.writeUInt32LE(44100,28);
+ wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
+ for(let i=0;i<samples;i++)wav.writeInt16LE(Math.round(Math.sin(i*440*2*Math.PI/22050)*300),44+i*2);
+ await page.route('**/assets/audio/*.mp3',r=>r.fulfill({contentType:'audio/wav',body:wav}));
+ try{
+  await page.goto(env.url);
+  await page.evaluate(async()=>{
+   const {GameMusic}=await import('./music.js');const music=window.playlistMusic=new GameMusic();
+   window.played=[];music.audio.addEventListener('playing',()=>played.push(music.audio.src));
+   document.addEventListener('keydown',()=>{
+    function frame(){music.update('playing');window.musicFrame=requestAnimationFrame(frame);}frame();
+   },{once:true});
+  });
+  await page.keyboard.press('Space');await page.waitForFunction(()=>played.length>=5);
+  const played=await page.evaluate(()=>{
+   cancelAnimationFrame(musicFrame);playlistMusic.update('paused');return window.played;
+  });
+  assert.equal(new Set(played).size,2);
+  for(let i=1;i<played.length;i++)assert.notEqual(played[i],played[i-1]);
+ }finally{await page.close();}
 });

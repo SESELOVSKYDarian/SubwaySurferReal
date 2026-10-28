@@ -41,7 +41,9 @@ export class GameMusic {
       this.pickNext();
       this.apply();
     });
-    audio.addEventListener?.('error', () => this.failTrack(this.current));
+    audio.addEventListener?.('error', () => {
+      if (audio.error?.code >= 2) this.failTrack(this.current);
+    });
   }
 
   setPreferences(enabled, volume) {
@@ -122,7 +124,8 @@ export class GameMusic {
       this.newRun = false;
       this.pickNext();
     }
-    if (!this.audio.paused || this.pending || this.needsInteraction) return;
+    // El final puede llegar antes que el evento ended; esperar al cambio de tema.
+    if (this.audio.ended || !this.audio.paused || this.pending || this.needsInteraction) return;
     this.pending = true;
     const track = this.current;
     try {

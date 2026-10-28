@@ -43,6 +43,22 @@ alumno reacciona inclinando el torso y levantando los brazos. Cada contacto se
 cuenta una sola vez, sin dar inmunidad frente a otros obstáculos. Los bancos
 y los choques frontales con colectivos también terminan la partida.
 
+## Música
+
+Para sumar temas, copiá archivos MP3 a `assets/audio` y recargá el juego. Se mezclan
+al azar y se reproducen en bucle; con el servidor local se detectan sin reiniciarlo.
+El volumen, el silencio y la pausa siguen funcionando igual.
+
+Para que la lista publicada en GitHub se actualice al hacer commit, configurá una
+sola vez por copia del repositorio:
+
+```sh
+python tools/audio_playlist.py --install-hook
+```
+
+Después solo agregá los MP3 al commit y subí los cambios. No hace falta editar
+código ni escribir nombres de canciones. [Detalles](assets/audio/README.md).
+
 ## Animación y colisiones
 
 Agacharse sostiene una postura baja: no gira el cuerpo ni reinicia una voltereta
