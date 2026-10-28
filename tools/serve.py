@@ -16,7 +16,7 @@ from audio_playlist import playlist
 class NoCache(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm',
-                      '.glb': 'model/gltf-binary', '.mp4': 'video/mp4'}
+                      '.glb': 'model/gltf-binary', '.mp4': 'video/mp4', '.cjs': 'text/javascript'}
 
     def do_GET(self):
         if urlsplit(self.path).path == '/assets/audio/playlist.json':

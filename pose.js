@@ -16,18 +16,21 @@ const BONES = [
 
 // Umbrales (en unidades relativas al cuerpo, así no dependen de la distancia a la cámara).
 // Los de salto y agacharse se dividen por la sensibilidad elegida en el menú.
-const LANE_ENTER = 0.6;    // anchos de hombro desplazado para cambiar de carril
+const LANE_ENTER = 0.52;   // anchos de hombro desplazado para cambiar de carril
 const LANE_EXIT = 0.35;    // histéresis para volver al centro
-const JUMP_UP = 0.11;      // subida del cuerpo (en largos de torso) para saltar
-const JUMP_EARLY = 0.05;   // ...o una subida menor pero rápida
-const JUMP_SPEED = 1.2;    // largos de torso por segundo
+const JUMP_UP = 0.10;      // subida del cuerpo (en largos de torso) para saltar
+const JUMP_EARLY = 0.045;   // ...o una subida menor pero rápida
+const JUMP_SPEED = 1.0;    // largos de torso por segundo
 const DUCK_DOWN = 0.38;    // bajada/encogimiento para agacharse ("hacerse bolita")
 const DUCK_DEEP = 0.6;     // tan agachado que no hace falta confirmar
 const DUCK_EXIT = 0.2;     // por debajo de esto se considera que te levantaste
 const CALIB_FRAMES = 20;   // frames quieto necesarios para calibrar
-const LOST_FRAMES = 10;    // ~1/3 s sin ver al jugador = lo hemos perdido (se pausa)
+const LOST_FRAMES = 12;    // ~1/3 s sin ver al jugador = lo hemos perdido (se pausa)
 const FORGET_FRAMES = 60;  // ~2 s sin verlo: se elige de nuevo a la persona más cercana
-const MAX_JUMP_AWAY = 2.5; // cuánto puede "saltar" el jugador entre fotogramas (en anchos de hombro)
+const MAX_JUMP_AWAY = 2.5;
+const SLOW_MS = 34;        // inferencia más lenta que esto (media) = bajar al siguiente modelo
+const CALIB_MS = 700;      // tiempo quieto necesario para calibrar
+const median = (values) => { const sorted = [...values].sort((a, b) => a - b); const mid = sorted.length >> 1; return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2; }; // cuánto puede "saltar" el jugador entre fotogramas (en anchos de hombro)
 
 const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
@@ -66,6 +69,11 @@ export class PoseController {
     this.track = null;   // posición y tamaño del jugador, para no confundirlo con otros
     this.missing = 0;
     this.lost = false;
+    this.stats = { ms: 0, count: 0, fps: 0, latency: 0, last: 0 };
+    this.box = null;       // caja del jugador (relativa al cuadro): de ahí sale el recorte
+    this.cropMiss = 0;     // cuadros seguidos sin ver al jugador dentro del recorte
+    this.tier = 0;
+    this.switching = false;
     this.recalibrate();
   }
 
@@ -89,7 +97,9 @@ export class PoseController {
     // Conservar el stream y el modelo: reintentar no vuelve a pedir acceso ni carga todo otra vez.
     if (!this.stream?.getVideoTracks().some(track => track.readyState === 'live')) {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, frameRate: { ideal: 60 }, facingMode: 'user' }, audio: false,
+        // 30 fps estables rinden más que 60 fps pedidos: el modelo no llega a procesarlos y la cámara
+        // baja la exposición (menos luz = más borroso) cuando se le piden demasiados.
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 60 }, facingMode: 'user' }, audio: false,
       });
       for (const track of this.stream.getVideoTracks()) track.onended = () => {
         this.running = false; this.recalibrate(); this.h.onLost?.();
@@ -126,11 +136,18 @@ export class PoseController {
         if (data.type === 'ready') {
           clearTimeout(timer);
           this.worker = worker;
+          this.tier = data.tier ?? 0;
           this.mode = `worker ${data.delegate}`;
           worker.onmessage = ({ data: d }) => {
+            if (d.type === 'tier') {
+              // Modelo más ligero cargado: se reanuda con medias limpias.
+              this.tier = d.tier; this.mode = `worker ${d.delegate} ${d.kind}`;
+              this.switching = false; this.busy = false; this.stats.ms = 0; this.stats.count = 0;
+              return;
+            }
             if (d.type !== 'result') return;
             this.busy = false;
-            this.process(d.poses);
+            this.process(d.poses, d.ms, d.crop);
           };
           resolve();
         } else if (data.type === 'error') {
@@ -139,7 +156,7 @@ export class PoseController {
           reject(new Error(data.message));
         }
       };
-      worker.postMessage({ type: 'init' });
+      worker.postMessage({ type: 'init', tier: 0 });
     });
   }
 
@@ -149,10 +166,10 @@ export class PoseController {
     const options = (kind, delegate) => ({
       baseOptions: { modelAssetPath: MODEL(kind), delegate },
       runningMode: 'VIDEO',
-      numPoses: 3,
-      minPoseDetectionConfidence: 0.6,
-      minPosePresenceConfidence: 0.6,
-      minTrackingConfidence: 0.6,
+      numPoses: 1,
+      minPoseDetectionConfidence: 0.55,
+      minPosePresenceConfidence: 0.55,
+      minTrackingConfidence: 0.55,
     });
     try {
       this.landmarker = await PoseLandmarker.createFromOptions(vision, options('full', 'GPU'));
@@ -166,28 +183,33 @@ export class PoseController {
   scheduleFrame() {
     if (!this.running) return;
     if (this.video.requestVideoFrameCallback) {
-      this.video.requestVideoFrameCallback(() => this.onFrame());
+      this.video.requestVideoFrameCallback((now, meta) => this.onFrame(meta));
     } else {
       requestAnimationFrame(() => this.onFrame());
     }
   }
 
-  async onFrame() {
+  async onFrame(meta) {
     const t = this.video.currentTime;
     if (t !== this.lastVideoTime && !this.busy && this.video.readyState >= 2) {
       this.lastVideoTime = t;
       const ts = performance.now();
+      this.captureTime = meta?.captureTime ?? meta?.expectedDisplayTime ?? ts;
       if (this.worker) {
         this.busy = true;
         try {
-          const bitmap = await createImageBitmap(this.video);
-          this.worker.postMessage({ type: 'frame', bitmap, ts }, [bitmap]);
+          // El modelo trabaja a 256 px: no hace falta mandarle los 640×480 completos.
+          const crop = this.cropForPlayer();
+          const bitmap = crop
+            ? await createImageBitmap(this.video, crop.x, crop.y, crop.w, crop.h, { resizeWidth: crop.outW, resizeHeight: crop.outH, resizeQuality: 'low' })
+            : await createImageBitmap(this.video, { resizeWidth: 384, resizeHeight: 288, resizeQuality: 'low' });
+          this.worker.postMessage({ type: 'frame', bitmap, ts, crop }, [bitmap]);
         } catch {
           this.busy = false;
         }
       } else {
         const result = this.landmarker.detectForVideo(this.video, ts);
-        this.process(result.landmarks);
+        this.process(result.landmarks, performance.now() - ts);
       }
     }
     this.scheduleFrame();
@@ -208,8 +230,12 @@ export class PoseController {
     this.lastJump = 0;
     this.lastDuckEnd = 0;
     this.prev = null;
+    this.prevX = null;
+    this.sideSpeed = null;
     this.meter = { jump: 0, duck: 0 };
     this.filters = {};
+    this.armFilters = {};
+    this.identity = null;
   }
 
   // De todas las personas detectadas, elige al jugador: la que sigue donde estaba
@@ -225,14 +251,20 @@ export class PoseController {
         ? Math.hypot(lm[L_SHOULDER].x - lm[R_SHOULDER].x, lm[L_SHOULDER].y - lm[R_SHOULDER].y)
         : this.track?.size;
       if (!size) continue;
-      cands.push({ lm, size, cx: avg(pts.map((i) => lm[i].x)), cy: avg(pts.map((i) => lm[i].y)) });
+      const torsoLen = v(L_HIP) && v(R_HIP) && v(L_SHOULDER) && v(R_SHOULDER)
+        ? Math.abs((lm[L_HIP].y + lm[R_HIP].y) / 2 - (lm[L_SHOULDER].y + lm[R_SHOULDER].y) / 2) : 0;
+      cands.push({ lm, size, ratio: torsoLen > 0.03 ? size / torsoLen : null, cx: avg(pts.map((i) => lm[i].x)), cy: avg(pts.map((i) => lm[i].y)) });
     }
     if (!cands.length) return null;
 
     let best;
     const t = this.track;
     if (t) {
-      const score = (c) => Math.hypot(c.cx - t.cx, c.cy - t.cy) / t.size + Math.abs(Math.log(c.size / t.size)) * 2;
+      // Además de dónde está y qué tamaño tiene, se compara la forma del cuerpo (hombros / torso): dos personas
+      // a distancias parecidas casi nunca tienen la misma proporción.
+      const id = this.identity?.ratio;
+      const score = (c) => Math.hypot(c.cx - t.cx, c.cy - t.cy) / t.size + Math.abs(Math.log(c.size / t.size)) * 2
+        + (id && c.ratio ? Math.abs(Math.log(c.ratio / id)) * 1.5 : 0);
       best = cands.reduce((a, c) => (score(c) < score(a) ? c : a));
       if (score(best) > MAX_JUMP_AWAY) return null;
     } else {
@@ -296,6 +328,21 @@ export class PoseController {
     ctx.fillRect(x, mid - 1, w, 2);
   }
 
+  // Los brazos del muñeco usan los puntos filtrados (One Euro): sin temblor cuando estás quieto
+  // y casi sin retraso cuando mueves los brazos rápido.
+  smoothArms(lm, t) {
+    const out = lm.map(point => ({ x: point.x, y: point.y, visibility: point.visibility }));
+    for (let i = 11; i <= 24; i++) {
+      const point = out[i];
+      if ((point.visibility ?? 1) < 0.4) continue;
+      const fx = (this.armFilters[`x${i}`] ??= new OneEuro(1.6, 14, 2));
+      const fy = (this.armFilters[`y${i}`] ??= new OneEuro(1.6, 14, 2));
+      point.x = fx.filter(point.x, t);
+      point.y = fy.filter(point.y, t);
+    }
+    return out;
+  }
+
   // Medidas del cuerpo en este fotograma (null si no se ve esa parte)
   measure(lm, t) {
     const vis = (i) => (lm[i].visibility ?? 1) > 0.5;
@@ -313,20 +360,101 @@ export class PoseController {
     if (m.sy != null && m.hy != null) m.torso = m.hy - m.sy;
     for (const k of Object.keys(m)) {
       // Lo horizontal se suaviza más (carriles estables); lo vertical casi sin retraso (saltos)
-      this.filters[k] ??= k === 'x' || k === 'sw' ? new OneEuro(1.5, 4) : new OneEuro(4, 20);
+      this.filters[k] ??= k === 'x' || k === 'sw' ? new OneEuro(2.4, 9) : new OneEuro(4, 22);
       m[k] = this.filters[k].filter(m[k], t);
     }
     return m;
   }
 
-  process(poses) {
+  // Mide fps de resultados, tiempo de inferencia y retraso cámara→resultado, y si la máquina
+  // no llega a ~30 fps baja a un modelo más ligero (completo GPU → ligero GPU → ligero CPU).
+  track_stats(ms) {
+    const now = performance.now(), s = this.stats;
+    if (s.last) s.fps += (1000 / Math.max(1, now - s.last) - s.fps) * 0.15;
+    s.last = now;
+    if (ms != null) s.ms = s.count ? s.ms + (ms - s.ms) * 0.1 : ms;
+    s.count++;
+    if (this.captureTime) s.latency += (now - this.captureTime - s.latency) * 0.15;
+    if (this.worker && !this.switching && this.tier < 2 && s.count > 45 && s.ms > SLOW_MS) {
+      this.switching = true; this.busy = true;
+      this.worker.postMessage({ type: 'tier', tier: this.tier + 1 });
+    }
+  }
+
+  // Recorte cuadrado alrededor del jugador (con margen para saltos y agachadas). Solo hay
+  // recorte cuando ya está fijado quién es el jugador; si se pierde, se vuelve a buscar en
+  // el cuadro completo.
+  cropForPlayer() {
+    const vw = this.video.videoWidth, vh = this.video.videoHeight;
+    if (!this.track || !this.box || this.cropMiss >= 3 || !vw || !vh) return null;
+    const { x0, y0, x1, y1 } = this.box;
+    // Recorte ajustado al cuerpo: estrecho a los costados (así quien pasa por detrás queda fuera) y con
+    // margen para brazos, saltos y agachadas.
+    // El jugador recorre todo el ancho de la pantalla: el recorte se adelanta según la velocidad con que se
+    // mueve (el resultado llega ~2 cuadros tarde) y se ensancha cuanto más rápido va.
+    const { vx = 0, vy = 0 } = this.boxVelocity || {};
+    const w = Math.round(Math.min(vw, Math.max(0.34 * vw, (x1 - x0) * vw * 1.5 + 0.06 * vw + Math.abs(vx) * vw * 6)));
+    const h = Math.round(Math.min(vh, Math.max(0.5 * vh, (y1 - y0) * vh * 1.25 + Math.abs(vy) * vh * 6)));
+    const x = Math.round(Math.max(0, Math.min(vw - w, ((x0 + x1) / 2 + vx * 2.5) * vw - w / 2)));
+    const y = Math.round(Math.max(0, Math.min(vh - h, ((y0 + y1) / 2 + vy * 2.5) * vh - h / 2)));
+    const scale = 288 / Math.max(w, h);
+    return { x, y, w, h, vw, vh, outW: Math.round(w * scale), outH: Math.round(h * scale) };
+  }
+
+  // La caja del jugador crece al instante y se encoge despacio (así un salto no se sale del recorte).
+  updateBox(lm) {
+    const pts = lm.filter(p => (p.visibility ?? 1) > 0.4);
+    if (pts.length < 4) return;
+    const next = {
+      x0: Math.min(...pts.map(p => p.x)), x1: Math.max(...pts.map(p => p.x)),
+      y0: Math.min(...pts.map(p => p.y)), y1: Math.max(...pts.map(p => p.y)),
+    };
+    // Velocidad del centro de la caja (fracción del cuadro por resultado), suavizada.
+    const cx = (next.x0 + next.x1) / 2, cy = (next.y0 + next.y1) / 2;
+    if (this.lastBoxCenter) {
+      const v = this.boxVelocity ??= { vx: 0, vy: 0 };
+      v.vx += ((cx - this.lastBoxCenter.cx) - v.vx) * 0.6;
+      v.vy += ((cy - this.lastBoxCenter.cy) - v.vy) * 0.6;
+    }
+    this.lastBoxCenter = { cx, cy };
+    const b = this.box;
+    if (!b) { this.box = next; return; }
+    const k = 0.25;
+    b.x0 = next.x0 < b.x0 ? next.x0 : b.x0 + (next.x0 - b.x0) * k;
+    b.y0 = next.y0 < b.y0 ? next.y0 : b.y0 + (next.y0 - b.y0) * k;
+    b.x1 = next.x1 > b.x1 ? next.x1 : b.x1 + (next.x1 - b.x1) * k;
+    b.y1 = next.y1 > b.y1 ? next.y1 : b.y1 + (next.y1 - b.y1) * k;
+  }
+
+  // ¿Quien volvió a cuadro es el mismo jugador ya calibrado? (mismo tamaño y lugar aproximados)
+  matchesBase(lm) {
+    const b = this.base;
+    if (!b || !lm) return false;
+    const sw = Math.hypot(lm[L_SHOULDER].x - lm[R_SHOULDER].x, lm[L_SHOULDER].y - lm[R_SHOULDER].y);
+    const x = 1 - (lm[L_SHOULDER].x + lm[R_SHOULDER].x) / 2;
+    return Math.abs(Math.log(sw / b.sw)) < 0.3 && Math.abs(x - b.x) / b.sw < 1.6;
+  }
+
+  process(poses, ms, crop) {
     this.lastResult = performance.now();
+    this.track_stats(ms);
     poses = poses || [];
+    if (crop) {
+      // Los puntos vienen relativos al recorte: se llevan al cuadro completo.
+      poses = poses.map(pose => pose.map(p => ({ ...p, x: (crop.x + p.x * crop.w) / crop.vw, y: (crop.y + p.y * crop.h) / crop.vh })));
+    }
     let lm = this.selectPlayer(poses);
     // Una cabeza aislada no sirve para controlar ni calibrar el cuerpo.
-    if (lm && ![L_SHOULDER, R_SHOULDER, L_HIP, R_HIP].every(i =>
-      (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.01 && lm[i].x < 0.99 && lm[i].y > 0.01 && lm[i].y < 0.99)) lm = null;
+    // Ya calibrado, alcanza con ver los hombros: al llegar a un borde de la pantalla o al agacharse las
+    // caderas pueden quedar fuera de cuadro y el carril se sigue leyendo igual.
+    // (solo en los extremos laterales: en el centro, unas caderas que no se ven = detección parcial).
+    const atSide = lm && (() => { const cx = (lm[L_SHOULDER].x + lm[R_SHOULDER].x) / 2; return cx < 0.14 || cx > 0.86; })();
+    const required = this.base && atSide ? [L_SHOULDER, R_SHOULDER] : [L_SHOULDER, R_SHOULDER, L_HIP, R_HIP];
+    if (lm && !required.every(i =>
+      (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.003 && lm[i].x < 0.997 && lm[i].y > 0.003 && lm[i].y < 0.997)) lm = null;
     this.draw(lm, poses);
+    if (crop) this.cropMiss = lm ? 0 : this.cropMiss + 1; else if (lm) this.cropMiss = 0;
+    if (lm) this.updateBox(lm);
     if (!lm) {
       this.h.onArms?.(null);
       this.missing++;
@@ -336,7 +464,7 @@ export class PoseController {
         this.lost = true;
         this.h.onLost?.();
       }
-      if (this.missing > FORGET_FRAMES) this.track = null;
+      if (this.missing > FORGET_FRAMES) { this.track = null; this.box = null; this.lastBoxCenter = this.boxVelocity = null; }
       this.status(
         this.lost
           ? '⏸ Te perdí — vuelve al centro y quédate quieto'
@@ -346,10 +474,15 @@ export class PoseController {
     }
     this.missing = 0;
     if (this.lost) {
-      // Has vuelto: recalibramos por si ya no estás en el mismo sitio
       this.lost = false;
-      this.recalibrate();
       this.h.onFound?.();
+      if (this.matchesBase(lm)) {
+        // Mismo jugador, mismo sitio: se sigue con la calibración que ya tenía (no se pide quedarse quieto)
+        this.prev = null; this.jumpArmed = true; this.ducking = false;
+        this.h.onCalibrated?.();
+      } else {
+        this.recalibrate();
+      }
     }
     this.processPlayer(lm);
   }
@@ -366,11 +499,15 @@ export class PoseController {
         this.status('Necesito ver tus hombros para calibrar');
         return;
       }
+      // Guía para encuadrarse bien antes de contar el tiempo quieto
+      if (m.sw < 0.09) { this.samples = []; this.status('Acércate un poco a la cámara'); return; }
+      if (m.sw > 0.42) { this.samples = []; this.status('Aléjate un poco: tienen que verse tus caderas'); return; }
+      if (Math.abs(m.x - 0.5) > 0.22) { this.samples = []; this.status(m.x < 0.5 ? 'Muévete un poco a tu izquierda: al centro' : 'Muévete un poco a tu derecha: al centro'); return; }
       this.calibrate(m);
       return;
     }
 
-    this.h.onArms?.(armTargets(lm, (this.video.videoWidth || 640) / (this.video.videoHeight || 480)));
+    this.h.onArms?.(armTargets(this.smoothArms(lm, now / 1000), (this.video.videoWidth || 640) / (this.video.videoHeight || 480)));
     const b = this.base;
     const T = b.torso;
     const sens = this.sensitivity;
@@ -417,10 +554,20 @@ export class PoseController {
     }
     this.meter = { jump: Math.max(0, jump ?? 0), duck: Math.max(0, duck ?? 0) };
 
+    // Velocidad lateral (anchos de hombro por segundo): al cruzar la pantalla rápido el cuerpo se inclina y los
+    // puntos suben y bajan un poco; eso no es un salto, así que en pleno desplazamiento se pide más altura.
+    let sideSpeed = 0;
+    if (m.x != null) {
+      if (this.prevX && now > this.prevX.t) sideSpeed = Math.abs(((m.x - this.prevX.x) * 1000) / (now - this.prevX.t)) / b.sw;
+      this.prevX = { x: m.x, t: now };
+    }
+    this.sideSpeed = this.sideSpeed == null ? sideSpeed : this.sideSpeed + (sideSpeed - this.sideSpeed) * 0.4;
+    const sliding = this.sideSpeed > 3.5;
+
     if (jump != null && this.jumpArmed && !this.ducking) {
-      const big = jump > JUMP_UP / sens;
-      // La detección temprana por velocidad no vale justo al levantarse de agacharse
-      const early = jump > JUMP_EARLY / sens && vUp > JUMP_SPEED && now - this.lastDuckEnd > 300;
+      const big = jump > (JUMP_UP / sens) * (sliding ? 1.7 : 1);
+      // La detección temprana por velocidad no vale justo al levantarse de agacharse ni al desplazarse de lado
+      const early = !sliding && jump > JUMP_EARLY / sens && vUp > JUMP_SPEED && now - this.lastDuckEnd > 300;
       if (big || early) {
         this.jumpArmed = false;
         this.lastJump = now;
@@ -461,29 +608,35 @@ export class PoseController {
 
     const laneName = ['izquierda', 'centro', 'derecha'][this.lane + 1];
     const feet = b.ay != null ? ' · pies ✓' : '';
-    this.status(`✅ ${laneName}${this.ducking ? ' · agachado' : ''}${feet} · ${this.mode}`);
+    const { fps, ms, latency } = this.stats;
+    const dim = fps && fps < 22 && ms < 25 ? ' · poca luz: la cámara va lenta' : '';
+    this.status(`✅ ${laneName}${this.ducking ? ' · agachado' : ''}${feet} · ${this.mode} · ${Math.round(fps)} fps · ${Math.round(ms)} ms${latency > 0 && latency < 400 ? ` · ${Math.round(latency)} ms de retraso` : ''}${dim}`);
   }
 
   calibrate(m) {
-    this.samples.push(m);
-    if (this.samples.length > CALIB_FRAMES) this.samples.shift();
+    const now = performance.now();
+    this.samples.push({ ...m, t: now });
+    // Ventana de ~1,2 s: la calibración dura lo mismo con cualquier fps de cámara
+    while (this.samples.length > 2 && now - this.samples[0].t > 1200) this.samples.shift();
 
     const pick = (k) => this.samples.map((p) => p[k]).filter((v) => v != null);
     const mean = (k) => {
       const v = pick(k);
       // Solo se usa una parte del cuerpo si se ha visto en la mayoría de los fotogramas
-      return v.length >= this.samples.length * 0.7 ? avg(v) : null;
+      return v.length >= this.samples.length * 0.7 ? median(v) : null;
     };
-    const mx = avg(pick('x')), my = avg(pick('sy'));
-    const sw = avg(pick('sw'));
+    const mx = median(pick('x')), my = median(pick('sy'));
+    const sw = median(pick('sw'));
     const spread = Math.max(...this.samples.filter((p) => p.x != null).map((p) => Math.hypot(p.x - mx, p.sy - my)));
 
     // Hay que estar quieto: si te mueves mucho, se reinicia la cuenta
-    if (spread > 0.25 * sw) this.samples = [m];
-    const pct = Math.round((this.samples.length / CALIB_FRAMES) * 100);
+    if (spread > 0.25 * sw) this.samples = [{ ...m, t: now }];
+    const span = now - this.samples[0].t;
+    const pct = Math.min(100, Math.round(Math.max(span / CALIB_MS, this.samples.length / CALIB_FRAMES) * 100));
     this.status(`Calibrando… quédate quieto en el centro (${pct}%)`);
 
-    if (this.samples.length >= CALIB_FRAMES) {
+    // Listo tras ~0,7 s quieto, o tras 20 fotogramas seguidos si la cámara va muy rápida
+    if ((span >= CALIB_MS && this.samples.length >= 8) || this.samples.length >= CALIB_FRAMES) {
       const torso = mean('torso');
       this.base = {
         x: mx, sy: my, sw,
@@ -491,6 +644,7 @@ export class PoseController {
         torso: Math.max(torso ?? sw * 1.3, 0.05),
       };
       this.lane = 0;
+      this.identity = { ratio: this.base.sw / this.base.torso };
       this.h.onCalibrated?.();
     }
   }

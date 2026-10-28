@@ -214,7 +214,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     model.getWorldQuaternion(modelRotation);
     for (const side of ['Left', 'Right']) for (const part of ['Arm', 'ForeArm', 'Hand']) {
       const name = side + part, bone = bones[name], sample = arms?.[name];
-      armWeights[name] = THREE.MathUtils.damp(armWeights[name] || 0, sample ? (arms[`${side}Weight`] ?? 1) : 0, 12, dt);
+      armWeights[name] = THREE.MathUtils.damp(armWeights[name] || 0, sample ? (arms[`${side}Weight`] ?? 1) : 0, 22, dt);
       if (!sample || armWeights[name] < 0.001) continue;
       // Convertir la dirección de cámara al espacio del padre de cada hueso.
       // Así doblar el codo no vuelve a rotar el hombro ni acumula ángulos.
@@ -222,7 +222,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       direction.fromArray(sample).applyQuaternion(modelRotation).applyQuaternion(parentRotation).normalize();
       trackedRotation.setFromUnitVectors(restDirections[name], direction).multiply(rest[name]);
       armRotations[name] ??= bone.quaternion.clone();
-      armRotations[name].slerp(trackedRotation, 1 - Math.exp(-12 * dt));
+      armRotations[name].slerp(trackedRotation, 1 - Math.exp(-26 * dt));
       bone.quaternion.slerp(armRotations[name], armWeights[name] * (1 - poseState.crouch) * (1 - poseState.stumble));
       bone.updateWorldMatrix(false, false);
     }
