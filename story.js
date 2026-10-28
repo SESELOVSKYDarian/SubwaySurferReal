@@ -1,5 +1,5 @@
-// Modo historia: video de intro → corrida a casa → video de la entrada (agarra el
-// guardapolvo, sin mostrar la casa) → vuelta a la Técnica como en el modo infinito →
+// Modo historia: video de intro → corrida a casa → video de recogida del
+// guardapolvo azul → vuelta a la Técnica como en el modo infinito →
 // video de victoria. Si choca en la ida o en la vuelta: video de derrota y vuelve a casa.
 // El puntaje es la cantidad de monedas juntadas en el recorrido completo.
 const $ = id => document.getElementById(id);
@@ -12,8 +12,8 @@ export const STORY = Object.freeze({
   homeAt: Number(query.get('storyHome')) || 650,         // metros hasta la casa (sobre Juan B. Justo)
   schoolAt: Number(query.get('storySchool')) || 2004,    // frente a la E.E.T. Nº 5, último lote del recorrido
   videos: Object.freeze({
-    intro: 'assets/story/video/intro.mp4',
-    pickup: 'assets/story/video/pickup.mp4',
+    intro: 'assets/videos/introduccion.mp4',
+    pickup: 'assets/videos/recoger-guardapolvo.mp4',
     victory: 'assets/videos/final-victoria.mp4',
     defeat: 'assets/videos/final-derrota.mp4',
   }),
@@ -127,7 +127,7 @@ export class StoryMode {
     this.session.request();
   }
 
-  // Llegó al punto de la casa: no se muestra la casa, solo la entrada y el video.
+  // Llegó a casa: entra, recoge el guardapolvo azul y comienza el regreso.
   async onLegEnd() {
     const token = this.token;
     if (!this.active) return;
@@ -147,7 +147,7 @@ export class StoryMode {
       await this.fade(false);
       if (!this.alive(token)) return;
       this.flash('¡Tenés el guardapolvo! Volvé a la Técnica', '#7dff9a');
-      this.game.start();
+      this.session.request();
     } else if (this.phase === 'vuelta') {
       const coins = this.game.coinCount;
       this.phase = 'victory';
