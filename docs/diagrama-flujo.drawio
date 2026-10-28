@@ -11,52 +11,52 @@
         <mxCell id="subtitle" value="Punto de entrada y elección del recorrido · index.html → main.js" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=18;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="90" width="1460" height="40" />
         </mxCell>
-        <UserObject id="abrir" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Abrir index.html&lt;br&gt;Cargar main.js&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;index.html:179&lt;/div&gt;" source_file="index.html" source_line="179" data-model-id="abrir">
+        <UserObject id="abrir" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Abrir index.html&lt;br&gt;Cargar main.js&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;index.html:179&lt;/div&gt;" source_file="index.html" source_line="179" data-model-id="abrir">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="160" width="300" height="80" />
           </mxCell>
         </UserObject>
-        <UserObject id="crear" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Crear Game, PlaySession,&lt;br&gt;Leaderboard y StoryMode&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:24&lt;/div&gt;" source_file="main.js" source_line="24" data-model-id="crear">
+        <UserObject id="crear" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Crear Game, PlaySession,&lt;br&gt;Leaderboard y StoryMode&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:24&lt;/div&gt;" source_file="main.js" source_line="24" data-model-id="crear">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="300" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="mundo" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Preparar escena 3D y personajes&lt;br&gt;Restaurar calidad y preferencias&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:36&lt;/div&gt;" source_file="game.js" source_line="36" data-model-id="mundo">
+        <UserObject id="mundo" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Preparar escena 3D y personajes&lt;br&gt;Restaurar calidad y preferencias&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:36&lt;/div&gt;" source_file="game.js" source_line="36" data-model-id="mundo">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="460" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="menu" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Mostrar menú principal&lt;br&gt;Escuchar botones y controles&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;menu.js:21&lt;/div&gt;" source_file="menu.js" source_line="21" data-model-id="menu">
+        <UserObject id="menu" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Mostrar menú principal&lt;br&gt;Escuchar botones y controles&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;menu.js:21&lt;/div&gt;" source_file="menu.js" source_line="21" data-model-id="menu">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="630" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="accion" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Qué acción elige&lt;br&gt;el jugador?&lt;/div&gt;">
+        <UserObject id="accion" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Qué acción elige&lt;br&gt;el jugador?&lt;/div&gt;">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="820" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="ajustes" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Personaje, sonido y opciones&lt;br&gt;Guardar preferencias locales&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;menu.js:27&lt;/div&gt;" source_file="menu.js" source_line="27" data-model-id="ajustes">
+        <UserObject id="ajustes" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Personaje, sonido y opciones&lt;br&gt;Guardar preferencias locales&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;menu.js:27&lt;/div&gt;" source_file="menu.js" source_line="27" data-model-id="ajustes">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="830" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="infinito" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Solicitar inicio de la sesión&lt;br&gt;session.request() · ver página 2&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:97&lt;/div&gt;" link="data:page/id,sesion" source_file="main.js" source_line="97" data-model-id="infinito">
+        <UserObject id="infinito" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Solicitar inicio de la sesión&lt;br&gt;session.request() · ver página 2&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:97&lt;/div&gt;" link="data:page/id,sesion" source_file="main.js" source_line="97" data-model-id="infinito">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1040" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="historia" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Modo historia&lt;br&gt;Intro y preparación de la ida&lt;br&gt;Ver página 5&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:110&lt;/div&gt;" link="data:page/id,historia" source_file="story.js" source_line="110" data-model-id="historia">
+        <UserObject id="historia" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Modo historia&lt;br&gt;Intro y preparación de la ida&lt;br&gt;Ver página 5&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:110&lt;/div&gt;" link="data:page/id,historia" source_file="story.js" source_line="110" data-model-id="historia">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="830" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="ranking" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Consultar ranking&lt;br&gt;Ver página 6&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:69&lt;/div&gt;" link="data:page/id,resultados" source_file="leaderboard.js" source_line="69" data-model-id="ranking">
+        <UserObject id="ranking" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Consultar ranking&lt;br&gt;Ver página 6&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:69&lt;/div&gt;" link="data:page/id,resultados" source_file="leaderboard.js" source_line="69" data-model-id="ranking">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="1140" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="carrera" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Iniciar carrera tras cuenta atrás&lt;br&gt;Ver sesión [2] y bucle [3]&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:36&lt;/div&gt;" link="data:page/id,bucle" source_file="session.js" source_line="36" data-model-id="carrera">
+        <UserObject id="carrera" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Iniciar carrera tras cuenta atrás&lt;br&gt;Ver sesión [2] y bucle [3]&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:36&lt;/div&gt;" link="data:page/id,bucle" source_file="session.js" source_line="36" data-model-id="carrera">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1290" width="300" height="100" />
           </mxCell>
@@ -73,15 +73,8 @@
         <mxCell id="edge-3" value="" edge="1" parent="1" source="menu" target="accion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-4" value="Opciones" edge="1" parent="1" source="accion" target="ajustes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
-          <mxGeometry as="geometry" relative="1" x="0">
-            <Array as="points">
-              <mxPoint x="530" y="880" />
-              <mxPoint x="530" y="960" />
-              <mxPoint x="80" y="960" />
-              <mxPoint x="80" y="880" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="edge-4" value="Opciones" edge="1" parent="1" source="accion" target="ajustes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-5" value="Volver" edge="1" parent="1" source="ajustes" target="menu" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0">
@@ -99,10 +92,12 @@
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-8" value="Ranking" edge="1" parent="1" source="accion" target="ranking" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0;entryY=0.5;">
-          <mxGeometry as="geometry" relative="1" x="0">
+          <mxGeometry as="geometry" relative="1" x="-0.5">
             <Array as="points">
-              <mxPoint x="800" y="990" />
-              <mxPoint x="80" y="990" />
+              <mxPoint x="800" y="970" />
+              <mxPoint x="500" y="970" />
+              <mxPoint x="500" y="1060" />
+              <mxPoint x="80" y="1060" />
               <mxPoint x="80" y="1190" />
             </Array>
           </mxGeometry>
@@ -176,52 +171,52 @@
         <mxCell id="subtitle" value="PlaySession coordina el inicio y la recuperación del seguimiento" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=18;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="90" width="1460" height="40" />
         </mxCell>
-        <UserObject id="solicitar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Solicitar inicio o reanudación&lt;br&gt;PlaySession.request() / advance()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:9&lt;/div&gt;" source_file="session.js" source_line="9" data-model-id="solicitar">
+        <UserObject id="solicitar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Solicitar inicio o reanudación&lt;br&gt;PlaySession.request() / advance()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:9&lt;/div&gt;" source_file="session.js" source_line="9" data-model-id="solicitar">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="160" width="300" height="80" />
           </mxCell>
         </UserObject>
-        <UserObject id="requiere" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Cámara seleccionada&lt;br&gt;y aún sin calibrar?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:38&lt;/div&gt;" source_file="session.js" source_line="38" data-model-id="requiere">
+        <UserObject id="requiere" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Cámara seleccionada&lt;br&gt;y aún sin calibrar?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:38&lt;/div&gt;" source_file="session.js" source_line="38" data-model-id="requiere">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="320" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="calibrar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Esperar cuerpo visible y quieto&lt;br&gt;PoseController.calibrate()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;pose.js:369&lt;/div&gt;" source_file="pose.js" source_line="369" data-model-id="calibrar">
+        <UserObject id="calibrar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Esperar cuerpo visible y quieto&lt;br&gt;PoseController.calibrate()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;pose.js:467&lt;/div&gt;" source_file="pose.js" source_line="467" data-model-id="calibrar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="330" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="cuenta" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Cuenta atrás 3 → 2 → 1&lt;br&gt;Cancelar y reiniciar si se pierde tracking&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:36&lt;/div&gt;" source_file="session.js" source_line="36" data-model-id="cuenta">
+        <UserObject id="cuenta" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Cuenta atrás 3 → 2 → 1&lt;br&gt;Cancelar y reiniciar si se pierde tracking&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:36&lt;/div&gt;" source_file="session.js" source_line="36" data-model-id="cuenta">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="560" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="jugar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Game.start() o Game.resume()&lt;br&gt;state = playing&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:34&lt;/div&gt;" source_file="session.js" source_line="34" data-model-id="jugar">
+        <UserObject id="jugar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Game.start() o Game.resume()&lt;br&gt;state = playing&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:41&lt;/div&gt;" source_file="session.js" source_line="41" data-model-id="jugar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="750" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="evento" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Pausa manual P&lt;br&gt;o pérdida de seguimiento?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:49&lt;/div&gt;" source_file="session.js" source_line="49" data-model-id="evento">
+        <UserObject id="evento" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Pausa manual P&lt;br&gt;o pérdida de seguimiento?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:49&lt;/div&gt;" source_file="session.js" source_line="49" data-model-id="evento">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="960" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="pausar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Pausar y detener cuenta atrás&lt;br&gt;Mostrar pausa / calibración&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:14&lt;/div&gt;" source_file="session.js" source_line="14" data-model-id="pausar">
+        <UserObject id="pausar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Pausar y detener cuenta atrás&lt;br&gt;Mostrar pausa / calibración&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;session.js:14&lt;/div&gt;" source_file="session.js" source_line="14" data-model-id="pausar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="970" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="recuperar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Se pulsa P para seguir&lt;br&gt;o se recupera el tracking?&lt;/div&gt;">
+        <UserObject id="recuperar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿P otra vez (pausa manual)&lt;br&gt;o tracking listo (automática)?&lt;/div&gt;">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="1200" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="controles" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Procesar controles&lt;br&gt;Carril, salto, agachado y brazos&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:112&lt;/div&gt;" source_file="main.js" source_line="112" data-model-id="controles">
+        <UserObject id="controles" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Procesar controles&lt;br&gt;Carril, salto, agachado y brazos&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:112&lt;/div&gt;" source_file="main.js" source_line="112" data-model-id="controles">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1210" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="paso" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Continuar con el bucle&lt;br&gt;Ver página 3&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:238&lt;/div&gt;" link="data:page/id,bucle" source_file="main.js" source_line="238" data-model-id="paso">
+        <UserObject id="paso" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Continuar con el bucle&lt;br&gt;Ver página 3&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:238&lt;/div&gt;" link="data:page/id,bucle" source_file="main.js" source_line="238" data-model-id="paso">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1400" width="300" height="100" />
           </mxCell>
@@ -250,7 +245,7 @@
         <mxCell id="edge-5" value="" edge="1" parent="1" source="jugar" target="evento" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-6" value="Sí" edge="1" parent="1" source="evento" target="pausar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-6" value="Sí" edge="1" parent="1" source="evento" target="pausar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-7" value="No" edge="1" parent="1" source="evento" target="controles" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
@@ -259,12 +254,12 @@
         <mxCell id="edge-8" value="" edge="1" parent="1" source="pausar" target="recuperar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-9" value="No · esperar" edge="1" parent="1" source="recuperar" target="recuperar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
-          <mxGeometry as="geometry" relative="1" x="0.2">
+        <mxCell id="edge-9" value="No · esperar" edge="1" parent="1" source="recuperar" target="recuperar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" x="0">
             <Array as="points">
-              <mxPoint x="80" y="1260" />
-              <mxPoint x="80" y="1390" />
-              <mxPoint x="290" y="1390" />
+              <mxPoint x="290" y="1400" />
+              <mxPoint x="500" y="1400" />
+              <mxPoint x="500" y="1260" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -327,70 +322,75 @@
         <mxCell id="subtitle" value="Cada fotograma · main.frame(now) → Game.update(dt)" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=18;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="90" width="1460" height="40" />
         </mxCell>
-        <UserObject id="frame" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Nuevo fotograma&lt;br&gt;requestAnimationFrame(frame)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:238&lt;/div&gt;" source_file="main.js" source_line="238" data-model-id="frame">
+        <UserObject id="frame" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Nuevo fotograma&lt;br&gt;requestAnimationFrame(frame)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:238&lt;/div&gt;" source_file="main.js" source_line="238" data-model-id="frame">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="160" width="300" height="80" />
           </mxCell>
         </UserObject>
-        <UserObject id="oculto" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿El menú está oculto?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:240&lt;/div&gt;" source_file="main.js" source_line="240" data-model-id="oculto">
+        <UserObject id="oculto" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿El menú está oculto?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:240&lt;/div&gt;" source_file="main.js" source_line="240" data-model-id="oculto">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="300" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="omitir" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Omitir Game.update()&lt;br&gt;Menú visible&lt;/div&gt;">
+        <UserObject id="omitir" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Omitir Game.update()&lt;br&gt;Menú visible&lt;/div&gt;">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="310" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="actualizar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Game.update(dt)&lt;br&gt;Ajustar calidad gráfica&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:669&lt;/div&gt;" source_file="game.js" source_line="669" data-model-id="actualizar">
+        <UserObject id="actualizar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Game.update(dt)&lt;br&gt;Ajustar calidad gráfica&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:669&lt;/div&gt;" source_file="game.js" source_line="669" data-model-id="actualizar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="500" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="pausa" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿state = paused?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:471&lt;/div&gt;" source_file="game.js" source_line="471" data-model-id="pausa">
+        <UserObject id="pausa" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿state = paused?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:671&lt;/div&gt;" source_file="game.js" source_line="671" data-model-id="pausa">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="670" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="congelar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Renderizar escena y salir&lt;br&gt;Sin avanzar la simulación&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:672&lt;/div&gt;" source_file="game.js" source_line="672" data-model-id="congelar">
+        <UserObject id="congelar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Renderizar escena y salir&lt;br&gt;Sin avanzar la simulación&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:672&lt;/div&gt;" source_file="game.js" source_line="672" data-model-id="congelar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="680" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="tiempo" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Limitar dt y actualizar reloj&lt;br&gt;Calcular desplazamiento&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:675&lt;/div&gt;" source_file="game.js" source_line="675" data-model-id="tiempo">
+        <UserObject id="tiempo" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Limitar dt y actualizar reloj&lt;br&gt;Calcular desplazamiento&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:675&lt;/div&gt;" source_file="game.js" source_line="675" data-model-id="tiempo">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="880" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="playing" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿state = playing?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:677&lt;/div&gt;" source_file="game.js" source_line="677" data-model-id="playing">
+        <UserObject id="playing" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿state = playing?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:677&lt;/div&gt;" source_file="game.js" source_line="677" data-model-id="playing">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="650" y="1040" width="300" height="120" />
+            <mxGeometry as="geometry" x="650" y="1030" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="avanzar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Aumentar velocidad y distancia&lt;br&gt;Generar filas y reducir persecución&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:681&lt;/div&gt;" source_file="game.js" source_line="681" data-model-id="avanzar">
+        <UserObject id="avanzar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Aumentar velocidad y distancia&lt;br&gt;Generar filas y reducir persecución&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:681&lt;/div&gt;" source_file="game.js" source_line="681" data-model-id="avanzar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="140" y="1050" width="300" height="100" />
+            <mxGeometry as="geometry" x="140" y="1040" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="fisica" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Física y colisiones [4]&lt;br&gt;Recoger monedas y jetpack&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:713&lt;/div&gt;" link="data:page/id,colisiones" source_file="game.js" source_line="713" data-model-id="fisica">
+        <UserObject id="mundo" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Actualizar mundo&lt;br&gt;Mover y retirar obstáculos&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:701&lt;/div&gt;" source_file="game.js" source_line="701" data-model-id="mundo">
+          <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
+            <mxGeometry as="geometry" x="650" y="1210" width="300" height="100" />
+          </mxCell>
+        </UserObject>
+        <UserObject id="fisica" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Si playing: física y recolección&lt;br&gt;Colisiones [4], monedas y jetpack&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:713&lt;/div&gt;" link="data:page/id,colisiones" source_file="game.js" source_line="713" data-model-id="fisica">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="140" y="1230" width="300" height="100" />
+            <mxGeometry as="geometry" x="650" y="1390" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="escena" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Actualizar mundo y objetos&lt;br&gt;Animar alumno, profesor y cámara&lt;br&gt;Renderizar escena&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:701&lt;/div&gt;" source_file="game.js" source_line="701" data-model-id="escena">
+        <UserObject id="escena" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Animar alumno, profesor y cámara&lt;br&gt;Renderizar escena&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:755&lt;/div&gt;" source_file="game.js" source_line="755" data-model-id="escena">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="650" y="1270" width="300" height="100" />
+            <mxGeometry as="geometry" x="1160" y="1220" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="hud" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Actualizar HUD, FPS y zona&lt;br&gt;Programar próximo fotograma&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:241&lt;/div&gt;" source_file="main.js" source_line="241" data-model-id="hud">
+        <UserObject id="hud" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Actualizar HUD, FPS y zona&lt;br&gt;Programar próximo fotograma&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:241&lt;/div&gt;" source_file="main.js" source_line="241" data-model-id="hud">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="650" y="1430" width="300" height="100" />
+            <mxGeometry as="geometry" x="1160" y="1420" width="300" height="100" />
           </mxCell>
         </UserObject>
         <mxCell id="edge-0" value="" edge="1" parent="1" source="frame" target="oculto" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-1" value="No" edge="1" parent="1" source="oculto" target="omitir" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-1" value="No" edge="1" parent="1" source="oculto" target="omitir" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-2" value="Sí" edge="1" parent="1" source="oculto" target="actualizar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
@@ -408,42 +408,56 @@
         <mxCell id="edge-6" value="" edge="1" parent="1" source="tiempo" target="playing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-7" value="Sí" edge="1" parent="1" source="playing" target="avanzar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-7" value="Sí" edge="1" parent="1" source="playing" target="avanzar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-8" value="" edge="1" parent="1" source="avanzar" target="fisica" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+        <mxCell id="edge-8" value="" edge="1" parent="1" source="avanzar" target="mundo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" x="0">
+            <Array as="points">
+              <mxPoint x="290" y="1260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-9" value="No" edge="1" parent="1" source="playing" target="mundo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-9" value="No" edge="1" parent="1" source="playing" target="escena" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+        <mxCell id="edge-10" value="" edge="1" parent="1" source="mundo" target="fisica" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-10" value="" edge="1" parent="1" source="fisica" target="escena" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-11" value="" edge="1" parent="1" source="fisica" target="escena" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" x="0">
+            <Array as="points">
+              <mxPoint x="1050" y="1440" />
+              <mxPoint x="1050" y="1170" />
+              <mxPoint x="1310" y="1170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-12" value="" edge="1" parent="1" source="escena" target="hud" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-11" value="" edge="1" parent="1" source="escena" target="hud" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
-          <mxGeometry as="geometry" relative="1" x="0" />
-        </mxCell>
-        <mxCell id="edge-12" value="" edge="1" parent="1" source="congelar" target="hud" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=1;">
+        <mxCell id="edge-13" value="" edge="1" parent="1" source="congelar" target="hud" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0">
             <Array as="points">
               <mxPoint x="1520" y="730" />
-              <mxPoint x="1520" y="1570" />
-              <mxPoint x="800" y="1570" />
+              <mxPoint x="1520" y="1380" />
+              <mxPoint x="1310" y="1380" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-13" value="" edge="1" parent="1" source="omitir" target="hud" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-14" value="" edge="1" parent="1" source="omitir" target="hud" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=1;">
           <mxGeometry as="geometry" relative="1" x="0">
             <Array as="points">
               <mxPoint x="80" y="360" />
-              <mxPoint x="80" y="1480" />
+              <mxPoint x="80" y="1570" />
+              <mxPoint x="1310" y="1570" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-14" value="" edge="1" parent="1" source="hud" target="frame" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;">
+        <mxCell id="edge-15" value="" edge="1" parent="1" source="hud" target="frame" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0">
             <Array as="points">
-              <mxPoint x="1560" y="1480" />
+              <mxPoint x="1560" y="1470" />
               <mxPoint x="1560" y="130" />
               <mxPoint x="800" y="130" />
             </Array>
@@ -496,72 +510,72 @@
         <mxCell id="subtitle" value="Game.updatePhysics(dt, move) · collisions.js calcula el contacto durante el movimiento" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=18;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="90" width="1460" height="40" />
         </mxCell>
-        <UserObject id="inicio" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Actualizar física&lt;br&gt;Sólo durante playing&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:713&lt;/div&gt;" source_file="game.js" source_line="713" data-model-id="inicio">
+        <UserObject id="inicio" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Actualizar física&lt;br&gt;Sólo durante playing&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:786&lt;/div&gt;" source_file="game.js" source_line="786" data-model-id="inicio">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="160" width="300" height="80" />
           </mxCell>
         </UserObject>
-        <UserObject id="integrar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Suavizar cambio de carril&lt;br&gt;Vuelo o gravedad, rampas y aterrizaje&lt;br&gt;Actualizar agachado y salto pendiente&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:789&lt;/div&gt;" source_file="game.js" source_line="789" data-model-id="integrar">
+        <UserObject id="integrar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Interpolar carril y altura&lt;br&gt;Vuelo, gravedad y superficies&lt;br&gt;Agachado y salto pendiente&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:789&lt;/div&gt;" source_file="game.js" source_line="789" data-model-id="integrar">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="650" y="310" width="300" height="100" />
+            <mxGeometry as="geometry" x="650" y="300" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="inmune" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Vuelo activo o&lt;br&gt;margen de invulnerabilidad?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:834&lt;/div&gt;" source_file="game.js" source_line="834" data-model-id="inmune">
+        <UserObject id="inmune" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Vuelo activo o&lt;br&gt;margen de invulnerabilidad?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:834&lt;/div&gt;" source_file="game.js" source_line="834" data-model-id="inmune">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="490" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="omitir" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Omitir pruebas de colisión&lt;/div&gt;">
+        <UserObject id="omitir" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Omitir pruebas de colisión&lt;/div&gt;">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="500" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="contacto" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Nuevo contacto peligroso&lt;br&gt;con un obstáculo?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:841&lt;/div&gt;" source_file="game.js" source_line="841" data-model-id="contacto">
+        <UserObject id="contacto" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Nuevo contacto peligroso&lt;br&gt;con un obstáculo?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:841&lt;/div&gt;" source_file="game.js" source_line="841" data-model-id="contacto">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="700" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="libre" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Sin impacto&lt;br&gt;Continuar carrera&lt;/div&gt;">
+        <UserObject id="libre" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Sin impacto&lt;br&gt;Continuar carrera&lt;/div&gt;">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="720" width="300" height="80" />
           </mxCell>
         </UserObject>
-        <UserObject id="mortal" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Frontal con colectivo&lt;br&gt;o impacto contra banco?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:845&lt;/div&gt;" source_file="game.js" source_line="845" data-model-id="mortal">
+        <UserObject id="mortal" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Frontal con colectivo&lt;br&gt;o impacto contra banco?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:845&lt;/div&gt;" source_file="game.js" source_line="845" data-model-id="mortal">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="910" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="choque" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Game.gameOver(&amp;quot;crash&amp;quot;)&lt;br&gt;Choque fatal&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:852&lt;/div&gt;" source_file="game.js" source_line="852" data-model-id="choque">
+        <UserObject id="choque" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Game.gameOver(&amp;quot;crash&amp;quot;)&lt;br&gt;Choque fatal&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:852&lt;/div&gt;" source_file="game.js" source_line="852" data-model-id="choque">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="920" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="tropiezo" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Acumular tropiezo&lt;br&gt;Tablero bajo o lateral de colectivo&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:839&lt;/div&gt;" source_file="game.js" source_line="839" data-model-id="tropiezo">
+        <UserObject id="tropiezo" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Acumular tropiezo&lt;br&gt;Tablero bajo o lateral de colectivo&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:839&lt;/div&gt;" source_file="game.js" source_line="839" data-model-id="tropiezo">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1110" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="peligro" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Al resolver cada tropiezo:&lt;br&gt;¿danger ya está activo?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:653&lt;/div&gt;" source_file="game.js" source_line="653" data-model-id="peligro">
+        <UserObject id="peligro" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Al resolver cada tropiezo:&lt;br&gt;¿danger ya está activo?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:653&lt;/div&gt;" source_file="game.js" source_line="653" data-model-id="peligro">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1290" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="persecucion" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;danger = true · chase = 5 s&lt;br&gt;Profesor cerca y aviso de tropiezo&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:661&lt;/div&gt;" source_file="game.js" source_line="661" data-model-id="persecucion">
+        <UserObject id="persecucion" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;danger = true · chase = 5 s&lt;br&gt;Profesor cerca y aviso de tropiezo&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:661&lt;/div&gt;" source_file="game.js" source_line="661" data-model-id="persecucion">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="1300" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="atrapado" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Game.gameOver(&amp;quot;caught&amp;quot;)&lt;br&gt;Segundo tropiezo durante peligro&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:657&lt;/div&gt;" source_file="game.js" source_line="657" data-model-id="atrapado">
+        <UserObject id="atrapado" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Game.gameOver(&amp;quot;caught&amp;quot;)&lt;br&gt;Segundo tropiezo durante peligro&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:657&lt;/div&gt;" source_file="game.js" source_line="657" data-model-id="atrapado">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="1300" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="fin" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Procesar derrota según modo&lt;br&gt;Ver página 6&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:983&lt;/div&gt;" link="data:page/id,resultados" source_file="game.js" source_line="983" data-model-id="fin">
+        <UserObject id="fin" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Procesar derrota según modo&lt;br&gt;Ver página 6&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:983&lt;/div&gt;" link="data:page/id,resultados" source_file="game.js" source_line="983" data-model-id="fin">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="1100" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="volver" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Continuar Game.update()&lt;/div&gt;">
+        <UserObject id="volver" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Continuar Game.update()&lt;/div&gt;">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1470" width="300" height="80" />
           </mxCell>
@@ -587,7 +601,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-5" value="No" edge="1" parent="1" source="contacto" target="libre" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-5" value="No" edge="1" parent="1" source="contacto" target="libre" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-6" value="" edge="1" parent="1" source="libre" target="volver" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=1;">
@@ -617,7 +631,7 @@
         <mxCell id="edge-12" value="Sí" edge="1" parent="1" source="peligro" target="atrapado" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-13" value="No" edge="1" parent="1" source="peligro" target="persecucion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-13" value="No" edge="1" parent="1" source="peligro" target="persecucion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-14" value="" edge="1" parent="1" source="persecucion" target="volver" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
@@ -628,8 +642,15 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-15" value="" edge="1" parent="1" source="atrapado" target="fin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0.5;entryY=0;">
-          <mxGeometry as="geometry" relative="1" x="0" />
+        <mxCell id="edge-15" value="" edge="1" parent="1" source="atrapado" target="fin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" x="0">
+            <Array as="points">
+              <mxPoint x="1310" y="1430" />
+              <mxPoint x="1500" y="1430" />
+              <mxPoint x="1500" y="1060" />
+              <mxPoint x="1310" y="1060" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="notes" value="Se descartan contactos repetidos, alturas libres y pasos por el techo del colectivo. Los choques mortales se resuelven antes que los tropiezos acumulados. Game.update() reduce chase; al llegar a cero desactiva danger y emite onEscape. El jetpack dura 7 s y deja 1,5 s de margen para aterrizar." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=16;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="1610" width="1460" height="80" />
@@ -678,52 +699,52 @@
         <mxCell id="subtitle" value="StoryMode organiza vídeos y tramos · distancias predeterminadas del código" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=18;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="90" width="1460" height="40" />
         </mxCell>
-        <UserObject id="inicio" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Elegir modo historia&lt;br&gt;StoryMode.start()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:110&lt;/div&gt;" source_file="story.js" source_line="110" data-model-id="inicio">
+        <UserObject id="inicio" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Elegir modo historia&lt;br&gt;StoryMode.start()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:110&lt;/div&gt;" source_file="story.js" source_line="110" data-model-id="inicio">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="160" width="300" height="80" />
           </mxCell>
         </UserObject>
-        <UserObject id="intro" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;phase = intro&lt;br&gt;Reiniciar juego y reproducir introducción&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:113&lt;/div&gt;" source_file="story.js" source_line="113" data-model-id="intro">
+        <UserObject id="intro" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;phase = intro&lt;br&gt;Reiniciar juego y reproducir introducción&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:113&lt;/div&gt;" source_file="story.js" source_line="113" data-model-id="intro">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="310" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="ida" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;beginHomeLeg(): reset()&lt;br&gt;phase = ida · legEnd = 650 m&lt;br&gt;Solicitar cuenta atrás [2]&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:121&lt;/div&gt;" link="data:page/id,sesion" source_file="story.js" source_line="121" data-model-id="ida">
+        <UserObject id="ida" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;beginHomeLeg(): reset()&lt;br&gt;phase = ida · legEnd = 650 m&lt;br&gt;Solicitar cuenta atrás [2]&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:121&lt;/div&gt;" link="data:page/id,sesion" source_file="story.js" source_line="121" data-model-id="ida">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="490" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="resultado_ida" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Qué ocurre durante&lt;br&gt;la ida a casa?&lt;/div&gt;">
+        <UserObject id="resultado_ida" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Qué ocurre durante&lt;br&gt;la ida a casa?&lt;/div&gt;">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="710" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="derrota" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;onCrash() → vídeo de derrota&lt;br&gt;Reiniciar la ida desde cero&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:167&lt;/div&gt;" source_file="story.js" source_line="167" data-model-id="derrota">
+        <UserObject id="derrota" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;onCrash() → vídeo de derrota&lt;br&gt;Reiniciar la ida desde cero&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:167&lt;/div&gt;" source_file="story.js" source_line="167" data-model-id="derrota">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="720" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="casa" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Llegar a casa → waiting&lt;br&gt;onLegEnd(): vídeo del guardapolvo&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:131&lt;/div&gt;" source_file="story.js" source_line="131" data-model-id="casa">
+        <UserObject id="casa" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Llegar a casa → waiting&lt;br&gt;onLegEnd(): vídeo del guardapolvo&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:131&lt;/div&gt;" source_file="story.js" source_line="131" data-model-id="casa">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="930" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="vuelta" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;phase = vuelta · clearTrack()&lt;br&gt;legEnd = 2004 m · conservar monedas&lt;br&gt;Solicitar nueva cuenta atrás [2]&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:143&lt;/div&gt;" link="data:page/id,sesion" source_file="story.js" source_line="143" data-model-id="vuelta">
+        <UserObject id="vuelta" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;phase = vuelta · clearTrack()&lt;br&gt;legEnd = 2004 m · conservar monedas&lt;br&gt;Solicitar nueva cuenta atrás [2]&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:143&lt;/div&gt;" link="data:page/id,sesion" source_file="story.js" source_line="143" data-model-id="vuelta">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1120" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="resultado_vuelta" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Qué ocurre durante&lt;br&gt;la vuelta a la escuela?&lt;/div&gt;">
+        <UserObject id="resultado_vuelta" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Qué ocurre durante&lt;br&gt;la vuelta a la escuela?&lt;/div&gt;">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1340" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="victoria" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Llegar a la escuela&lt;br&gt;Vídeo de victoria y reset()&lt;br&gt;Puntaje = monedas de ambos tramos&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:153&lt;/div&gt;" source_file="story.js" source_line="153" data-model-id="victoria">
+        <UserObject id="victoria" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Llegar a la escuela&lt;br&gt;Vídeo de victoria y reset()&lt;br&gt;Puntaje = monedas de ambos tramos&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:153&lt;/div&gt;" source_file="story.js" source_line="153" data-model-id="victoria">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="1340" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="ranking" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Guardar / omitir resultado&lt;br&gt;Ranking de historia · página 6&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:162&lt;/div&gt;" link="data:page/id,resultados" source_file="story.js" source_line="162" data-model-id="ranking">
+        <UserObject id="ranking" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Guardar / omitir resultado&lt;br&gt;Ranking de historia · página 6&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:162&lt;/div&gt;" link="data:page/id,resultados" source_file="story.js" source_line="162" data-model-id="ranking">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="1130" width="300" height="100" />
           </mxCell>
@@ -737,7 +758,7 @@
         <mxCell id="edge-2" value="" edge="1" parent="1" source="ida" target="resultado_ida" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-3" value="Choque o captura" edge="1" parent="1" source="resultado_ida" target="derrota" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-3" value="Choque o captura" edge="1" parent="1" source="resultado_ida" target="derrota" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-4" value="" edge="1" parent="1" source="derrota" target="ida" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=0;">
@@ -768,8 +789,15 @@
         <mxCell id="edge-9" value="Alcanzar 2004 m" edge="1" parent="1" source="resultado_vuelta" target="victoria" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-10" value="" edge="1" parent="1" source="victoria" target="ranking" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0.5;entryY=0;">
-          <mxGeometry as="geometry" relative="1" x="0" />
+        <mxCell id="edge-10" value="" edge="1" parent="1" source="victoria" target="ranking" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" x="0">
+            <Array as="points">
+              <mxPoint x="1310" y="1500" />
+              <mxPoint x="1520" y="1500" />
+              <mxPoint x="1520" y="1080" />
+              <mxPoint x="1310" y="1080" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="notes" value="Un choque o captura en cualquier tramo reproduce derrota y reinicia la ida con monedas en cero. Los vídeos pueden omitirse; si un archivo falla se muestra un aviso y el flujo sigue. Volver al menú cancela la historia. Los parámetros storyHome y storySchool permiten acortar las distancias para pruebas." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=16;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="1610" width="1460" height="80" />
@@ -818,67 +846,67 @@
         <mxCell id="subtitle" value="Game.gameOver() → main.js / StoryMode → Leaderboard → RankingStore" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=18;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="70" y="90" width="1460" height="40" />
         </mxCell>
-        <UserObject id="over" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Game.gameOver(reason)&lt;br&gt;state = over · onGameOver(score, coins)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:983&lt;/div&gt;" source_file="game.js" source_line="983" data-model-id="over">
+        <UserObject id="over" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Terminar carrera&lt;br&gt;state = over · emitir onGameOver&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;game.js:983&lt;/div&gt;" source_file="game.js" source_line="983" data-model-id="over">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
-            <mxGeometry as="geometry" x="650" y="160" width="300" height="80" />
+            <mxGeometry as="geometry" x="650" y="140" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="historia" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Historia activa?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:55&lt;/div&gt;" source_file="main.js" source_line="55" data-model-id="historia">
+        <UserObject id="historia" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Historia activa?&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:55&lt;/div&gt;" source_file="main.js" source_line="55" data-model-id="historia">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="330" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="reinicio" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Vídeo de derrota&lt;br&gt;Reiniciar ida · página 5&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:167&lt;/div&gt;" link="data:page/id,historia" source_file="story.js" source_line="167" data-model-id="reinicio">
+        <UserObject id="reinicio" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Vídeo de derrota&lt;br&gt;Reiniciar ida · página 5&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:167&lt;/div&gt;" link="data:page/id,historia" source_file="story.js" source_line="167" data-model-id="reinicio">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="340" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="infinito" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Infinito: emitir runner:gameover&lt;br&gt;Puntos = floor(distancia) + 10 × monedas&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:56&lt;/div&gt;" source_file="main.js" source_line="56" data-model-id="infinito">
+        <UserObject id="infinito" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Infinito: emitir runner:gameover&lt;br&gt;Puntos = floor(distancia) + 10 × monedas&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;main.js:56&lt;/div&gt;" source_file="main.js" source_line="56" data-model-id="infinito">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="540" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="video" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;onInfiniteCrash()&lt;br&gt;Reproducir vídeo de derrota&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:82&lt;/div&gt;" source_file="story.js" source_line="82" data-model-id="video">
+        <UserObject id="video" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;onInfiniteCrash()&lt;br&gt;Reproducir vídeo de derrota&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:82&lt;/div&gt;" source_file="story.js" source_line="82" data-model-id="video">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="710" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="ofrecer" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Ofrecer resultado de infinito&lt;br&gt;offerScore(score, coins)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:47&lt;/div&gt;" source_file="leaderboard.js" source_line="47" data-model-id="ofrecer">
+        <UserObject id="ofrecer" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Ofrecer resultado de infinito&lt;br&gt;offerScore(score, coins)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:47&lt;/div&gt;" source_file="leaderboard.js" source_line="47" data-model-id="ofrecer">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="880" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="gana" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Victoria de historia [5]&lt;br&gt;offerScore(coins, coins, &amp;quot;story&amp;quot;)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:162&lt;/div&gt;" link="data:page/id,historia" source_file="story.js" source_line="162" data-model-id="gana">
+        <UserObject id="gana" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Victoria de historia [5]&lt;br&gt;offerScore(coins, coins, &amp;quot;story&amp;quot;)&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;story.js:162&lt;/div&gt;" link="data:page/id,historia" source_file="story.js" source_line="162" data-model-id="gana">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="880" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="guardar" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;¿Guardar resultado?&lt;/div&gt;">
+        <UserObject id="guardar" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;¿Guardar resultado?&lt;/div&gt;">
           <mxCell style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1050" width="300" height="120" />
           </mxCell>
         </UserObject>
-        <UserObject id="omitir" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Omitir guardado&lt;br&gt;Leaderboard.skip()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:62&lt;/div&gt;" source_file="leaderboard.js" source_line="62" data-model-id="omitir">
+        <UserObject id="omitir" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Omitir guardado&lt;br&gt;Leaderboard.skip()&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:62&lt;/div&gt;" source_file="leaderboard.js" source_line="62" data-model-id="omitir">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="1060" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="persistir" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Ingresar 3 iniciales y validar&lt;br&gt;RankingStore.save() → localStorage&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;ranking.js:33&lt;/div&gt;" source_file="ranking.js" source_line="33" data-model-id="persistir">
+        <UserObject id="persistir" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Ingresar 3 iniciales y validar&lt;br&gt;RankingStore.save() → localStorage&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;ranking.js:33&lt;/div&gt;" source_file="ranking.js" source_line="33" data-model-id="persistir">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1250" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="error" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Mostrar error de guardado&lt;br&gt;Reintentar u omitir&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:38&lt;/div&gt;" source_file="leaderboard.js" source_line="38" data-model-id="error">
+        <UserObject id="error" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Mostrar error de guardado&lt;br&gt;Reintentar u omitir&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:38&lt;/div&gt;" source_file="leaderboard.js" source_line="38" data-model-id="error">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="1160" y="1250" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="tabla" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Mostrar ranking del modo&lt;br&gt;Top 10 y puesto de la partida&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:69&lt;/div&gt;" source_file="leaderboard.js" source_line="69" data-model-id="tabla">
+        <UserObject id="tabla" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Mostrar ranking del modo&lt;br&gt;Top 10 y puesto de la partida&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:69&lt;/div&gt;" source_file="leaderboard.js" source_line="69" data-model-id="tabla">
           <mxCell style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="650" y="1430" width="300" height="100" />
           </mxCell>
         </UserObject>
-        <UserObject id="menu" label="&lt;div style=&quot;font-size:18px;line-height:1.3&quot;&gt;Volver al menú&lt;br&gt;Elegir una nueva partida&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:20&lt;/div&gt;" source_file="leaderboard.js" source_line="20" data-model-id="menu">
+        <UserObject id="menu" label="&lt;div style=&quot;font-size:16px;line-height:1.3&quot;&gt;Volver al menú&lt;br&gt;Elegir una nueva partida&lt;/div&gt;&lt;div style=&quot;font-size:12px;color:#4f5b6b;margin-top:7px&quot;&gt;leaderboard.js:20&lt;/div&gt;" source_file="leaderboard.js" source_line="20" data-model-id="menu">
           <mxCell style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontFamily=Helvetica;fontSize=18;fontColor=#243247;spacing=10;" vertex="1" parent="1">
             <mxGeometry as="geometry" x="140" y="1440" width="300" height="80" />
           </mxCell>
@@ -886,7 +914,7 @@
         <mxCell id="edge-0" value="" edge="1" parent="1" source="over" target="historia" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-1" value="Sí" edge="1" parent="1" source="historia" target="reinicio" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-1" value="Sí" edge="1" parent="1" source="historia" target="reinicio" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-2" value="No" edge="1" parent="1" source="historia" target="infinito" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
@@ -901,15 +929,16 @@
         <mxCell id="edge-5" value="" edge="1" parent="1" source="ofrecer" target="guardar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-6" value="" edge="1" parent="1" source="gana" target="guardar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+        <mxCell id="edge-6" value="" edge="1" parent="1" source="gana" target="guardar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0">
             <Array as="points">
-              <mxPoint x="1310" y="1030" />
-              <mxPoint x="800" y="1030" />
+              <mxPoint x="1310" y="1040" />
+              <mxPoint x="1050" y="1040" />
+              <mxPoint x="1050" y="1110" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-7" value="No" edge="1" parent="1" source="guardar" target="omitir" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-7" value="No" edge="1" parent="1" source="guardar" target="omitir" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="edge-8" value="Sí" edge="1" parent="1" source="guardar" target="persistir" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
@@ -924,16 +953,15 @@
         <mxCell id="edge-11" value="Error" edge="1" parent="1" source="persistir" target="error" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
-        <mxCell id="edge-12" value="Elegir de nuevo" edge="1" parent="1" source="error" target="guardar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;">
+        <mxCell id="edge-12" value="Elegir de nuevo" edge="1" parent="1" source="error" target="guardar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0">
             <Array as="points">
               <mxPoint x="1520" y="1300" />
-              <mxPoint x="1520" y="1010" />
-              <mxPoint x="800" y="1010" />
+              <mxPoint x="1520" y="1110" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-13" value="Cerrar" edge="1" parent="1" source="tabla" target="menu" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+        <mxCell id="edge-13" value="Cerrar" edge="1" parent="1" source="tabla" target="menu" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;strokeColor=#52647b;strokeWidth=1.6;fontFamily=Helvetica;fontSize=15;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry as="geometry" relative="1" x="0" />
         </mxCell>
         <mxCell id="notes" value="El ranking se guarda en localStorage, con listas separadas para infinito e historia. Se normalizan tres iniciales A–Z y se validan enteros no negativos. Orden: más puntaje, más monedas y fecha más antigua. Se muestran los primeros diez; la lista guardada puede tener más entradas." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=16;fontColor=#5b6778;fontStyle=0;" vertex="1" parent="1">
