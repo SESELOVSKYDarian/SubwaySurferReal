@@ -1,0 +1,6 @@
+#!/bin/sh
+if command -v python >/dev/null 2>&1; then
+  exec python tools/audio_playlist.py --staged --stage
+else
+  exec python3 tools/audio_playlist.py --staged --stage
+fi

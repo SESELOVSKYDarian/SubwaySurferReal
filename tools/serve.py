@@ -7,13 +7,27 @@ usando módulos .js viejos después de editar el código.
 import http.server
 import socketserver
 import sys
+import json
 from pathlib import Path
+from urllib.parse import urlsplit
+from audio_playlist import playlist
 
 
 class NoCache(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm',
                       '.glb': 'model/gltf-binary', '.mp4': 'video/mp4'}
+
+    def do_GET(self):
+        if urlsplit(self.path).path == '/assets/audio/playlist.json':
+            data = json.dumps(playlist(root)).encode('utf8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        super().do_GET()
 
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, must-revalidate')

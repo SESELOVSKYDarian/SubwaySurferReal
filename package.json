@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "python3 tools/serve.py 8000",
     "test": "node --test tests/*.test.cjs",
+    "music:index": "python tools/audio_playlist.py",
+    "setup:music": "python tools/audio_playlist.py --install-hook",
     "benchmark": "node tests/benchmark.cjs",
     "capture": "node tests/capture-poses.cjs",
     "capture:mdp": "node tests/capture-marplatense.cjs",
