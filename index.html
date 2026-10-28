@@ -168,21 +168,37 @@
     <p class="dialog-eyebrow">DEJÁ TU MARCA</p><h2 id="achievements-title">TUS LOGROS</h2><div id="achievement-list"></div>
   </dialog>
 
-  <dialog id="score-dialog" class="score-modal" aria-labelledby="score-dialog-title">
-    <h2 id="score-dialog-title">¡Partida terminada!</h2>
+  <!-- Fin de partida: resultado, iniciales para el ranking y qué hacer después -->
+  <dialog id="score-dialog" class="score-modal gameover" aria-labelledby="score-dialog-title">
+    <div class="dialog-head">
+      <img class="crest" src="assets/menu/icons/crest.svg" alt="">
+      <div>
+        <p id="gameover-eyebrow" class="dialog-eyebrow">LLEGASTE TARDE</p>
+        <h2 id="score-dialog-title">¡Partida terminada!</h2>
+      </div>
+    </div>
+    <dl class="gameover-stats">
+      <div id="gameover-points"><dt>PUNTOS</dt><dd id="gameover-score">0</dd></div>
+      <div><dt>MONEDAS</dt><dd id="gameover-coins">0</dd></div>
+      <div><dt>RÉCORD</dt><dd id="gameover-best">0</dd></div>
+    </dl>
     <p id="final-score" class="final-score"></p>
     <form id="score-form">
       <div class="score-entry">
-        <label for="score-initials">Tus tres iniciales</label>
-        <input id="score-initials" name="initials" type="text" placeholder="AAA" minlength="3" maxlength="3" pattern="[A-Z]{3}" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="initials-hint score-error">
+        <label for="score-initials">Dejá tus tres iniciales en el ranking</label>
+        <div class="score-entry-row">
+          <input id="score-initials" name="initials" type="text" placeholder="AAA" minlength="3" maxlength="3" pattern="[A-Z]{3}" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="initials-hint score-error">
+          <button id="save-score" type="submit" disabled><img src="assets/menu/icons/trophy.svg" alt="">GUARDAR</button>
+        </div>
         <p id="initials-hint" class="sr-only">Escribí tres letras, por ejemplo ABC.</p>
       </div>
       <p id="score-error" class="ranking-error" role="alert"></p>
-      <div class="buttons">
-        <button id="save-score" type="submit" disabled>Guardar y ver ranking</button>
-        <button id="skip-score" type="button" class="secondary-button">Omitir</button>
-      </div>
     </form>
+    <div class="gameover-actions">
+      <button id="replay-score" type="button" class="btn-primary"><img src="assets/menu/icons/play.svg" alt="">VOLVER A JUGAR</button>
+      <button id="skip-score" type="button"><img src="assets/menu/icons/home.svg" alt="">IR AL MENÚ</button>
+    </div>
+    <p class="pause-tip">TAMBIÉN PODÉS LEVANTAR LAS DOS MANOS PARA VOLVER A JUGAR</p>
   </dialog>
 
   <dialog id="ranking-dialog" class="score-modal" aria-labelledby="ranking-title">
@@ -199,7 +215,10 @@
       <tbody id="ranking-rows"></tbody>
     </table>
     <p id="ranking-status" role="status"></p>
-    <div class="buttons"><button id="close-ranking" type="button">Volver al menú</button></div>
+    <div class="buttons">
+      <button id="ranking-replay" type="button" class="btn-primary" hidden><img src="assets/menu/icons/play.svg" alt="">VOLVER A JUGAR</button>
+      <button id="close-ranking" type="button">Volver al menú</button>
+    </div>
   </dialog>
 
   <script type="module" src="main.js"></script>

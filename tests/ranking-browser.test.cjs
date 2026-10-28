@@ -13,7 +13,7 @@ async function pageWithGameStub(context) {
       constructor(canvas,callbacks){window.testGame=this;this.callbacks=callbacks;this.state='ready';this.distance=0;this.starts=0;}
       start(){this.state='playing';this.starts++;}
       resume(){this.state='playing';}
-      update(){} left(){} right(){} jump(){} roll(){} releaseRoll(){} setQuality(){}
+      update(){} left(){} right(){} jump(){} roll(){} releaseRoll(){} setQuality(){} reset(){this.state='ready';this.resets=(this.resets||0)+1;}
       finish(score,coins){this.state='over';this.callbacks.onGameOver(score,coins,'caught');}
     }
   `}));
@@ -90,6 +90,47 @@ test('guardar falla sin perder la partida y permite reintentar u omitir',async()
     assert.equal(await page.locator('#overlay').evaluate(e=>!e.classList.contains('hidden')),true);
     await page.locator('#rankingBtn').click();
     assert.equal(await page.locator('#ranking-rows tr').count(),1);
+  }finally{await context.close();}
+});
+
+test('fin de partida: volver a jugar desde el resultado o el ranking, ir al menú y sin reinicio automático',async()=>{
+  const context=await env.browser.newContext({viewport:{width:960,height:720}}),page=await pageWithGameStub(context),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  try{
+    await page.keyboard.press('KeyD');await page.evaluate(()=>window.testGame.finish(321,5));
+    await page.waitForFunction(()=>document.querySelector('#score-dialog').open);
+    assert.match(await page.locator('#score-dialog-title').innerText(),/ATRAP/);
+    assert.equal(await page.locator('#gameover-score').innerText(),'321');
+    assert.equal(await page.locator('#gameover-coins').innerText(),'5');
+    // Sin elegir nada, la partida no vuelve a empezar sola.
+    await page.waitForTimeout(1500);
+    assert.equal(await page.evaluate(()=>window.testGame.starts),1);
+    assert.equal(await page.locator('#overlay').evaluate(e=>e.classList.contains('hidden')),true);
+    await page.locator('#replay-score').click();
+    assert.equal(await page.locator('#score-dialog').evaluate(d=>d.open),false);
+    await page.waitForFunction(()=>window.testGame.starts===2,null,{timeout:8000});
+    assert.equal(await page.locator('#overlay').evaluate(e=>e.classList.contains('hidden')),true);
+    // Guardar y volver a jugar desde el ranking no muestra el menú por detrás.
+    await page.evaluate(()=>window.testGame.finish(400,2));
+    await page.waitForFunction(()=>document.querySelector('#score-dialog').open);
+    assert.equal(await page.locator('#gameover-best').innerText(),'0');
+    await page.keyboard.type('xyz');await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>document.querySelector('#ranking-dialog').open);
+    assert.equal(await page.locator('#ranking-replay').isVisible(),true);
+    await page.locator('#ranking-replay').click();
+    await page.waitForFunction(()=>window.testGame.starts===3,null,{timeout:8000});
+    assert.equal(await page.locator('#overlay').evaluate(e=>e.classList.contains('hidden')),true);
+    // Ir al menú.
+    await page.evaluate(()=>window.testGame.finish(10,0));
+    await page.waitForFunction(()=>document.querySelector('#score-dialog').open);
+    assert.equal(await page.locator('#gameover-best').innerText(),'400');
+    await page.locator('#skip-score').click();
+    assert.equal(await page.locator('#overlay').evaluate(e=>!e.classList.contains('hidden')),true);
+    assert.equal(await page.locator('#ranking-dialog').evaluate(d=>d.open),false);
+    // El ranking abierto desde el menú no ofrece volver a jugar.
+    await page.locator('#rankingBtn').click();
+    assert.equal(await page.locator('#ranking-replay').isVisible(),false);
+    assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
 

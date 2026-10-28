@@ -10,7 +10,15 @@ const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
 const actionEl = $('action');
 // Si se abrió desde la pausa, al cerrar el ranking se vuelve a la pausa, no al menú.
-const leaderboard = new Leaderboard(() => { if (!session.manual) overlay.classList.remove('hidden'); });
+const leaderboard = new Leaderboard(() => { if (!session.manual) overlay.classList.remove('hidden'); }, {
+  // Fin de partida → menú principal, igual que «Volver al menú» de la pausa.
+  onMenu: () => $('return-menu').click(),
+  onReplay({ mode, replay }) {
+    if (replay) replay();
+    else if (mode === 'story') story.start();
+    else { game.reset(); play(); }
+  },
+});
 let actionTimer;
 let story = null;   // se crea después de la sesión de juego
 
@@ -61,7 +69,7 @@ const game = new Game($('game'), {
     const replayLabel = $('playBtn').querySelector('small');
     if (replayLabel) replayLabel.textContent = 'Otra carrera · ¡esta vez llegás!';
     else $('playBtn').textContent = '↻ Otra vez';
-    story.onInfiniteCrash(score, coins);
+    story.onInfiniteCrash(score, coins, reason);
   },
 });
 
@@ -147,7 +155,10 @@ const poseHandlers = {
   },
   onDuckHold: () => { if (!session.keyboard) game.holdRoll(); },
   onDuckEnd: () => { if (!session.keyboard) game.releaseRoll(); },
-  onHandsUp: () => { if (!session.keyboard) play(); },
+  onHandsUp: () => {
+    if (session.keyboard) return;
+    if (leaderboard.result) leaderboard.replay(); else play();
+  },
 };
 
 async function activateCamera() {
@@ -252,7 +263,7 @@ function frame(now) {
     fpsFrames = 0;
     fpsSampleStart = now;
   }
-  const route = routeState(game.distance, game.world.reversed);
+  const route = routeState(game.distance, game.world?.reversed);
   const label = story?.active
     ? `Juan B. Justo · ${story.phase === 'vuelta' ? 'de casa a la Técnica' : 'de la Técnica a casa'}`
     : `${route.zone} · Vuelta ${route.lap}`;

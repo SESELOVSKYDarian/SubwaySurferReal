@@ -1,6 +1,7 @@
 // Modo historia: video de intro → corrida a casa → video de recogida del
 // guardapolvo azul → vuelta a la Técnica como en el modo infinito →
-// video de victoria. Si choca en la ida o en la vuelta: video de derrota y vuelve a casa.
+// video de victoria. Si choca en la ida o en la vuelta: video de derrota y pantalla para
+// volver a intentar la ida o ir al menú.
 // El puntaje es la cantidad de monedas juntadas en el recorrido completo.
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -85,12 +86,12 @@ export class StoryMode {
   }
 
   // Infinito solo tiene derrota; al terminar u omitir el video se guarda el puntaje.
-  async onInfiniteCrash(score, coins) {
+  async onInfiniteCrash(score, coins, reason) {
     if (this.active || this.videoOpen) return;
     const token = ++this.token;
     await this.playVideo('defeat');
     if (token !== this.token) return;
-    this.leaderboard.offerScore(score, coins);
+    this.leaderboard.offerScore(score, coins, 'infinite', reason);
   }
 
   async fade(on) {
@@ -135,7 +136,7 @@ export class StoryMode {
     this.phase = 'ida';
     this.game.reset();
     this.game.runner?.setCoat(false);
-    this.game.world.setReversed(true);
+    this.game.world?.setReversed(true);
     this.game.legEnd = STORY.homeAt;
     this.hud();
     this.sound('start');
@@ -159,7 +160,7 @@ export class StoryMode {
       this.phase = 'vuelta';
       await this.game.runner?.setCoat(true);   // ahora lleva puesto el guardapolvo
       // La vuelta arranca en el inicio del recorrido normal (bajo el fundido a negro).
-      this.game.world.setReversed(false);
+      this.game.world?.setReversed(false);
       this.game.distance = 0;
       this.game.clearTrack();
       this.game.legEnd = STORY.schoolAt;
@@ -183,10 +184,12 @@ export class StoryMode {
     }
   }
 
-  // Chocó o lo atrapó el profesor: video de derrota y de vuelta a casa (monedas en cero).
+  // Chocó o lo atrapó el profesor: video de derrota y pantalla de fin de partida,
+  // desde donde se vuelve a intentar la ida (monedas en cero) o se va al menú.
   async onCrash() {
     const token = this.token;
     if (!this.active) return;
+    const coins = this.game.coinCount;
     this.settleSession();
     this.game.legEnd = null;
     this.phase = 'defeat';
@@ -198,7 +201,10 @@ export class StoryMode {
     if (!this.alive(token)) return;
     await this.fade(false);
     if (!this.alive(token)) return;
-    this.beginHomeLeg();
+    this.leaderboard.offerScore(coins, coins, 'story', 'late', {
+      save: false,
+      replay: () => { if (this.alive(token)) this.beginHomeLeg(); },
+    });
   }
 
   cancel() {

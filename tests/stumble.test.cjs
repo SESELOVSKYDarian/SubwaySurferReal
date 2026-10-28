@@ -141,7 +141,7 @@ test('indicador de persecución legible en móvil, pausa y aviso de escape',asyn
  await page.route('**/game.js',r=>r.fulfill({contentType:'text/javascript',body:`
   export class Game {
    constructor(canvas,cb){window.testGame=this;this.cb=cb;this.state='ready';this.distance=0;}
-   update(){} setQuality(){} start(){this.state='playing';} pause(){this.state='paused';} resume(){this.state='playing';}
+   update(){} setQuality(){} reset(){this.state='ready';} start(){this.state='playing';} pause(){this.state='paused';} resume(){this.state='playing';}
   }
  `}));
  try{

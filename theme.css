@@ -235,3 +235,42 @@
   #pause-actions { grid-template-columns: 1fr; }
   #pause-title.count { font-size: 110px; }
 }
+
+/* ---------- fin de partida ---------- */
+.score-modal button[hidden], .score-modal [hidden] { display: none !important; }
+.gameover { width: min(560px, 94vw); padding-top: 30px; }
+.gameover .dialog-head { margin-bottom: 14px; }
+.gameover h2 { margin-bottom: 0; font-size: 46px; }
+.gameover-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 12px;
+  margin: 6px 0 10px; padding: 0;
+}
+.gameover-stats > div {
+  padding: 10px 8px 8px; text-align: center;
+  background: #00000030; border: 2px dashed var(--stitch); border-radius: 4px;
+}
+.gameover-stats dt { font: 13px Bangers, sans-serif; letter-spacing: 3px; color: #e9a39d; }
+.gameover-stats dd { margin: 2px 0 0; font: 40px/1 Bangers, sans-serif; letter-spacing: 1px; color: var(--chalk); }
+.gameover-stats > div:first-child dd { color: #ffd34e; }
+.gameover .final-score { min-height: 1.3em; margin: 4px 0 14px; font-size: 19px; }
+.score-entry-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: stretch; }
+.gameover #score-initials { font-size: 42px; letter-spacing: 12px; padding: 6px 10px 2px; }
+.gameover #save-score { font-size: 22px; padding: 10px 18px 8px; }
+.gameover #save-score:disabled { filter: grayscale(.6) brightness(.75); }
+.gameover #save-score img, .gameover #replay-score img, #ranking-replay img { filter: invert(1); }
+.gameover-actions { display: grid; gap: 14px; margin-top: 22px; }
+.gameover-actions #replay-score { font-size: 32px; padding: 15px 24px 12px; }
+/* «Ir al menú» como papel, igual que el botón secundario del inicio */
+.gameover-actions #skip-score {
+  background: var(--chalk) !important; color: var(--ink) !important; border: 0 !important;
+  box-shadow: 5px 6px 0 #0008 !important; clip-path: polygon(1% 6%, 99% 0, 100% 94%, 0 100%) !important;
+  font-size: 24px !important;
+}
+.gameover .pause-tip { text-align: center; }
+#ranking-dialog .buttons { grid-template-columns: 1fr; }
+
+@media (max-width: 560px) {
+  .gameover h2 { font-size: 34px; }
+  .gameover-stats dd { font-size: 30px; }
+  .gameover #score-initials { font-size: 34px; letter-spacing: 8px; }
+}
