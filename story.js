@@ -78,6 +78,15 @@ export class StoryMode {
     });
   }
 
+  // Infinito solo tiene derrota; al terminar u omitir el video se guarda el puntaje.
+  async onInfiniteCrash(score, coins) {
+    if (this.active || this.videoOpen) return;
+    const token = ++this.token;
+    await this.playVideo('defeat');
+    if (token !== this.token) return;
+    this.leaderboard.offerScore(score, coins);
+  }
+
   async fade(on) {
     $('story-fade').classList.toggle('on', on);
     await wait(on ? 700 : 500);

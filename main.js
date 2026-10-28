@@ -60,7 +60,7 @@ const game = new Game($('game'), {
     const replayLabel = $('playBtn').querySelector('small');
     if (replayLabel) replayLabel.textContent = 'Otra carrera · ¡esta vez llegás!';
     else $('playBtn').textContent = '↻ Otra vez';
-    leaderboard.offerScore(score, coins);
+    story.onInfiniteCrash(score, coins);
   },
 });
 
@@ -95,7 +95,7 @@ function showPause(title, text = '', count = false) {
 }
 const session = new PlaySession(game, showPause, () => pauseEl.classList.add('hidden'));
 function play() {
-  if (leaderboard.blocking || game.state === 'playing' || session.pending || session.manual) return;
+  if (leaderboard.blocking || story?.videoOpen || game.state === 'playing' || session.pending || session.manual) return;
   if (story?.active && story.phase !== 'ida') return;   // los videos y el choque los maneja el modo historia
   overlay.classList.add('hidden');
   sound('start');
@@ -104,7 +104,7 @@ function play() {
 
 story = new StoryMode({ game, session, leaderboard, flash, sound });
 $('storyBtn').addEventListener('click', () => {
-  if (leaderboard.blocking || story.active || game.state === 'playing') return;
+  if (leaderboard.blocking || story.videoOpen || story.active || session.pending || session.manual || game.state === 'playing') return;
   story.start();
 });
 window.addEventListener('runner:menu', () => story.cancel());
