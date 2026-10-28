@@ -27,6 +27,8 @@ const DUCK_DOWN = 0.3;     // bajada/encogimiento para agacharse ("hacerse bolit
 const DUCK_DEEP = 0.5;     // tan agachado que no hace falta confirmar
 const DUCK_EXIT = 0.16;    // por debajo de esto se considera que te levantaste
 const DUCK_LOWERED = 0.15; // hombros así de bajos: agachándose, las caderas pueden salir de cuadro
+const DUCK_MAX_MS = 2500;  // agachado más tiempo que esto y quieto = quedó parado más abajo, no esquivando
+const DUCK_STILL_MS = 800; // tiempo sin subir ni bajar para dar por buena una postura nueva
 const CALIB_FRAMES = 20;   // frames quieto necesarios para calibrar
 const LOST_FRAMES = 12;    // ~1/3 s sin ver al jugador = lo hemos perdido (se pausa)
 const FORGET_FRAMES = 60;  // ~2 s sin verlo: se elige de nuevo a la persona más cercana
@@ -229,6 +231,8 @@ export class PoseController {
     this.ducking = false;
     this.duckFrames = 0;
     this.jumpFrames = 0;
+    this.still = null;
+    this.rebased = null;
     this.handsUpSince = 0;
     this.lastHandsUp = 0;
     this.lastJump = 0;
@@ -248,7 +252,8 @@ export class PoseController {
   selectPlayer(poses) {
     const cands = [];
     for (const lm of poses) {
-      const v = (i) => (lm[i].visibility ?? 1) > 0.5;
+      // Los puntos fuera del cuadro (caderas en una sentadilla honda) no sirven para reconocer a nadie.
+      const v = (i) => (lm[i].visibility ?? 1) > 0.5 && lm[i].y > 0.003 && lm[i].y < 0.997;
       const pts = [NOSE, L_SHOULDER, R_SHOULDER, L_HIP, R_HIP].filter(v);
       if (pts.length < 2) continue;
       const size = v(L_SHOULDER) && v(R_SHOULDER)
@@ -551,8 +556,11 @@ export class PoseController {
 
     // --- Agacharse / hacerse bolita: baja la cabeza o los hombros, o se encoge el torso ---
     const duckCues = [];
-    if (m.sy != null) duckCues.push((m.sy - b.sy) / T);
-    if (m.ny != null && b.ny != null) duckCues.push(((m.ny - b.ny) / T) * 0.85);
+    const shoulderDrop = m.sy != null ? (m.sy - b.sy) / T : null;
+    if (shoulderDrop != null) duckCues.push(shoulderDrop);
+    // Bajar solo la cabeza (mirar la pantalla) no es agacharse: la nariz ayuda si los hombros
+    // también empezaron a bajar.
+    if (m.ny != null && b.ny != null && (shoulderDrop == null || shoulderDrop > 0.08)) duckCues.push(((m.ny - b.ny) / T) * 0.85);
     if (m.torso != null) duckCues.push((1 - m.torso / T) * 0.9);
     const duck = duckCues.length ? Math.max(...duckCues) : null;
 
@@ -590,6 +598,10 @@ export class PoseController {
     }
     if (jump != null && jump < JUMP_EARLY / 2) this.jumpArmed = true;
 
+    // ¿Cuánto hace que el cuerpo no sube ni baja? (para reconocer una postura nueva que ya no cambia)
+    if (m.sy != null && (!this.still || Math.abs(m.sy - this.still.sy) > 0.06 * T)) this.still = { sy: m.sy, t: now };
+    const stillFor = this.still ? now - this.still.t : 0;
+
     // Agacharse: hay que mantenerlo 2 fotogramas (así el pequeño amago antes de
     // saltar no cuenta), salvo que sea muy profundo. Se ignora el aterrizaje.
     if (duck != null && now - this.lastJump > 400) {
@@ -597,15 +609,44 @@ export class PoseController {
         this.duckFrames = duck > DUCK_DOWN / sens ? this.duckFrames + 1 : 0;
         if (this.duckFrames >= 2 || duck > DUCK_DEEP / sens) {
           this.ducking = true;
+          this.duckStart = now;
+          this.duckPeak = duck;
           this.h.onDuck?.();
         }
-      } else if (duck < DUCK_EXIT / sens) {
-        this.ducking = false;
-        this.h.onDuckEnd?.();
-        this.duckFrames = 0;
-        this.lastDuckEnd = now;
       } else {
-        this.h.onDuckHold?.(); // sigues agachado: el corredor sigue rodando
+        // Para levantarse cuentan los hombros y el torso, no la nariz: al pararse es común seguir
+        // con la cabeza gacha mirando la pantalla. La salida es relativa a lo profundo que bajó:
+        // tras una sentadilla honda, volver a menos de la mitad ya es estar de pie.
+        this.duckPeak = Math.max(this.duckPeak, duck);
+        const body = [];
+        if (m.sy != null) body.push((m.sy - b.sy) / T);
+        if (m.torso != null) body.push((1 - m.torso / T) * 0.9);
+        const stand = body.length ? Math.max(...body) : duck;
+        const exitAt = Math.min(DUCK_DOWN * 0.8, Math.max(DUCK_EXIT, this.duckPeak * 0.45)) / sens;
+        // Nadie esquiva agachado tanto tiempo: si la postura lleva un rato sin cambiar, el jugador quedó
+        // parado más abajo que al calibrar (se acercó o se movió). Esa postura pasa a ser la de referencia.
+        const stuck = now - this.duckStart > DUCK_MAX_MS && stillFor > DUCK_STILL_MS;
+        if (stand < exitAt || stuck) {
+          this.ducking = false;
+          this.h.onDuckEnd?.();
+          this.duckFrames = 0;
+          this.lastDuckEnd = now;
+          if (stuck) this.rebaseVertical(m, now);
+        } else {
+          this.h.onDuckHold?.(); // sigues agachado: el corredor sigue rodando
+        }
+      }
+    }
+
+    // Tras corregir la referencia agachado: si después se para y queda quieto en otra altura,
+    // esa es la postura de pie real. Mientras tanto no hay saltos (subir de la sentadilla no lo es).
+    if (this.rebased) {
+      this.jumpArmed = false;
+      const moved = m.sy != null && Math.abs(m.sy - this.rebased.sy) > 0.15 * T;
+      if (!this.ducking && stillFor > DUCK_STILL_MS && (moved || now - this.rebased.t > 2000)) {
+        if (moved) this.rebaseVertical(m, now);
+        this.rebased = null;
+        this.jumpArmed = true;
       }
     }
 
@@ -625,6 +666,20 @@ export class PoseController {
     const { fps, ms, latency } = this.stats;
     const dim = fps && fps < 22 && ms < 25 ? ' · poca luz: la cámara va lenta' : '';
     this.status(`✅ ${laneName}${this.ducking ? ' · agachado' : ''}${feet} · ${this.mode} · ${Math.round(fps)} fps · ${Math.round(ms)} ms${latency > 0 && latency < 400 ? ` · ${Math.round(latency)} ms de retraso` : ''}${dim}`);
+  }
+
+  // Toma la postura actual como referencia de altura (hombros, nariz, cadera y pies), sin pedir
+  // quedarse quieto ni pausar: el carril y el tamaño calibrados se conservan.
+  rebaseVertical(m, now) {
+    const b = this.base;
+    if (m.sy != null) b.sy = m.sy;
+    if (m.ny != null) b.ny = m.ny;
+    if (m.hy != null) b.hy = m.hy;
+    if (m.ay != null) b.ay = m.ay;
+    if (m.torso != null) b.torso = Math.max(m.torso, 0.05);
+    this.prev = null;
+    this.jumpFrames = 0;
+    this.rebased = { sy: m.sy ?? b.sy, t: now };
   }
 
   calibrate(m) {

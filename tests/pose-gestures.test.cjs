@@ -3,10 +3,10 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 // Poses simuladas a 30 fps con reloj falso: el detector real (filtros, calibración y umbrales).
 // Torso de 0,27 (hombros 0,35 → caderas 0,62), así que 0,1 torsos ≈ 0,027 del cuadro.
 const T=.27;
-function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false}={}){
+function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false,head=0}={}){
  const p=Array.from({length:33},()=>({x:.5,y:.5,visibility:1}));
  const set=(i,x,y)=>{p[i]={x,y,visibility:1};};
- set(0,.5,.25+body+shoulders);
+ set(0,.5,.25+body+shoulders+head);
  set(11,.44,.35+body+shoulders);set(12,.56,.35+body+shoulders);
  set(13,.41,.47+body+shoulders);set(14,.59,.47+body+shoulders);
  const wy=wrists??(.58+body+shoulders);set(15,.4,wy);set(16,.6,wy);
@@ -81,6 +81,50 @@ test('agachado: con las caderas fuera de cuadro se detecta, se sostiene y no pie
   // Agachado leve (media sentadilla, ~0,35 torsos) con las caderas a la vista.
   d.feed(pose({body:.35*T}),10);
   assert.equal(d.count.duck,2,'media sentadilla también cuenta');
+ }finally{d.restore();}
+});
+
+test('no se queda agachado: se levanta con la cabeza gacha o tras una sentadilla honda',async()=>{
+ const d=await detector();
+ try{
+  for(const h of [.15,.35,.5])d.feed(pose({body:h*T}));
+  d.feed(pose({body:.5*T}),8);
+  assert.equal(d.count.duck,1);
+  // De pie otra vez, pero mirando la pantalla con la cabeza agachada (la nariz sigue baja).
+  d.feed(pose({head:.35*T}),10);
+  assert.equal(d.count.duckEnd,1,'la cabeza gacha no lo deja agachado');
+  d.feed(pose(),15);
+  // Sentadilla muy honda y vuelta casi completa (queda un poco encorvado).
+  for(const h of [.3,.6,.85])d.feed(pose({body:h*T,hipsOut:h>.5}));
+  d.feed(pose({body:.85*T,hipsOut:true}),8);
+  assert.equal(d.count.duck,2);
+  d.feed(pose({body:.2*T}),6);
+  assert.equal(d.count.duckEnd,2,'tras una sentadilla honda, volver casi arriba ya es estar de pie');
+  assert.equal(d.count.lost,0);
+ }finally{d.restore();}
+});
+
+test('no se queda agachado aunque el jugador quede parado más abajo que al calibrar',async()=>{
+ const d=await detector();
+ try{
+  for(const h of [.15,.35,.55])d.feed(pose({body:h*T}));
+  d.feed(pose({body:.55*T}),6);
+  assert.equal(d.count.duck,1);
+  // Se acercó a la cámara: de pie, pero los hombros quedan 0,3 torsos más abajo que al calibrar.
+  d.feed(pose({body:.3*T}),40);
+  assert.equal(d.count.duckEnd,0,'en el primer segundo puede seguir esquivando');
+  d.feed(pose({body:.3*T}),60);
+  assert.equal(d.count.duckEnd,1,'quieto en la postura nueva, deja de estar agachado');
+  d.feed(pose({body:.3*T}),90);
+  assert.equal(d.count.jump,0,'la corrección no produce saltos');
+  assert.equal(d.count.duck,1,'ni vuelve a agacharse');
+  // Desde la postura nueva se puede saltar y agacharse otra vez.
+  for(const h of [.15,.35,.5,.5,.35,.15])d.feed(pose({body:(.3-h)*T}));
+  d.feed(pose({body:.3*T}),15);
+  assert.equal(d.count.jump,1,'salta desde la nueva referencia');
+  for(const h of [.15,.35,.5])d.feed(pose({body:(.3+h)*T}));
+  d.feed(pose({body:.8*T}),5);
+  assert.equal(d.count.duck,2,'se agacha desde la nueva referencia');
  }finally{d.restore();}
 });
 
