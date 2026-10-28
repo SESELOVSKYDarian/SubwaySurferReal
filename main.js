@@ -89,6 +89,7 @@ let pose = null;
 const pauseEl = $('pause');
 function showPause(title, text = '', count = false) {
   pauseEl.classList.remove('hidden');
+  $('pause-actions').classList.toggle('hidden', !title.includes('Pausa'));
   $('pause-title').textContent = title;
   $('pause-title').classList.toggle('count', count);
   $('pause-text').textContent = text;
@@ -102,6 +103,8 @@ function play() {
   session.request();
 }
 
+$('resumeBtn').addEventListener('click', () => session.togglePause());
+$('pauseSettingsBtn').addEventListener('click', () => $('settingsBtn').click());
 story = new StoryMode({ game, session, leaderboard, flash, sound });
 $('storyBtn').addEventListener('click', () => {
   if (leaderboard.blocking || story.videoOpen || story.active || session.pending || session.manual || game.state === 'playing') return;
@@ -218,7 +221,7 @@ window.addEventListener('keydown', (e) => {
     case 'ArrowDown': case 'KeyS': game.roll(); if(!e.repeat)sound('duck');break;
     case 'Enter': play(); break;
     case 'KeyC': pose?.recalibrate(); break;
-    case 'KeyP':
+    case 'KeyP': case 'Escape':
       session.togglePause();
       break;
     default: return;
@@ -247,8 +250,10 @@ function frame(now) {
     fpsFrames = 0;
     fpsSampleStart = now;
   }
-  const route = routeState(game.distance);
-  const label = `${route.zone} · Vuelta ${route.lap}`;
+  const route = routeState(game.distance, game.world.reversed);
+  const label = story?.active
+    ? `Juan B. Justo · ${story.phase === 'vuelta' ? 'de casa a la Técnica' : 'de la Técnica a casa'}`
+    : `${route.zone} · Vuelta ${route.lap}`;
   if (routeZone.textContent !== label) routeZone.textContent = label;
   last = now;
   requestAnimationFrame(frame);

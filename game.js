@@ -419,6 +419,7 @@ export class Game {
 
   reset() {
     this.clearTrack();
+    this.world?.setReversed(false);
     this.legEnd = null;      // modo historia: distancia donde termina el tramo actual
     this.state = 'ready';
     this.speed = START_SPEED;

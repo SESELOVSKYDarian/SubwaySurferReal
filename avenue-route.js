@@ -91,9 +91,9 @@ export function buildingAt(slot, side) {
   return lots.get(side)[routeIndex(slot)];
 }
 
-export function routeState(distance) {
+export function routeState(distance, reversed = false) {
   const progress = ((distance % ROUTE_LENGTH) + ROUTE_LENGTH) % ROUTE_LENGTH;
-  const index = Math.floor(progress / LOT_LENGTH);
+  const index = reversed ? LOT_COUNT - 1 - Math.floor(progress / LOT_LENGTH) : Math.floor(progress / LOT_LENGTH);
   const zone = index < 12 ? 'De los Trabajadores' : index < 42 ? 'Avenida del Pulóver' : index < 80 ? 'Hacia San Juan' : 'San Juan';
   return { index, zone, lap: Math.floor(Math.max(0, distance) / ROUTE_LENGTH) + 1 };
 }

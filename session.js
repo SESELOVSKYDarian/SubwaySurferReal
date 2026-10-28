@@ -50,7 +50,7 @@ export class PlaySession {
     if (this.manual) { this.manual = false; this.pending = true; this.advance(); }
     else if (this.game.state === 'playing' || this.pending) {
       this.cancel(); this.game.pause(); this.pending = false; this.manual = true;
-      this.show('⏸ Pausa', 'Pulsa P para seguir');
+      this.show('⏸ Pausa', 'Pulsa Esc o P para seguir');
     }
   }
 }

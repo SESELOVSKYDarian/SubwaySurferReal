@@ -5,11 +5,15 @@
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+import { ROUTE_LENGTH, LOT_LENGTH } from './avenue-route.js';
+
 // ?storyHome=40&storySchool=120 acorta los tramos para probar el flujo completo.
 const query = new URLSearchParams(globalThis.location?.search ?? '');
 
 export const STORY = Object.freeze({
-  homeAt: Number(query.get('storyHome')) || 650,         // metros hasta la casa (sobre Juan B. Justo)
+  // Ida: Juan B. Justo al revés, desde la escuela hasta la casa, junto a la estación Axion
+  // (el inicio del recorrido del modo infinito). Vuelta: el recorrido normal hasta la escuela.
+  homeAt: Number(query.get('storyHome')) || ROUTE_LENGTH - 2 * LOT_LENGTH,
   schoolAt: Number(query.get('storySchool')) || 2004,    // frente a la E.E.T. Nº 5, último lote del recorrido
   videos: Object.freeze({
     intro: 'assets/videos/introduccion.mp4',
@@ -94,6 +98,13 @@ export class StoryMode {
     await wait(on ? 700 : 500);
   }
 
+  // Corta cualquier cuenta atrás o pausa en curso para que no reanude el juego en medio de un video.
+  settleSession() {
+    this.session.cancel();
+    this.session.pending = this.session.manual = false;
+    $('pause').classList.add('hidden');
+  }
+
   hud() {
     const show = this.active && ['ida', 'vuelta'].includes(this.phase);
     $('story-hud').classList.toggle('hidden', !show);
@@ -102,7 +113,7 @@ export class StoryMode {
 
   updateHud() {
     if (!this.active || $('story-hud').classList.contains('hidden')) return;
-    const start = this.phase === 'ida' ? 0 : STORY.homeAt;
+    const start = 0;
     const end = this.phase === 'ida' ? STORY.homeAt : STORY.schoolAt;
     const fraction = Math.max(0, Math.min(1, (this.game.distance - start) / (end - start)));
     $('story-fill').style.width = `${fraction * 100}%`;
@@ -123,6 +134,7 @@ export class StoryMode {
   beginHomeLeg() {
     this.phase = 'ida';
     this.game.reset();
+    this.game.world.setReversed(true);
     this.game.legEnd = STORY.homeAt;
     this.hud();
     this.sound('start');
@@ -133,6 +145,7 @@ export class StoryMode {
   async onLegEnd() {
     const token = this.token;
     if (!this.active) return;
+    this.settleSession();
     if (this.phase === 'ida') {
       this.phase = 'pickup';
       this.hud();
@@ -143,6 +156,9 @@ export class StoryMode {
       await this.playVideo('pickup');
       if (!this.alive(token)) return;
       this.phase = 'vuelta';
+      // La vuelta arranca en el inicio del recorrido normal (bajo el fundido a negro).
+      this.game.world.setReversed(false);
+      this.game.distance = 0;
       this.game.clearTrack();
       this.game.legEnd = STORY.schoolAt;
       this.hud();
@@ -169,6 +185,7 @@ export class StoryMode {
   async onCrash() {
     const token = this.token;
     if (!this.active) return;
+    this.settleSession();
     this.game.legEnd = null;
     this.phase = 'defeat';
     this.hud();

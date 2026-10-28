@@ -300,3 +300,8 @@ button:focus-visible, #score-initials:focus-visible { outline: 3px solid #4ad0ff
 #ranking-table .current-score { color: #ffd84a; background: #283047; }
 #ranking-status { font-size: 14px; line-height: 1.5; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.pause-box { pointer-events: auto; }
+#pause-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+#pause-actions.hidden { display: none; }
+#pause-box button, .pause-box button { cursor: pointer; }

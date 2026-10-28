@@ -417,9 +417,25 @@ export class World {
     }
   }
 
+  // Modo historia: la ida recorre Juan B. Justo al revés (de la escuela hacia Axion).
+  // Los lotes se leen de atrás para adelante y cada edificio pasa a la vereda opuesta.
+  lotAt(slot, side) {
+    if (!this.reversed) return buildingAt(slot, side);
+    const lot = buildingAt(-slot - 1, -side);
+    return { ...lot, offset: lot.span - 1 - lot.offset, marker: undefined };
+  }
+
+  setReversed(on) {
+    on = !!on;
+    if (on === !!this.reversed) return;
+    this.reversed = on;
+    for (const seg of this.segments) seg.slot = null;
+    for (const b of this.buildings) b.slot = null;
+  }
+
   randomizeSegment(seg, slot) {
     const sample = channel => avenueSample(slot, seg.s, channel);
-    const landmark = isLandmarkKind(buildingAt(slot, seg.s).appearance.kind);
+    const landmark = isLandmarkKind(this.lotAt(slot, seg.s).appearance.kind);
     seg.fence.visible = seg.frame.visible = !landmark;
     seg.graffiti.material = seg.graffitiMats[Math.floor(sample(0) * seg.graffitiMats.length)];
     seg.graffiti.visible = seg.graffiti.material !== this.blankGraffiti;
@@ -482,7 +498,7 @@ export class World {
   }
 
   setBuilding(b, slot) {
-    const lot = buildingAt(slot, b.s);
+    const lot = this.lotAt(slot, b.s);
     const p = lot.appearance;
     b.slot = slot;
     b.span = lot.span;
@@ -660,7 +676,7 @@ export class World {
     for (let i = 0; i < this.buildings.length; i++) {
       const b = this.buildings[i];
       const slot = firstSlot + i % this.buildingCount;
-      const lot = buildingAt(slot, b.s);
+      const lot = this.lotAt(slot, b.s);
       if (lot.offset && slot !== firstSlot) {
         b.group.visible = false;
         b.box.castShadow = b.cornice.castShadow = b.roof.castShadow = false;
