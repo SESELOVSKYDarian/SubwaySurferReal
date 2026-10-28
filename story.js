@@ -14,8 +14,8 @@ export const STORY = Object.freeze({
   videos: Object.freeze({
     intro: 'assets/story/video/intro.mp4',
     pickup: 'assets/story/video/pickup.mp4',
-    victory: 'assets/story/video/victory.mp4',
-    defeat: 'assets/story/video/defeat.mp4',
+    victory: 'assets/videos/final-victoria.mp4',
+    defeat: 'assets/videos/final-derrota.mp4',
   }),
   titles: Object.freeze({
     intro: 'Intro', pickup: 'Agarrás el guardapolvo', victory: '¡Llegaste a tiempo!', defeat: 'No llegaste',
