@@ -3,21 +3,24 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 // Poses simuladas a 30 fps con reloj falso: el detector real (filtros, calibración y umbrales).
 // Torso de 0,27 (hombros 0,35 → caderas 0,62), así que 0,1 torsos ≈ 0,027 del cuadro.
 const T=.27;
-function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false,head=0}={}){
+function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false,head=0,scale=1,noFeet=false,wide=1}={}){
  const p=Array.from({length:33},()=>({x:.5,y:.5,visibility:1}));
  const set=(i,x,y)=>{p[i]={x,y,visibility:1};};
  set(0,.5,.25+body+shoulders+head);
- set(11,.44,.35+body+shoulders);set(12,.56,.35+body+shoulders);
+ set(11,.5-.06*wide,.35+body+shoulders);set(12,.5+.06*wide,.35+body+shoulders);
  set(13,.41,.47+body+shoulders);set(14,.59,.47+body+shoulders);
  const wy=wrists??(.58+body+shoulders);set(15,.4,wy);set(16,.6,wy);
  set(19,.4,wy+.02);set(20,.6,wy+.02);set(17,.41,wy+.02);set(18,.59,wy+.02);
  const hy=hipsOut?1.04:.62+body+hips;set(23,.46,hy);set(24,.54,hy);
  set(25,.46,.78+body+hips);set(26,.54,.78+body+hips);
  set(27,.46,.92+body+feet);set(28,.54,.92+body+feet);
+ if(noFeet){p[27].visibility=0;p[28].visibility=0;}
+ // Jugadores de otro tamaño o a otra distancia: el cuerpo entero se escala alrededor del pecho.
+ if(scale!==1)for(const q of p){q.x=.5+(q.x-.5)*scale;q.y=.45+(q.y-.45)*scale;}
  return p;
 }
 
-async function detector(){
+async function detector(base={},calibMs=33){
  const {PoseController}=await import('../pose.js');
  let clock=1000;
  const real=Object.getOwnPropertyDescriptor(globalThis,'performance');
@@ -29,7 +32,7 @@ async function detector(){
  });
  p.draw=()=>{};
  const feed=(lm,frames=1,ms=33)=>{for(let i=0;i<frames;i++){clock+=ms;p.process([lm]);}};
- feed(pose(),30);
+ feed(pose(base),calibMs>100?12:30,calibMs);
  assert.equal(count.calibrated,1,'calibra de pie y quieto');
  return {p,feed,count,restore(){if(real)Object.defineProperty(globalThis,'performance',real);}};
 }
@@ -160,6 +163,93 @@ test('no se queda agachado aunque el jugador quede parado más abajo que al cali
   d.feed(pose({body:.8*T}),5);
   assert.equal(d.count.duck,2,'se agacha desde la nueva referencia');
  }finally{d.restore();}
+});
+
+test('agacharse y levantarse rápido no es saltar (con y sin pies a la vista)',async()=>{
+ for(const noFeet of [false,true]){
+  const d=await detector({noFeet});
+  try{
+   // Agachada corta, que no llega a contar como agachado, y se para de golpe pasando un poco de largo.
+   for(const h of [.08,.16,.22,.22,.12,-.04,-.12,-.1,-.04,0])d.feed(pose({body:h*T,noFeet}));
+   d.feed(pose({noFeet}),20);
+   assert.equal(d.count.jump,0,'levantarse de una agachada corta no es saltar'+(noFeet?' (sin pies)':''));
+   // Agachada completa y se para con impulso.
+   for(const h of [.15,.3,.45,.5,.5,.5,.5,.3,.1,-.1,-.16,-.12,-.05,0])d.feed(pose({body:h*T,noFeet}));
+   d.feed(pose({noFeet}),20);
+   assert.equal(d.count.duck,1);
+   assert.equal(d.count.jump,0,'levantarse de agachado con impulso no es saltar'+(noFeet?' (sin pies)':''));
+  }finally{d.restore();}
+ }
+});
+
+test('salto con amague: baja un poco, despega y los pies dejan el piso',async()=>{
+ const d=await detector();
+ try{
+  for(const h of [.06,.12,.12,.04,-.25,-.5,-.55,-.4,-.15,0])d.feed(pose({body:h*T}));
+  d.feed(pose(),20);
+  assert.equal(d.count.jump,1);
+  assert.equal(d.count.duck,0);
+ }finally{d.restore();}
+});
+
+test('distintos tamaños: un chico lejos y alguien alto cerca calibran, saltan y se agachan',async()=>{
+ for(const scale of [.72,1.3]){
+  const d=await detector({scale});
+  try{
+   for(const h of [.15,.35,.5,.5,.35,.15])d.feed(pose({body:-h*T,scale}));
+   d.feed(pose({scale}),20);
+   for(const h of [.15,.3,.45])d.feed(pose({body:h*T,scale}));
+   d.feed(pose({body:.45*T,scale}),8);
+   for(const h of [.3,.15,0])d.feed(pose({body:h*T,scale}));
+   d.feed(pose({scale}),20);
+   assert.deepEqual([d.count.jump,d.count.duck,d.count.duckEnd,d.count.lost],[1,1,1,0],'escala '+scale);
+  }finally{d.restore();}
+ }
+});
+
+test('cámara lenta: un cuadro erróneo mientras se agacha no es un salto',async()=>{
+ for(const noFeet of [false,true]){
+  const d=await detector({noFeet});
+  try{
+   d.feed(pose({noFeet}),20,100);
+   // Agachada corta (no llega a agachado) y un cuadro en el que el detector ve todo el cuerpo más arriba.
+   d.feed(pose({body:.22*T,noFeet}),3,100);
+   d.feed(pose({body:-.2*T,noFeet}),1,100);
+   d.feed(pose({body:.22*T,noFeet}),3,100);
+   d.feed(pose({noFeet}),15,100);
+   assert.equal(d.count.jump,0,noFeet?'sin pies':'con pies');
+  }finally{d.restore();}
+ }
+});
+
+test('inclinarse hacia la cámara cuenta como agacharse; acercarse caminando no',async()=>{
+ const d=await detector();
+ try{
+  // Inclinado: hombros un poco más abajo, más anchos (más cerca) y el torso se ve más corto.
+  for(const k of [.3,.6,1])d.feed(pose({shoulders:.12*T*k,wide:1+.22*k,head:.1*T*k}));
+  d.feed(pose({shoulders:.12*T,wide:1.22,head:.1*T}),6);
+  assert.equal(d.count.duck,1,'inclinarse cuenta');
+  for(const k of [.6,.2,-.2,0])d.feed(pose({shoulders:.12*T*k,wide:1+.22*Math.max(0,k)}));
+  d.feed(pose(),20);
+  assert.equal(d.count.duckEnd,1);
+  assert.equal(d.count.jump,0,'enderezarse no es saltar');
+  // Un paso hacia la cámara: todo el cuerpo se ve más grande, en proporción.
+  for(const sc of [1.04,1.08,1.12,1.15])d.feed(pose({scale:sc}));
+  d.feed(pose({scale:1.15}),20);
+  assert.equal(d.count.duck,1,'acercarse no es agacharse');
+  assert.equal(d.count.jump,0);
+ }finally{d.restore();}
+});
+
+test('calibra con la cámara lenta (5 y 6 fps) y no se queda en 100 %',async()=>{
+ for(const ms of [200,170]){
+  const d=await detector({},ms);
+  try{
+   assert.match(d.p.lastStatus,/✅|Calibrando/);
+   d.feed(pose(),5,ms);
+   assert.match(d.p.lastStatus,/✅/,'quedó calibrado a '+Math.round(1000/ms)+' fps');
+  }finally{d.restore();}
+ }
 });
 
 test('de pie en el centro, unas caderas que no se ven siguen siendo una detección parcial',async()=>{

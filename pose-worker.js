@@ -36,7 +36,20 @@ async function boot() {
 
 let search = null, track = null;
 let vision = null;
+let createTrack = null;
 
+// Calentamiento: la primera inferencia compila los shaders de la GPU (varios segundos).
+// Hecha aquí, el primer fotograma real ya sale rápido y el vigilante no cree que se perdió.
+async function warm(run) {
+  const blank = new OffscreenCanvas(256, 256);
+  blank.getContext('2d').fillRect(0, 0, 256, 256);
+  const bitmap = await createImageBitmap(blank);
+  try { run(bitmap); } finally { bitmap.close(); }
+}
+
+// Primero solo el detector de búsqueda: con él ya se puede calibrar y jugar. El de seguimiento
+// (recorte alrededor del jugador) se carga después sin hacer esperar: en equipos lentos cargar y
+// calentar los dos juntos superaba el tiempo de espera y el juego caía al hilo principal.
 async function load(tier) {
   await boot();
   vision ??= await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
@@ -48,22 +61,30 @@ async function load(tier) {
         ...options,
         ...(delegate === 'GPU' ? { canvas: new OffscreenCanvas(1, 1) } : {}),
       });
-      const [nextSearch, nextTrack] = [await create(SEARCH), await create(TRACK)];
+      const nextSearch = await create(SEARCH);
+      await warm(bitmap => nextSearch.detectForVideo(bitmap, performance.now()));
       search?.close();
       track?.close();
-      [search, track] = [nextSearch, nextTrack];
-      // Calentamiento: la primera inferencia compila los shaders de la GPU (varios segundos).
-      // Hecha aquí, el primer fotograma real ya sale rápido y el vigilante no cree que se perdió.
-      const blank = new OffscreenCanvas(256, 256);
-      blank.getContext('2d').fillRect(0, 0, 256, 256);
-      for (let i = 0; i < 2; i++) {
-        const bitmap = await createImageBitmap(blank);
-        try { search.detectForVideo(bitmap, performance.now() + i); track.detect(bitmap); } finally { bitmap.close(); }
-      }
+      search = nextSearch;
+      track = null;
+      createTrack = () => create(TRACK);
       return { tier: index, delegate, kind };
     } catch (error) {
       if (index === TIERS.length - 1) throw error;
     }
+  }
+}
+
+async function loadTrack() {
+  const make = createTrack;
+  try {
+    const next = await make();
+    await warm(bitmap => next.detect(bitmap));
+    if (make !== createTrack) { next.close(); return; }   // mientras tanto se cambió de modelo
+    track = next;
+    self.postMessage({ type: 'track' });
+  } catch {
+    // Sin detector de recorte se sigue con el de cuadro completo.
   }
 }
 
@@ -72,6 +93,7 @@ self.onmessage = async ({ data }) => {
     try {
       const info = await load(data.tier ?? 0);
       self.postMessage({ type: data.type === 'init' ? 'ready' : 'tier', ...info });
+      loadTrack();
     } catch (err) {
       self.postMessage({ type: 'error', message: String(err?.message || err) });
     }
@@ -79,7 +101,13 @@ self.onmessage = async ({ data }) => {
     let poses = [];
     const start = performance.now();
     try {
-      poses = (data.crop ? track.detect(data.bitmap) : search.detectForVideo(data.bitmap, data.ts)).landmarks;
+      // Un recorte que llega sin detector de recorte (justo al cambiar de modelo) se descarta:
+      // sus coordenadas no son las del cuadro completo.
+      if (data.crop) poses = track ? track.detect(data.bitmap).landmarks : [];
+      else poses = search.detectForVideo(data.bitmap, data.ts).landmarks;
+    } catch {
+      // Un fotograma que falla no puede dejar al controlador esperando para siempre.
+      poses = [];
     } finally {
       data.bitmap.close();
     }

@@ -23,8 +23,10 @@ const JUMP_UP = 0.14;      // subida del cuerpo (en largos de torso) para saltar
 const JUMP_EARLY = 0.07;   // ...o una subida menor pero rápida
 const JUMP_SPEED = 1.1;    // largos de torso por segundo
 const JUMP_FRAMES = 2;     // fotogramas seguidos por encima del umbral (un solo cuadro con ruido no salta)
-const SLOW_FPS = 18;       // con menos resultados por segundo un salto dura 1–2 cuadros: alcanza con uno
-const DUCK_DOWN = 0.3;     // bajada/encogimiento para agacharse ("hacerse bolita")
+const SLOW_FPS = 18;       // con menos resultados por segundo un salto dura 1–2 cuadros: alcanza con uno alto
+const DUCK_DOWN = 0.27;    // bajada/encogimiento para agacharse ("hacerse bolita")
+const LOW_RISE = 0.08;     // cuerpo por debajo de la altura de reposo (largos de torso)
+const FROM_LOW_MS = 600;   // tras estar abajo, este tiempo sin salto por velocidad y con umbral más alto
 const DUCK_DEEP = 0.5;     // tan agachado que no hace falta confirmar
 const DUCK_EXIT = 0.16;    // por debajo de esto se considera que te levantaste
 const DUCK_LOWERED = 0.15; // hombros así de bajos: agachándose, las caderas pueden salir de cuadro
@@ -36,6 +38,7 @@ const FORGET_FRAMES = 60;  // ~2 s sin verlo: se elige de nuevo a la persona má
 const MAX_JUMP_AWAY = 2.5;
 const SLOW_MS = 34;        // inferencia más lenta que esto (media) = bajar al siguiente modelo
 const CALIB_MS = 700;      // tiempo quieto necesario para calibrar
+const CALIB_MIN = 4;       // cuadros mínimos dentro de ese tiempo (cámaras lentas de 5 fps)
 const median = (values) => { const sorted = [...values].sort((a, b) => a - b); const mid = sorted.length >> 1; return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2; }; // cuánto puede "saltar" el jugador entre fotogramas (en anchos de hombro)
 
 const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -80,6 +83,7 @@ export class PoseController {
     this.cropMiss = 0;     // cuadros seguidos sin ver al jugador dentro del recorte
     this.tier = 0;
     this.switching = false;
+    this.trackReady = false; // el detector de recorte se carga después del de búsqueda
     this.recalibrate();
   }
 
@@ -132,7 +136,7 @@ export class PoseController {
       const timer = setTimeout(() => {
         worker.terminate();
         reject(new Error('el worker tardó demasiado'));
-      }, 30000);
+      }, 60000);   // en equipos lentos la primera carga del modelo con GPU puede pasar los 30 s
       worker.onerror = (e) => {
         clearTimeout(timer);
         worker.terminate();
@@ -145,8 +149,10 @@ export class PoseController {
           this.tier = data.tier ?? 0;
           this.mode = `worker ${data.delegate}`;
           worker.onmessage = ({ data: d }) => {
+            if (d.type === 'track') { this.trackReady = true; return; }
             if (d.type === 'tier') {
               // Modelo más ligero cargado: se reanuda con medias limpias.
+              this.trackReady = false;
               this.tier = d.tier; this.mode = `worker ${d.delegate} ${d.kind}`;
               this.switching = false; this.busy = false; this.stats.ms = 0; this.stats.count = 0;
               return;
@@ -232,6 +238,7 @@ export class PoseController {
     this.ducking = false;
     this.duckFrames = 0;
     this.jumpFrames = 0;
+    this.lastLow = 0;
     this.still = null;
     this.rebased = null;
     this.handsUpSince = 0;
@@ -397,7 +404,7 @@ export class PoseController {
   // el cuadro completo.
   cropForPlayer() {
     const vw = this.video.videoWidth, vh = this.video.videoHeight;
-    if (!this.track || !this.box || this.cropMiss >= 3 || !vw || !vh) return null;
+    if (!this.trackReady || !this.track || !this.box || this.cropMiss >= 3 || !vw || !vh) return null;
     const { x0, y0, x1, y1 } = this.box;
     // Recorte ajustado al cuerpo: estrecho a los costados (así quien pasa por detrás queda fuera) y con
     // margen para brazos, saltos y agachadas.
@@ -463,8 +470,10 @@ export class PoseController {
     const atSide = lm && (() => { const cx = (lm[L_SHOULDER].x + lm[R_SHOULDER].x) / 2; return cx < 0.14 || cx > 0.86; })();
     const lowered = lm && this.base && ((lm[L_SHOULDER].y + lm[R_SHOULDER].y) / 2 - this.base.sy) / this.base.torso > DUCK_LOWERED;
     const required = this.base && (atSide || lowered) ? [L_SHOULDER, R_SHOULDER] : [L_SHOULDER, R_SHOULDER, L_HIP, R_HIP];
-    if (lm && !required.every(i =>
-      (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.003 && lm[i].x < 0.997 && lm[i].y > 0.003 && lm[i].y < 0.997)) lm = null;
+    const inFrame = i => (lm[i].visibility ?? 1) > 0.5 && lm[i].x > 0.003 && lm[i].x < 0.997 && lm[i].y > 0.003 && lm[i].y < 0.997;
+    // Sin calibrar, con los hombros a la vista pero sin caderas: suele ser alguien alto o muy cerca de la cámara.
+    const tooClose = lm && !this.base && inFrame(L_SHOULDER) && inFrame(R_SHOULDER) && !(inFrame(L_HIP) && inFrame(R_HIP));
+    if (lm && !required.every(inFrame)) lm = null;
     this.draw(lm, poses);
     if (crop) this.cropMiss = lm ? 0 : this.cropMiss + 1; else if (lm) this.cropMiss = 0;
     if (lm) this.updateBox(lm);
@@ -481,6 +490,7 @@ export class PoseController {
       this.status(
         this.lost
           ? '⏸ Te perdí — vuelve al centro y quédate quieto'
+          : tooClose ? 'Aléjate un paso de la cámara: tienen que verse tus caderas'
           : poses.length ? 'Sigo buscándote…' : 'No te veo 👀 — ponte delante de la cámara',
       );
       return;
@@ -513,7 +523,8 @@ export class PoseController {
         return;
       }
       // Guía para encuadrarse bien antes de contar el tiempo quieto
-      if (m.sw < 0.09) { this.samples = []; this.status('Acércate un poco a la cámara'); return; }
+      // (0,075: un chico a unos 2,5 m todavía entra; más chico que eso, el detector pierde precisión)
+      if (m.sw < 0.075) { this.samples = []; this.status('Acércate un poco a la cámara'); return; }
       if (m.sw > 0.42) { this.samples = []; this.status('Aléjate un poco: tienen que verse tus caderas'); return; }
       if (Math.abs(m.x - 0.5) > 0.22) { this.samples = []; this.status(m.x < 0.5 ? 'Muévete un poco a tu izquierda: al centro' : 'Muévete un poco a tu derecha: al centro'); return; }
       this.calibrate(m);
@@ -563,6 +574,12 @@ export class PoseController {
     // también empezaron a bajar.
     if (m.ny != null && b.ny != null && (shoulderDrop == null || shoulderDrop > 0.08)) duckCues.push(((m.ny - b.ny) / T) * 0.85);
     if (m.torso != null) duckCues.push((1 - m.torso / T) * 0.9);
+    // Inclinarse hacia la cámara ("hacerse bolita"): los hombros se ven más anchos pero el torso más
+    // corto. Acercarse caminando agranda las dos medidas por igual y no cuenta.
+    const size = m.sw != null ? m.sw / b.sw : 1;
+    const torsoRel = m.torso != null ? m.torso / T / size : null;
+    const leaning = size > 1.06 && torsoRel != null && torsoRel < 0.88;
+    if (leaning) duckCues.push((1 - torsoRel) * 1.5);
     const duck = duckCues.length ? Math.max(...duckCues) : null;
 
     // Velocidad vertical del cuerpo (largos de torso por segundo, + = subiendo)
@@ -583,15 +600,24 @@ export class PoseController {
     this.sideSpeed = this.sideSpeed == null ? sideSpeed : this.sideSpeed + (sideSpeed - this.sideSpeed) * 0.4;
     const sliding = this.sideSpeed > 3.5;
 
+    // ¿Venía de abajo? Al levantarse de una agachada (aunque no haya llegado a contar como agachado)
+    // el cuerpo sube rápido y pasa la altura de reposo: eso no es un salto.
+    if ((jump != null && jump < -LOW_RISE) || (duck != null && duck > (DUCK_DOWN / sens) * 0.5)) this.lastLow = now;
+    const fromLow = now - this.lastLow < FROM_LOW_MS;
+    // Si se ven los pies, en un salto tienen que despegar del piso; al levantarse de agachado no se mueven.
+    const feetRise = m.ay != null && b.ay != null ? (b.ay - m.ay) / T : null;
+
     if (jump != null && this.jumpArmed && !this.ducking) {
-      const up = (JUMP_UP / sens) * (sliding ? 1.7 : 1);
+      const up = (JUMP_UP / sens) * (sliding ? 1.7 : 1) * (fromLow ? 1.4 : 1);
       // Al levantarse de agacharse el cuerpo pasa rápido por la altura de reposo: no es un salto.
-      const settled = now - this.lastDuckEnd > 350;
-      const early = !sliding && jump > JUMP_EARLY / sens && vUp > JUMP_SPEED;
-      this.jumpFrames = settled && (jump > up || early) ? this.jumpFrames + 1 : 0;
-      // Dos fotogramas seguidos (uno si la cámara va lenta), salvo una subida tan grande que no puede ser ruido.
-      const needed = this.stats.fps && this.stats.fps < SLOW_FPS ? 1 : JUMP_FRAMES;
-      if (this.jumpFrames >= needed || (settled && jump > up * 2)) {
+      const feetOff = feetRise == null || feetRise > up * 0.5;
+      const settled = now - this.lastDuckEnd > 350 && feetOff;
+      const early = !sliding && !fromLow && jump > JUMP_EARLY / sens && vUp > JUMP_SPEED;
+      this.jumpFrames = settled && !leaning && (jump > up || early) ? this.jumpFrames + 1 : 0;
+      // Dos fotogramas seguidos. Con la cámara lenta un salto puede durar uno solo: se acepta si sube
+      // bastante más que el umbral (un cuadro con error del detector no llega).
+      const slow = this.stats.fps && this.stats.fps < SLOW_FPS;
+      if (this.jumpFrames >= JUMP_FRAMES || (settled && !leaning && jump > up * (slow ? 1.3 : 2))) {
         this.jumpArmed = false;
         this.jumpFrames = 0;
         this.lastJump = now;
@@ -625,6 +651,7 @@ export class PoseController {
         const body = [];
         if (m.sy != null) body.push((m.sy - b.sy) / T);
         if (m.torso != null) body.push((1 - m.torso / T) * 0.9);
+        if (leaning) body.push((1 - torsoRel) * 1.5);
         const stand = body.length ? Math.max(...body) : duck;
         const exitAt = Math.min(DUCK_DOWN * 0.8, Math.max(DUCK_EXIT, this.duckPeak * 0.45)) / sens;
         // Nadie esquiva agachado tanto tiempo: si la postura lleva un rato sin cambiar, el jugador quedó
@@ -707,11 +734,14 @@ export class PoseController {
     // Hay que estar quieto: si te mueves mucho, se reinicia la cuenta
     if (spread > 0.25 * sw) this.samples = [{ ...m, t: now }];
     const span = now - this.samples[0].t;
-    const pct = Math.min(100, Math.round(Math.max(span / CALIB_MS, this.samples.length / CALIB_FRAMES) * 100));
+    // El porcentaje muestra lo mismo que decide: tiempo quieto y cantidad mínima de cuadros.
+    const n = this.samples.length;
+    const pct = Math.min(100, Math.round(Math.max(Math.min(span / CALIB_MS, n / CALIB_MIN), n / CALIB_FRAMES) * 100));
     this.status(`Calibrando… quédate quieto en el centro (${pct}%)`);
 
-    // Listo tras ~0,7 s quieto, o tras 20 fotogramas seguidos si la cámara va muy rápida
-    if ((span >= CALIB_MS && this.samples.length >= 8) || this.samples.length >= CALIB_FRAMES) {
+    // Listo tras ~0,7 s quieto, o tras 20 fotogramas seguidos si la cámara va muy rápida. Con la
+    // cámara lenta (5–7 fps) la ventana de 1,2 s no junta 8 cuadros: alcanza con CALIB_MIN.
+    if ((span >= CALIB_MS && n >= CALIB_MIN) || n >= CALIB_FRAMES) {
       const torso = mean('torso');
       this.base = {
         x: mx, sy: my, sw,
