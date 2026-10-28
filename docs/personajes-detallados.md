@@ -16,7 +16,7 @@ IK de piernas y las posturas trabajan en ejes del modelo.
 | Personaje | Malla | Esqueleto y pesos |
 | --- | --- | --- |
 | El pibe (`technical-student`) | teen-boy original (CC BY 4.0) | Rig Mixamo original de 65 huesos y sus pesos: se fusionan las puntas en sus padres, se baja de pose T a pose A con su propio skinning y se intercambian Left/Right para la convención del juego (sin espejar la malla). `tools/rig_detailed.py -- teen` |
-| El técnico (`classic-student`) | Reconstruido: anatomía MakeHuman CC0 y guardapolvo nuevo | Pesos anatómicos MakeHuman mapeados a 52 huesos. `tools/build_classic.py` + `tools/build_estanga.py -- test-results/classic classic-student` |
+| El del taller (`classic-student`; antes El técnico) | Reconstruido: anatomía MakeHuman CC0 y guardapolvo nuevo | Pesos anatómicos MakeHuman mapeados a 52 huesos. `tools/build_classic.py` + `tools/build_estanga.py -- test-results/classic classic-student` |
 | La del buzo / La conectada | Escaneos aportados | Antes tenían articulaciones copiadas de otro personaje (el codo quedaba fuera del brazo). Ahora se ajusta el cuerpo MakeHuman a cada escaneo por pose y escala (estilo SMPL) y se transfieren sus pesos con normales compatibles. `tools/rig_scan.py` + `tools/fit_scan_rig.py` |
 | Estanga | Reconstruido desde la hoja | Pesos anatómicos MakeHuman mapeados a 52 huesos (`docs/estanga.md`) |
 

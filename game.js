@@ -449,6 +449,7 @@ export class Game {
     this.guardZ = 2.6;
     this.guardX = 0;
     this.runner?.reset();
+    this.runner?.setCoat(false);   // el guardapolvo solo se usa en el modo historia, tras recogerlo
     this.officer?.reset();
     this.rig.root.rotation.set(0, 0, 0);
     this.rig.root.visible = true;

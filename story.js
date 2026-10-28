@@ -134,6 +134,7 @@ export class StoryMode {
   beginHomeLeg() {
     this.phase = 'ida';
     this.game.reset();
+    this.game.runner?.setCoat(false);
     this.game.world.setReversed(true);
     this.game.legEnd = STORY.homeAt;
     this.hud();
@@ -156,6 +157,7 @@ export class StoryMode {
       await this.playVideo('pickup');
       if (!this.alive(token)) return;
       this.phase = 'vuelta';
+      await this.game.runner?.setCoat(true);   // ahora lleva puesto el guardapolvo
       // La vuelta arranca en el inicio del recorrido normal (bajo el fundido a negro).
       this.game.world.setReversed(false);
       this.game.distance = 0;

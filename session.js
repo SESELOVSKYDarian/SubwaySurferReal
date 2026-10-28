@@ -17,7 +17,7 @@ export class PlaySession {
     if (!ready) {
       this.cancel();
       if (this.game.state === 'playing') { this.game.pause(); this.pending = true; }
-      if (this.pending) this.show('⏸ Calibrando', 'Ponte en el centro y quédate quieto');
+      if (this.pending) this.show('Calibrando', 'Ponte en el centro y quédate quieto');
     } else if (this.pending && !this.manual) this.advance();
   }
   useKeyboard() {
@@ -36,7 +36,7 @@ export class PlaySession {
   advance(n = 3) {
     this.cancel();
     if (!this.keyboard && this.camera && !this.ready) {
-      this.show('⏸ Calibrando', 'Necesito ver tus hombros y cadera con claridad'); return;
+      this.show('Calibrando', 'Necesito ver tus hombros y cadera con claridad'); return;
     }
     if (!n) {
       this.pending = false; this.hide();
@@ -50,7 +50,7 @@ export class PlaySession {
     if (this.manual) { this.manual = false; this.pending = true; this.advance(); }
     else if (this.game.state === 'playing' || this.pending) {
       this.cancel(); this.game.pause(); this.pending = false; this.manual = true;
-      this.show('⏸ Pausa', 'Pulsa Esc o P para seguir');
+      this.show('Pausa', 'Pulsa Esc o P para seguir');
     }
   }
 }

@@ -8,8 +8,9 @@ const sources=new Map();
 const FINGERS=['Thumb','Index','Middle','Ring','Pinky'];
 let selectedCharacter='technical-student';
 try { const saved=localStorage.getItem('runnerCharacter');if(['technical-student','classic-student','hoodie-student','phone-student'].includes(saved))selectedCharacter=saved; } catch {}
-function getSource(teacher=false,low=false) {
-  const stem=teacher?'estanga':selectedCharacter;
+function getSource(teacher=false,low=false,stemOverride=null) {
+  // 'El del taller' (id classic-student) usa la malla del pibe con otra ropa y pelo (el modelo original dependía del guardapolvo).
+  const stem=stemOverride||(teacher?'estanga':selectedCharacter==='classic-student'?'technical-student':selectedCharacter);
   const filename=stem+(low?'-low':'')+'.glb';
   if(!sources.has(filename))sources.set(filename,new GLTFLoader().loadAsync(
     new URL('./assets/characters/'+filename,import.meta.url).href,
@@ -25,6 +26,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   const lowGeometries = new Map();
   low?.scene.traverse(mesh => { if (mesh.isMesh) lowGeometries.set(mesh.name, mesh.geometry); });
   const detailMeshes = [];
+  const ownCoat = [];
   const model = clone(gltf.scene);
   model.name = teacher ? 'Teacher' : 'TechnicalStudent';
   model.updateMatrixWorld(true);
@@ -33,6 +35,11 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     if (object.isBone) bones[object.name.replace(/^mixamorig:?/, '')] = object;
     if (!object.isMesh) return;
     object.castShadow = object.receiveShadow = true;
+    // La malla original de classic-student lleva el guardapolvo como prenda aparte: se pone al recogerlo en casa.
+    if (!teacher && selectedCharacter === 'classic-student' && COAT_PARTS.includes(object.name)) {
+      object.visible = false;
+      ownCoat.push(object);
+    }
     object.material = [object.material].flat().map(material => {
       const copy = material.clone();
       // Estanga: color proyectado desde la hoja; el relieve fino de punto y de
@@ -45,6 +52,11 @@ export async function loadRunner(parent, { teacher = false } = {}) {
         Object.assign(copy, surface('fabric'));
         copy.roughness = 0.92;
         if(teacher){copy.roughnessMap=null;copy.bumpScale=.0003;}
+      }
+      if (!teacher && selectedCharacter === 'classic-student') {
+        // Camisa de trabajo gris verdosa y pelo más claro: otro chico, sin guardapolvo.
+        if (copy.name === 'outfit_top') { copy.map = null; copy.color.setRGB(.09, .12, .1); copy.roughness = .9; }
+        if (copy.name === 'haircut') copy.color.setRGB(2.4, 1.7, .9);
       }
       if (copy.name === 'Skin' && !teacher) {
         Object.assign(copy, surface('skin'));
@@ -351,8 +363,16 @@ export async function loadRunner(parent, { teacher = false } = {}) {
     }
     if(Number.isFinite(lowest))model.position.y-=THREE.MathUtils.clamp(lowest,-.12,.18)*(1-poseState.crouch);
   };
+  let coat = null;
   const controller = {
     model, bones, poseState,
+    // Guardapolvo del modo historia: todos los personajes lo llevan después de recogerlo en casa.
+    async setCoat(on) {
+      if (teacher) return;
+      if (ownCoat.length) { for (const part of ownCoat) part.visible = on; return; }
+      if (on && !coat) coat = await buildCoat(model).catch(error => { console.error('No se pudo armar el guardapolvo:', error); return null; });
+      if (coat) coat.visible = on;
+    },
     setDetail(high = true) {
       for (const entry of detailMeshes) {
         const geometry=high ? entry.high : entry.low;
@@ -476,6 +496,77 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   };
   controller.update(0.1, {});
   return controller;
+}
+
+// Cuánto se separa el guardapolvo del cuerpo (m, en unidades del modelo) según la ropa de cada personaje.
+const COAT_INFLATE = { 'technical-student': .05, 'hoodie-student': .015, 'phone-student': .03 };
+const COAT_PARTS = ['ClassicCoat', 'ClassicCoatSkirt', 'ClassicCollar', 'ClassicLapels', 'ClassicPockets', 'ClassicButtons'];
+const boneKey = bone => bone.name.replace(/^mixamorig:?/, '');
+
+// Pasa las prendas del guardapolvo del técnico al esqueleto de otro personaje (mismos
+// huesos Mixamo, distinto orden): se reasignan los índices de hueso por nombre.
+async function buildCoat(model) {
+  const gltf = await getSource(false, false, 'classic-student');
+  const source = clone(gltf.scene);
+  source.updateMatrixWorld(true);
+  let target = null;
+  model.traverse(object => { if (!target && object.isSkinnedMesh) target = object; });
+  if (!target) return null;
+  const skeleton = target.skeleton;
+  const names = skeleton.bones.map(boneKey);
+  const group = new THREE.Group();
+  group.name = 'GuardapolvoLayer';
+  const parts = [];
+  source.traverse(object => { if (object.isSkinnedMesh && COAT_PARTS.includes(object.name)) parts.push(object); });
+  // Ajuste al cuerpo del personaje: escala y giro en Y a partir de caderas, cabeza y hombros.
+  const point = (bones, key) => { const bone = bones.find(item => boneKey(item) === key); return bone ? bone.getWorldPosition(new THREE.Vector3()) : null; };
+  const sourceBones = parts[0].skeleton.bones;
+  const keys = ['Hips', 'Head', 'LeftArm', 'RightArm'];
+  const from = keys.map(key => point(sourceBones, key));
+  model.updateMatrixWorld(true);
+  const to = keys.map(key => { const p = point(skeleton.bones, key); return p && model.worldToLocal(p); });
+  let fit = new THREE.Matrix4();
+  if (from.every(Boolean) && to.every(Boolean)) {
+    const [fHips, fHead, fLeft, fRight] = from, [tHips, tHead, tLeft, tRight] = to;
+    const horizontal = (a, b) => new THREE.Vector3(b.x - a.x, 0, b.z - a.z);
+    const fSide = horizontal(fLeft, fRight), tSide = horizontal(tLeft, tRight);
+    const height = tHead.distanceTo(tHips) / fHead.distanceTo(fHips);
+    const width = THREE.MathUtils.clamp(tSide.length() / fSide.length(), .85, 1.3) * 1.04;
+    const turn = new THREE.Quaternion().setFromUnitVectors(fSide.normalize(), tSide.normalize());
+    fit = new THREE.Matrix4().compose(tHips, turn, new THREE.Vector3(width, height, width))
+      .multiply(new THREE.Matrix4().makeTranslation(-fHips.x, -fHips.y, -fHips.z));
+  }
+  for (const part of parts) {
+    const map = part.skeleton.bones.map(bone => Math.max(0, names.indexOf(boneKey(bone))));
+    const geometry = part.geometry.clone();
+    // Sobre ropa holgada el guardapolvo tiene que quedar por fuera: se infla a lo largo de la normal.
+    const inflate = COAT_INFLATE[selectedCharacter === 'classic-student' ? 'technical-student' : selectedCharacter] ?? .02;
+    const position = geometry.getAttribute('position'), normal = geometry.getAttribute('normal');
+    if (inflate && normal) for (let i = 0; i < position.count; i++) {
+      position.setXYZ(i, position.getX(i) + normal.getX(i) * inflate, position.getY(i) + normal.getY(i) * inflate, position.getZ(i) + normal.getZ(i) * inflate);
+    }
+    const index = geometry.getAttribute('skinIndex');
+    const remapped = new Uint16Array(index.count * 4);
+    for (let i = 0; i < remapped.length; i++) remapped[i] = map[index.array[i]];
+    geometry.setAttribute('skinIndex', new THREE.BufferAttribute(remapped, 4));
+    const material = [part.material].flat().map(original => {
+      const copy = original.clone();
+      if (copy.name === 'StudentCoat') { Object.assign(copy, surface('fabric')); copy.roughness = .92; }
+      return copy;
+    });
+    const mesh = new THREE.SkinnedMesh(geometry, material.length === 1 ? material[0] : material);
+    mesh.name = part.name;
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    mesh.matrixAutoUpdate = false;
+    mesh.matrix.copy(fit).multiply(part.matrixWorld);
+    group.add(mesh);
+  }
+  model.add(group);
+  model.updateMatrixWorld(true);
+  // bindMatrix en el espacio del modelo (igual que las mallas originales del GLB), no en el del mundo.
+  for (const mesh of group.children) mesh.bind(skeleton, mesh.matrix.clone());
+  return group;
 }
 
 function addSchoolBadge(parent, bones, teacher) {

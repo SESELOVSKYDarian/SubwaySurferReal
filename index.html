@@ -6,6 +6,7 @@
   <title>El Guardapolvo · Técnica 5</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="menu.css">
+  <link rel="stylesheet" href="theme.css">
   <script type="importmap">
     {
       "imports": {
@@ -39,11 +40,12 @@
 
   <div id="pause" class="hidden">
     <div class="pause-box">
-      <div id="pause-title">⏸ Pausa</div>
+      <div id="pause-title">Pausa</div>
       <div id="pause-text"></div>
       <div id="pause-actions" class="hidden">
-        <button id="resumeBtn" type="button">▶ Reanudar (Esc)</button>
-        <button id="pauseSettingsBtn" type="button">⚙ Ajustes</button>
+        <button id="resumeBtn" type="button"><img src="assets/menu/icons/play.svg" alt="">REANUDAR (ESC)</button>
+        <button id="pauseSettingsBtn" type="button"><img src="assets/menu/icons/settings.svg" alt="">AJUSTES</button>
+        <button id="pauseRankingBtn" type="button"><img src="assets/menu/icons/trophy.svg" alt="">RÉCORDS</button>
       </div>
       <button id="retryCam" class="hidden">📷 Reconectar cámara</button>
     </div>
@@ -94,47 +96,65 @@
   </div>
   <dialog id="settings-dialog" class="menu-dialog" aria-label="Ajustes">
     <button class="dialog-close" data-close aria-label="Cerrar ajustes"><img src="assets/menu/icons/x.svg" alt=""></button>
-    <h2>AJUSTES</h2>
-    <label class="audio-volume">Volumen <input id="sound-volume" type="range" min="0" max="100" value="55"></label>
+    <header class="dialog-head">
+      <img class="crest" src="assets/menu/icons/crest.svg" alt="">
+      <div><p class="dialog-eyebrow">E.E.T. Nº 5 · MAR DEL PLATA</p><h2>AJUSTES</h2></div>
+    </header>
     <div class="panel">
-      <h1 id="title">Técnica <span>RUN</span></h1>
-      <p id="subtitle">Corre con tu guardapolvo por la técnica</p>
-      <ul id="howto">
-        <li><b>Paso a la izquierda / derecha</b> → cambiar de carril</li>
-        <li><b>Salta</b> → saltar los tableros de dibujo</li>
-        <li><b>Agáchate</b> → pasar por debajo de los bancos rotos</li>
-        <li><b>Rampas</b> → súbete a los colectivos y corre por encima</li>
-        <li><b>🚀 Jetpack</b> → cógelo y vuela unos segundos</li>
-        <li><b>¡Cuidado con el profesor!</b> Otro tropiezo en los siguientes 5 segundos y te atrapa. La barra indica cuándo escapás</li>
-        <li><b>Levanta las dos manos</b> → empezar / reiniciar</li>
-      </ul>
-      <label id="quality-control">Calidad gráfica
-        <select id="quality" aria-label="Calidad gráfica">
-          <option value="auto">Automática</option>
-          <option value="low">Ligera · más rendimiento</option>
-          <option value="balanced">Equilibrada</option>
-          <option value="high">Alta · más detalle</option>
-          <option value="ultra">Ultra · máxima calidad</option>
-        </select>
-        <span id="quality-description" aria-live="polite"></span>
-      </label>
-      <label class="sens">
-        Sensibilidad de salto / agacharse
+      <h1 id="title" class="sr-only-title">El Guardapolvo</h1>
+      <p id="subtitle" class="sr-only-title">Corre con tu guardapolvo por la técnica</p>
+
+      <section class="setting">
+        <img src="assets/menu/icons/volume.svg" alt="">
+        <div><label class="setting-title" for="sound-volume">SONIDO</label>
+        <input id="sound-volume" type="range" min="0" max="100" value="55"></div>
+      </section>
+
+      <section class="setting">
+        <img src="assets/menu/icons/screen.svg" alt="">
+        <div><label class="setting-title" for="quality">CALIDAD GRÁFICA</label>
+        <label id="quality-control">
+          <select id="quality" aria-label="Calidad gráfica">
+            <option value="auto">Automática</option>
+            <option value="low">Ligera · más rendimiento</option>
+            <option value="balanced">Equilibrada</option>
+            <option value="high">Alta · más detalle</option>
+            <option value="ultra">Ultra · máxima calidad</option>
+          </select>
+          <span id="quality-description" aria-live="polite"></span>
+        </label></div>
+      </section>
+
+      <section class="setting">
+        <img src="assets/menu/icons/sliders.svg" alt="">
+        <div><label class="setting-title" for="sens">SENSIBILIDAD <span id="sens-value">100%</span></label>
         <input id="sens" type="range" min="0.6" max="1.6" step="0.1" value="1">
-        <span id="sens-value">100%</span>
-      </label>
-      <div class="buttons">
-        <button id="camBtn">📷 Activar cámara</button>
+        <p class="setting-hint">Qué tanto tenés que saltar o agacharte para que cuente.</p></div>
+      </section>
 
+      <section class="setting">
+        <img src="assets/menu/icons/camera.svg" alt="">
+        <div><span class="setting-title">CÁMARA</span>
+        <div class="setting-actions"><button id="camBtn">Activar cámara</button></div>
+        <p class="setting-hint">Ponete a ~2 m, de la cintura para arriba, y quedate quieto un segundo para calibrar.</p></div>
+      </section>
 
-      </div>
-      <p class="hint">
-        <b>Pulsa D para iniciar en modo debug sin cámara. Usa ← → ↑ ↓ para jugar.</b><br>
-        Ponte a ~2 m de la cámara, que se te vea de la cintura para arriba (mejor cuerpo entero),
-        y quédate quieto un segundo para calibrar. La barra junto a la cámara muestra
-        cuánto te falta para saltar (arriba) o agacharte (abajo): al pasar la raya blanca, cuenta.<br>
-        Teclado sin cámara: ↑ / Enter empezar · ← → carril · ↑ / Espacio saltar · ↓ agacharse · P pausa · C recalibrar
-      </p>
+      <details class="howto-card">
+        <summary>CÓMO SE JUEGA</summary>
+        <ul id="howto">
+          <li><b>Paso a la izquierda / derecha</b> → cambiar de carril</li>
+          <li><b>Salta</b> → saltar los tableros de dibujo</li>
+          <li><b>Agáchate</b> → pasar por debajo de los bancos rotos</li>
+          <li><b>Rampas</b> → súbete a los colectivos y corre por encima</li>
+          <li><b>🚀 Jetpack</b> → cógelo y vuela unos segundos</li>
+          <li><b>¡Cuidado con el profesor!</b> Si tropiezas dos veces seguidas, te atrapa</li>
+          <li><b>Levanta las dos manos</b> → empezar / reiniciar</li>
+        </ul>
+        <p class="hint">
+          Teclado sin cámara: ↑ / Enter empezar · ← → carril · ↑ / Espacio saltar · ↓ agacharse ·
+          Esc / P pausa · C recalibrar · D iniciar sin cámara (debug).
+        </p>
+      </details>
     </div>
   </dialog>
   <dialog id="characters-dialog" class="menu-dialog character-dialog" aria-labelledby="characters-title">

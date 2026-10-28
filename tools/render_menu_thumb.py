@@ -1,6 +1,6 @@
 """Miniatura del menú de personajes (480×560) desde el GLB del juego. Blender 4.3.
 
-Uso: blender -b --python-exit-code 1 --python tools/render_menu_thumb.py -- classic-student classic.png
+Uso: blender -b --python-exit-code 1 --python tools/render_menu_thumb.py -- classic-student classic.png [variante-tecnico]
 Fondo gris cálido y encuadre iguales a las otras miniaturas (figura de 47 a 513 px).
 """
 import math
@@ -10,15 +10,40 @@ import bpy
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
-stem, out = sys.argv[sys.argv.index('--') + 1:][:2]
+args = sys.argv[sys.argv.index('--') + 1:]
+stem, out = args[:2]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=str(ROOT / 'assets/characters' / f'{stem}.glb'))
 # El importador agrega una esfera para dibujar huesos: no es parte del personaje.
 for o in list(bpy.data.objects):
     if o.type == 'MESH' and not o.data.materials:
         bpy.data.objects.remove(o, do_unlink=True)
+# 'El técnico' es la malla del pibe con camisa de trabajo y pelo más claro (como en el juego).
+if 'variante-tecnico' in args:
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        bsdf = mat.node_tree.nodes.get('Principled BSDF')
+        if not bsdf:
+            continue
+        link = bsdf.inputs['Base Color'].links[0] if bsdf.inputs['Base Color'].links else None
+        if mat.name.startswith('outfit_top'):
+            if link:
+                mat.node_tree.links.remove(link)
+            bsdf.inputs['Base Color'].default_value = (.09, .12, .1, 1)
+            bsdf.inputs['Roughness'].default_value = .9
+        elif mat.name.startswith('haircut') and link:
+            mix = mat.node_tree.nodes.new('ShaderNodeMix')
+            mix.data_type, mix.blend_type = 'RGBA', 'MULTIPLY'
+            mix.inputs['Factor'].default_value = 1
+            mix.inputs[7].default_value = (1, .75, .4, 1)
+            mat.node_tree.links.new(link.from_socket, mix.inputs[6])
+            mat.node_tree.links.new(mix.outputs[2], bsdf.inputs['Base Color'])
 scene = bpy.context.scene
-scene.render.engine = 'BLENDER_EEVEE_NEXT'
+try:
+    scene.render.engine = 'BLENDER_EEVEE_NEXT'
+except TypeError:
+    scene.render.engine = 'BLENDER_EEVEE'
 scene.render.resolution_x, scene.render.resolution_y = 480, 560
 scene.view_settings.view_transform = 'AgX'
 srgb = lambda v: ((v / 255 + .055) / 1.055) ** 2.4

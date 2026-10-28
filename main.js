@@ -9,7 +9,8 @@ import { StoryMode } from './story.js';
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
 const actionEl = $('action');
-const leaderboard = new Leaderboard(() => overlay.classList.remove('hidden'));
+// Si se abrió desde la pausa, al cerrar el ranking se vuelve a la pausa, no al menú.
+const leaderboard = new Leaderboard(() => { if (!session.manual) overlay.classList.remove('hidden'); });
 let actionTimer;
 let story = null;   // se crea después de la sesión de juego
 
@@ -105,6 +106,7 @@ function play() {
 
 $('resumeBtn').addEventListener('click', () => session.togglePause());
 $('pauseSettingsBtn').addEventListener('click', () => $('settingsBtn').click());
+$('pauseRankingBtn').addEventListener('click', () => $('rankingBtn').click());
 story = new StoryMode({ game, session, leaderboard, flash, sound });
 $('storyBtn').addEventListener('click', () => {
   if (leaderboard.blocking || story.videoOpen || story.active || session.pending || session.manual || game.state === 'playing') return;
@@ -266,3 +268,8 @@ navigator.permissions?.query({ name: 'camera' }).then(permission => {
 }).catch(() => {});
 
 initMenu(game,session);
+// ?coat prueba el guardapolvo del modo historia con el personaje elegido.
+if (new URLSearchParams(location.search).has('coat')) {
+  window.__game = game;
+  game.characterReady.then(runner => runner?.setCoat(true));
+}

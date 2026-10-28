@@ -1,0 +1,237 @@
+/* El Guardapolvo · pantallas del juego (pausa, ajustes, ranking, puntaje)
+   Lenguaje visual: tela de guardapolvo azul marino con pespunte, parche blanco con el
+   nombre bordado, pintura roja de la Técnica y marcador a mano, como el menú principal. */
+:root {
+  --navy: #14213f;
+  --navy-2: #1d305a;
+  --chalk: #efe9d9;
+  --ink: #131719;
+  --paint: #ad2324;
+  --green: #2f8a43;
+  --stitch: #efe9d94d;
+}
+
+/* ---------- tela ---------- */
+.cloth,
+.menu-dialog,
+.score-modal,
+.pause-box {
+  color: var(--chalk);
+  background:
+    repeating-linear-gradient(45deg, #ffffff08 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, #0000001c 0 2px, transparent 2px 4px),
+    radial-gradient(130% 95% at 15% 0%, var(--navy-2), var(--navy) 68%);
+  border: 0;
+  border-radius: 6px;
+  box-shadow: 0 30px 90px #000c, 0 0 0 1px #00000066, inset 0 0 0 1px #ffffff12;
+  font-family: Marker, system-ui, sans-serif;
+}
+/* pespunte */
+.menu-dialog::before,
+.score-modal::before,
+.pause-box::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 2px dashed var(--stitch);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.menu-dialog, .score-modal, .pause-box { position: relative; }
+.menu-dialog::backdrop, .score-modal::backdrop { background: #070b14c4; backdrop-filter: blur(6px); }
+.menu-dialog { padding: 34px 32px 30px; width: min(640px, 94vw); }
+.score-modal { padding: 34px 32px 30px; }
+
+/* ---------- títulos: parche bordado ---------- */
+.menu-dialog h2,
+.score-modal h2,
+#pause-title {
+  display: inline-block;
+  margin: 4px 0 18px;
+  padding: 5px 22px 3px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: 38px/1.05 Bangers, system-ui, sans-serif;
+  letter-spacing: 3px;
+  transform: rotate(-1.6deg);
+  box-shadow: 4px 5px 0 #0007;
+  clip-path: polygon(0 4%, 4% 0, 97% 2%, 100% 0, 99% 96%, 100% 100%, 3% 98%, 0 100%);
+  position: relative;
+}
+.menu-dialog h2::after, .score-modal h2::after, #pause-title:not(.count)::after {
+  content: '';
+  position: absolute;
+  left: 22px; right: 22px; bottom: 3px;
+  height: 3px;
+  background: var(--paint);
+  transform: skewX(-18deg);
+}
+.dialog-head { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+.dialog-head h2 { margin-bottom: 4px; }
+.crest { width: 64px; height: 64px; flex-shrink: 0; filter: drop-shadow(3px 4px 0 #0008); transform: rotate(-6deg); }
+.dialog-eyebrow { margin: 0; font: 12px Bangers, sans-serif; letter-spacing: 3px; color: #e9a39d; }
+
+/* ---------- botones pintados ---------- */
+.menu-dialog button:not(.dialog-close):not(.character-card):not(.rank-tabs button),
+.score-modal button,
+.pause-box button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 24px 9px;
+  border: 0;
+  border-radius: 0;
+  background: var(--chalk);
+  color: var(--ink);
+  font: 24px/1 Bangers, system-ui, sans-serif;
+  letter-spacing: 2px;
+  box-shadow: 5px 6px 0 #0008;
+  transform: rotate(-1.2deg);
+  clip-path: polygon(1% 6%, 99% 0, 100% 94%, 0 100%);
+  transition: transform .15s, filter .15s;
+}
+.menu-dialog button:not(.dialog-close):hover:not(:disabled),
+.score-modal button:hover:not(:disabled),
+.pause-box button:hover:not(:disabled) { transform: rotate(0deg) translateY(-3px); filter: brightness(1.08); }
+.menu-dialog button:active, .score-modal button:active, .pause-box button:active { transform: translateY(2px); }
+.pause-box button img, .menu-dialog button:not(.character-card):not(.dialog-close) img, .score-modal button img { width: 24px; height: 24px; }
+.btn-primary, #resumeBtn, #save-score { background: var(--paint) !important; color: #fbefe3 !important; }
+.btn-primary img, #resumeBtn img { filter: invert(1); }
+.btn-ghost, #return-menu, #skip-score, .secondary-button {
+  background: transparent !important;
+  color: var(--chalk) !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  border: 2px dashed var(--stitch) !important;
+  font-size: 20px !important;
+}
+.btn-ghost img, #return-menu img { filter: invert(1); opacity: .8; }
+#camBtn { background: var(--chalk) !important; color: var(--ink) !important; }
+
+.dialog-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 38px; height: 38px; padding: 6px;
+  background: #0000003d; border: 2px dashed var(--stitch); border-radius: 50%;
+}
+.dialog-close img { width: 100%; height: 100%; filter: invert(1); }
+
+/* ---------- pausa ---------- */
+#pause { background: radial-gradient(70% 70% at 50% 45%, #0a1226aa, #050810d9); backdrop-filter: blur(3px); }
+.pause-box {
+  width: min(430px, 92vw);
+  max-width: none;
+  padding: 58px 30px 24px;
+  margin-top: 36px;
+  border-radius: 6px;
+  position: relative;
+}
+.pause-box::after {
+  content: '';
+  position: absolute;
+  top: -40px; left: 50%;
+  width: 82px; height: 82px;
+  margin-left: -41px;
+  background: url('assets/menu/icons/crest.svg') center/contain no-repeat;
+  filter: drop-shadow(0 6px 0 #0008);
+  transform: rotate(-6deg);
+}
+#pause-title { margin: 0 0 8px; font-size: 50px; letter-spacing: 4px; padding: 6px 28px 4px; }
+#pause-text { margin: 10px 0 0; font: 20px Marker, sans-serif; color: #e6dfcd; opacity: .95; letter-spacing: .5px; }
+#pause-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 14px; margin-top: 26px; }
+#pause-actions #resumeBtn { grid-column: 1 / -1; font-size: 30px; padding: 14px 24px 11px; }
+.pause-box #return-menu { margin-top: 18px; width: 100%; }
+.pause-tip { margin: 22px 0 0; font: 11px Bangers, sans-serif; letter-spacing: 3px; color: #e9a39d; }
+#retryCam { margin-top: 16px; }
+
+/* cuenta atrás: número pintado sobre la calle, sin tarjeta */
+.pause-box:has(#pause-title.count) {
+  background: none; box-shadow: none; padding-top: 20px; margin-top: 0;
+}
+.pause-box:has(#pause-title.count)::before,
+.pause-box:has(#pause-title.count)::after { display: none; }
+#pause-title.count {
+  background: none; clip-path: none; box-shadow: none; transform: rotate(-5deg);
+  color: #fff; font: 150px/1 Bangers, sans-serif; letter-spacing: 0; padding: 0;
+  text-shadow: 6px 8px 0 var(--paint), 0 0 40px #0009;
+  -webkit-text-stroke: 2px #131719;
+}
+.pause-box:has(#pause-title.count) #pause-text {
+  font: 26px Marker, sans-serif; color: #fff; text-shadow: 2px 3px 0 #000;
+}
+.pause-box:has(#pause-title.count) #return-menu { width: auto; margin-top: 10px; padding: 6px 16px 4px; font-size: 16px !important; }
+
+/* ---------- ajustes ---------- */
+.sr-only-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.setting {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 4px 16px;
+  align-items: center;
+  margin: 14px 0;
+  padding: 14px 16px 14px 14px;
+  background: #00000030;
+  border: 2px dashed var(--stitch);
+  border-radius: 4px;
+}
+.setting > img { width: 38px; height: 38px; filter: invert(1); opacity: .9; }
+.setting-title { display: block; font: 21px Bangers, sans-serif; letter-spacing: 2px; margin: 0 0 4px; color: var(--chalk); }
+.setting .setting-hint, #quality-description { margin: 4px 0 0; font: 13px/1.45 system-ui, sans-serif; color: #c9c3b2; min-height: 0; }
+.setting input[type=range] { width: 100%; accent-color: var(--paint); }
+#sens-value { font: 20px Bangers, sans-serif; letter-spacing: 1px; color: #f3b9b3; margin-left: 8px; }
+#quality {
+  width: 100%; padding: 9px 12px;
+  color: var(--ink); background: var(--chalk);
+  border: 0; border-radius: 3px; font: 16px Marker, sans-serif;
+  box-shadow: 3px 4px 0 #0008;
+}
+#quality-control { all: unset; display: block; }
+.setting-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+.howto-card { margin-top: 16px; }
+.howto-card summary {
+  cursor: pointer; list-style: none;
+  font: 22px Bangers, sans-serif; letter-spacing: 2px; color: var(--chalk);
+  padding: 8px 0;
+}
+.howto-card summary::before { content: '✎ '; color: #e9a39d; }
+.howto-card summary::-webkit-details-marker { display: none; }
+.menu-dialog #howto { margin: 6px 0 0; padding-left: 20px; font: 14px/1.7 system-ui, sans-serif; color: #e2dccb; }
+.menu-dialog #howto li::marker { color: var(--paint); }
+.menu-dialog .hint { margin: 12px 0 0; font: 12.5px/1.65 system-ui, sans-serif; color: #c4bea9; opacity: 1; }
+.menu-dialog .panel { padding: 0; max-height: none; overflow: visible; }
+
+/* ---------- ranking y puntaje ---------- */
+.rank-tabs { display: flex; gap: 10px; margin: 0 0 14px; }
+.rank-tabs button {
+  flex: 1; padding: 9px 10px 7px; border: 2px dashed var(--stitch); border-radius: 3px;
+  background: transparent; color: var(--chalk); font: 20px Bangers, sans-serif; letter-spacing: 2px; box-shadow: none; clip-path: none; transform: none;
+}
+.rank-tabs button[aria-pressed=true] { background: var(--paint); border-color: var(--paint); color: #fbefe3; }
+#ranking-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+#ranking-table th { font: 15px Bangers, sans-serif; letter-spacing: 2px; color: #e9a39d; border-bottom: 2px dashed var(--stitch); padding: 8px 6px; }
+#ranking-table td { font: 20px Bangers, sans-serif; letter-spacing: 1.5px; color: var(--chalk); border-bottom: 1px dashed #efe9d92e; padding: 9px 6px; }
+#ranking-table tbody tr:nth-child(1) td:first-child { color: #ffd34e; }
+#ranking-table .current-score { background: #ad232466; color: #fff; }
+#ranking-empty, #ranking-status, .final-score { font: 18px Marker, sans-serif; color: #e6dfcd; }
+.final-score { color: #ffd34e; font-size: 22px; margin: 0 0 14px; }
+#score-form label { font: 18px Marker, sans-serif; display: block; margin-bottom: 8px; }
+#score-initials {
+  width: 100%; padding: 8px 12px 4px; text-align: center; text-transform: uppercase;
+  font: 54px Bangers, sans-serif; letter-spacing: 14px; color: var(--ink); background: var(--chalk);
+  border: 0; border-radius: 3px; box-shadow: 4px 5px 0 #0008;
+}
+#score-dialog .buttons, .score-modal .buttons { display: grid; gap: 14px; margin-top: 18px; }
+
+/* ---------- personajes y logros ---------- */
+.menu-dialog .dialog-description { font: 16px Marker, sans-serif; color: #dcd5c2; }
+.menu-dialog .character-card { background: #00000033; border: 2px dashed var(--stitch); border-radius: 4px; color: var(--chalk); }
+.menu-dialog .character-card[aria-pressed=true] { border: 2px solid var(--paint); background: #ad232433; }
+.menu-dialog .achievement { border-bottom: 1px dashed #efe9d92e; }
+
+/* ---------- celulares ---------- */
+@media (max-width: 560px) {
+  .menu-dialog, .score-modal { padding: 28px 18px 22px; }
+  .menu-dialog h2, .score-modal h2 { font-size: 30px; }
+  #pause-actions { grid-template-columns: 1fr; }
+  #pause-title.count { font-size: 110px; }
+}

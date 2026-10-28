@@ -14,7 +14,7 @@ export function sound(kind='click'){
 function unlock(){if(!enabled)return;backgroundMusic.unlock();try{context??=new (window.AudioContext||window.webkitAudioContext)();context.resume().catch(()=>{});}catch{}}
 export const characters=[
  {id:'technical-student',name:'El pibe',image:'teen.png',description:'Remera negra · zapatillas blancas'},
- {id:'classic-student',name:'El técnico',image:'classic.png',description:'Guardapolvo azul · listo para el taller'},
+ {id:'classic-student',name:'El del taller',image:'classic.png',description:'Camisa verde · jeans · listo para el taller'},
  {id:'hoodie-student',name:'La del buzo',image:'hoodie.png',description:'Buzo gris · paso decidido'},
  {id:'phone-student',name:'La conectada',image:'smartphone.png',description:'Remera negra · siempre en línea'},
 ];
@@ -40,5 +40,5 @@ export function initMenu(game,session){
  const drawAchievements=()=>{const best=read('menuBest',0);$('achievement-list').replaceChildren();for(const [name,goal,desc] of achievements){const row=document.createElement('div');row.className='achievement'+(best>=goal?' earned':'');const icon=document.createElement('img');icon.src='assets/menu/icons/trophy.svg';icon.alt=best>=goal?'Desbloqueado':'Pendiente';const content=document.createElement('div'),h=document.createElement('h3'),p=document.createElement('p');h.textContent=name;p.textContent=desc+' '+Math.min(best,goal)+' / '+goal;content.append(h,p);row.append(icon,content);$('achievement-list').append(row);}};
  $('achievementsBtn').onclick=()=>{drawAchievements();open('achievements-dialog');};
  window.addEventListener('runner:gameover',e=>{save('menuBest',Math.max(read('menuBest',0),Math.floor(e.detail.score)));sound('lose');});
- const home=document.createElement('button');home.id='return-menu';home.textContent='Volver al menú';home.onclick=()=>{window.dispatchEvent(new Event('runner:menu'));session.cancel();session.pending=session.manual=false;game.reset();$('pause').classList.add('hidden');$('overlay').classList.remove('hidden');};document.querySelector('.pause-box').append(home);
+ const home=document.createElement('button');home.id='return-menu';home.className='btn-ghost';home.innerHTML='<img src="assets/menu/icons/home.svg" alt="">VOLVER AL MENÚ';home.onclick=()=>{window.dispatchEvent(new Event('runner:menu'));session.cancel();session.pending=session.manual=false;game.reset();$('pause').classList.add('hidden');$('overlay').classList.remove('hidden');};document.querySelector('.pause-box').append(home);
 }
