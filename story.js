@@ -31,6 +31,8 @@ export class StoryMode {
     this.skipVideo = null;
     window.addEventListener('keydown', event => {
       if (!this.skipVideo) return;
+      // Las teclas del navegador (F11 pantalla completa, F5, etc.) pasan sin tocar.
+      if (/^F\d+$/.test(event.code) || event.ctrlKey || event.metaKey || event.altKey) return;
       event.stopImmediatePropagation();
       event.preventDefault();
       if (['Escape', 'Enter', 'Space'].includes(event.code)) this.skipVideo();
