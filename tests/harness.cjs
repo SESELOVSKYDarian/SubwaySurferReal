@@ -11,7 +11,7 @@ async function harness(){
    const file=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
    if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
    const content=await readFile(file);
-   const type={'.html':'text/html','.js':'text/javascript','.css':'text/css','.glb':'model/gltf-binary','.svg':'image/svg+xml','.png':'image/png','.ttf':'font/ttf','.mjs':'text/javascript','.wasm':'application/wasm'}[path.extname(file)]||'application/octet-stream';
+   const type={'.html':'text/html','.js':'text/javascript','.css':'text/css','.glb':'model/gltf-binary','.svg':'image/svg+xml','.png':'image/png','.ttf':'font/ttf','.mjs':'text/javascript','.wasm':'application/wasm','.mp3':'audio/mpeg'}[path.extname(file)]||'application/octet-stream';
    res.writeHead(200,{'Content-Type':type});res.end(content);
   }catch{res.writeHead(404).end();}
  });

@@ -1,6 +1,6 @@
 // Une el juego con los controles (cuerpo vía cámara + teclado).
 import { Game } from './game.js';
-import { initMenu, sound } from './menu.js';
+import { initMenu, sound, backgroundMusic } from './menu.js';
 import { PlaySession } from './session.js';
 import { routeState } from './avenue-route.js';
 import { Leaderboard } from './leaderboard.js';
@@ -231,10 +231,15 @@ let last = performance.now();
 let fpsSampleStart = last;
 let fpsFrames = 0;
 const routeZone = $('route-zone');
+function syncMusic() {
+  backgroundMusic.update(game.state, !overlay.classList.contains('hidden') || story?.videoOpen || document.hidden);
+}
+document.addEventListener('visibilitychange', syncMusic);
 function frame(now) {
   // El menú es una ilustración: no gastar GPU dibujando la escena detrás.
   if (overlay.classList.contains('hidden')) game.update((now - last) / 1000);
   story?.updateHud();
+  syncMusic();
   fpsFrames++;
   const fpsElapsed = now - fpsSampleStart;
   if (fpsElapsed >= 500) {

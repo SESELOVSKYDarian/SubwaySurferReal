@@ -1,13 +1,17 @@
+import { GameMusic } from './music.js';
+
 const $=id=>document.getElementById(id);
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{}};
 let context=null,enabled=read('menuSound',true),volume=read('menuVolume',.55),lastHover=0;
+export const backgroundMusic=new GameMusic();
+backgroundMusic.setPreferences(enabled,volume);
 export function sound(kind='click'){
  if(!enabled||!context||context.state!=='running')return;
  const notes={hover:[330],click:[430,650],start:[330,440,660],coin:[880,1320],jump:[300,600],duck:[250,150],lose:[260,180,100]};
  (notes[kind]||notes.click).forEach((hz,i)=>{const t=context.currentTime+i*.065,osc=context.createOscillator(),gain=context.createGain();osc.type=kind==='coin'?'sine':'triangle';osc.frequency.setValueAtTime(hz,t);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.09*volume,t+.009);gain.gain.exponentialRampToValueAtTime(.001,t+.11);osc.connect(gain);gain.connect(context.destination);osc.start(t);osc.stop(t+.13);});
 }
-function unlock(){if(!enabled)return;try{context??=new (window.AudioContext||window.webkitAudioContext)();context.resume().catch(()=>{});}catch{}}
+function unlock(){if(!enabled)return;backgroundMusic.unlock();try{context??=new (window.AudioContext||window.webkitAudioContext)();context.resume().catch(()=>{});}catch{}}
 export const characters=[
  {id:'technical-student',name:'El pibe',image:'teen.png',description:'Remera negra · zapatillas blancas'},
  {id:'classic-student',name:'El técnico',image:'classic.png',description:'Guardapolvo azul · listo para el taller'},
@@ -20,9 +24,9 @@ export function initMenu(game,session){
  document.addEventListener('pointerdown',unlock,{capture:true});document.addEventListener('keydown',unlock,{capture:true});
  document.addEventListener('pointerover',e=>{if(e.target.closest('button')&&performance.now()-lastHover>100){lastHover=performance.now();sound('hover');}});
  document.addEventListener('click',e=>{if(e.target.closest('button'))sound('click');});
- const syncSound=()=>{const b=$('sound-toggle');b.setAttribute('aria-pressed',String(enabled));b.setAttribute('aria-label',enabled?'Desactivar sonido':'Activar sonido');b.querySelector('span').textContent=enabled?'SONIDO ON':'SONIDO OFF';};syncSound();
+ const syncSound=()=>{backgroundMusic.setPreferences(enabled,volume);const b=$('sound-toggle');b.setAttribute('aria-pressed',String(enabled));b.setAttribute('aria-label',enabled?'Desactivar sonido':'Activar sonido');b.querySelector('span').textContent=enabled?'SONIDO ON':'SONIDO OFF';};syncSound();
  $('sound-toggle').onclick=()=>{enabled=!enabled;save('menuSound',enabled);if(enabled)unlock();syncSound();};
- $('sound-volume').value=Math.round(volume*100);$('sound-volume').oninput=e=>{volume=Number(e.target.value)/100;save('menuVolume',volume);};
+ $('sound-volume').value=Math.round(volume*100);$('sound-volume').oninput=e=>{volume=Number(e.target.value)/100;save('menuVolume',volume);backgroundMusic.setPreferences(enabled,volume);};
  const open=id=>{const d=$(id);if(!d.open)d.showModal();};
  $('settingsBtn').onclick=()=>open('settings-dialog');
  const showCharacters=()=>open('characters-dialog');$('charactersBtn').onclick=showCharacters;$('quick-character').onclick=showCharacters;
