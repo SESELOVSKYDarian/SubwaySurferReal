@@ -28,7 +28,7 @@ async function detector(){
   onLost:()=>count.lost++,onCalibrated:()=>count.calibrated++,
  });
  p.draw=()=>{};
- const feed=(lm,frames=1)=>{for(let i=0;i<frames;i++){clock+=33;p.process([lm]);}};
+ const feed=(lm,frames=1,ms=33)=>{for(let i=0;i<frames;i++){clock+=ms;p.process([lm]);}};
  feed(pose(),30);
  assert.equal(count.calibrated,1,'calibra de pie y quieto');
  return {p,feed,count,restore(){if(real)Object.defineProperty(globalThis,'performance',real);}};
@@ -62,6 +62,40 @@ test('salto real: todo el cuerpo y los pies suben; cuenta una vez por salto',asy
   for(const h of [.15,.35,.5,.5,.35,.15])d.feed(pose({body:-h*T}));
   d.feed(pose(),15);
   assert.equal(d.count.jump,2);
+ }finally{d.restore();}
+});
+
+test('salto con la cámara lenta (10 fps): el salto dura un solo cuadro arriba del umbral',async()=>{
+ const d=await detector();
+ try{
+  d.feed(pose(),20,100);
+  for(const h of [.05,.4,.05])d.feed(pose({body:-h*T}),1,100);
+  d.feed(pose(),10,100);
+  assert.equal(d.count.jump,1,'detecta el salto');
+  for(const h of [.05,.35,.05])d.feed(pose({body:-h*T}),1,100);
+  d.feed(pose(),10,100);
+  assert.equal(d.count.jump,2,'y el siguiente');
+  // Un cuadro suelto con solo los hombros arriba sigue sin contar.
+  d.feed(pose({shoulders:-.4*T}),1,100);d.feed(pose(),10,100);
+  assert.equal(d.count.jump,2);
+ }finally{d.restore();}
+});
+
+test('saltos seguidos aunque después de aterrizar quede a otra altura que al calibrar',async()=>{
+ const d=await detector();
+ try{
+  for(let n=0;n<4;n++){
+   const rest=n%2?.08:-.06;   // queda un poco más arriba o más abajo que al calibrar
+   for(const h of [.15,.35,.5,.5,.35,.15])d.feed(pose({body:(rest-h)*T}));
+   d.feed(pose({body:rest*T}),30);
+  }
+  assert.equal(d.count.jump,4,'cada salto cuenta');
+  // Quedó parado más arriba un rato largo: la referencia se ajusta y el salto sigue funcionando.
+  d.feed(pose({body:-.07*T}),90);
+  for(const h of [.15,.35,.5,.5,.35,.15])d.feed(pose({body:(-.07-h)*T}));
+  d.feed(pose({body:-.07*T}),20);
+  assert.equal(d.count.jump,5);
+  assert.equal(d.count.duck,0);
  }finally{d.restore();}
 });
 

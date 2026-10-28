@@ -19,10 +19,11 @@ const BONES = [
 const LANE_ENTER = 0.52;   // anchos de hombro desplazado para cambiar de carril
 const LANE_EXIT = 0.35;    // histéresis para volver al centro
 // Un salto real sube unos 15–40 cm (0,3–0,8 torsos); trotar en el lugar o respirar mueve ~5 cm.
-const JUMP_UP = 0.17;      // subida del cuerpo (en largos de torso) para saltar
-const JUMP_EARLY = 0.09;   // ...o una subida menor pero rápida
-const JUMP_SPEED = 1.4;    // largos de torso por segundo
+const JUMP_UP = 0.14;      // subida del cuerpo (en largos de torso) para saltar
+const JUMP_EARLY = 0.07;   // ...o una subida menor pero rápida
+const JUMP_SPEED = 1.1;    // largos de torso por segundo
 const JUMP_FRAMES = 2;     // fotogramas seguidos por encima del umbral (un solo cuadro con ruido no salta)
+const SLOW_FPS = 18;       // con menos resultados por segundo un salto dura 1–2 cuadros: alcanza con uno
 const DUCK_DOWN = 0.3;     // bajada/encogimiento para agacharse ("hacerse bolita")
 const DUCK_DEEP = 0.5;     // tan agachado que no hace falta confirmar
 const DUCK_EXIT = 0.16;    // por debajo de esto se considera que te levantaste
@@ -588,15 +589,18 @@ export class PoseController {
       const settled = now - this.lastDuckEnd > 350;
       const early = !sliding && jump > JUMP_EARLY / sens && vUp > JUMP_SPEED;
       this.jumpFrames = settled && (jump > up || early) ? this.jumpFrames + 1 : 0;
-      // Dos fotogramas seguidos, salvo una subida tan grande que no puede ser ruido.
-      if (this.jumpFrames >= JUMP_FRAMES || (settled && jump > up * 2)) {
+      // Dos fotogramas seguidos (uno si la cámara va lenta), salvo una subida tan grande que no puede ser ruido.
+      const needed = this.stats.fps && this.stats.fps < SLOW_FPS ? 1 : JUMP_FRAMES;
+      if (this.jumpFrames >= needed || (settled && jump > up * 2)) {
         this.jumpArmed = false;
         this.jumpFrames = 0;
         this.lastJump = now;
         this.h.onJump?.();
       }
     }
-    if (jump != null && jump < JUMP_EARLY / 2) this.jumpArmed = true;
+    // Para el próximo salto hay que volver al piso. Si después de aterrizar quedó un poco más arriba
+    // o más abajo que al calibrar, alcanza con haber bajado de la mitad del umbral.
+    if (jump != null && (jump < JUMP_EARLY / 2 || (now - this.lastJump > 700 && jump < (JUMP_UP / sens) * 0.5))) this.jumpArmed = true;
 
     // ¿Cuánto hace que el cuerpo no sube ni baja? (para reconocer una postura nueva que ya no cambia)
     if (m.sy != null && (!this.still || Math.abs(m.sy - this.still.sy) > 0.06 * T)) this.still = { sy: m.sy, t: now };
@@ -650,9 +654,11 @@ export class PoseController {
       }
     }
 
-    // Adaptación lenta por si te acercas/alejas un poco de la cámara
-    if (!this.ducking && Math.abs(jump ?? 0) < 0.04 && Math.abs(duck ?? 0) < 0.08) {
-      const k = 0.02;
+    // Adaptación lenta por si te acercas/alejas un poco de la cámara. También si quedaste quieto un rato
+    // a otra altura (cambiaste la postura de pie): esa pasa a ser la referencia y el salto sigue igual.
+    const settledHere = !this.rebased && stillFor > 1500 && Math.abs(jump ?? 0) < (JUMP_UP / sens) * 0.6 && Math.abs(duck ?? 0) < (DUCK_DOWN / sens) * 0.6;
+    if (!this.ducking && ((Math.abs(jump ?? 0) < 0.04 && Math.abs(duck ?? 0) < 0.08) || settledHere)) {
+      const k = settledHere ? 0.06 : 0.02;
       if (m.sy != null) b.sy += (m.sy - b.sy) * k;
       if (m.sw != null) b.sw += (m.sw - b.sw) * k;
       if (m.ny != null && b.ny != null) b.ny += (m.ny - b.ny) * k;
