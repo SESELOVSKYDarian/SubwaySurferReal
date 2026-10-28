@@ -495,7 +495,7 @@ export class World {
         // Medianera revocada: textura compartida teñida con el color del lote.
         side: mat({ color: p.color, map: this.partyWall }),
         accent: mat({ color: p.accent }),
-        trim: mat({ color: p.kind === 'lumber' ? 0xcdd0c4 : p.kind === 'bendu' ? 0xb0b2a4 : 0xa8aba0 }),
+        trim: mat({ color: p.kind === 'arena' ? 0xd7dcd3 : p.kind === 'lumber' ? 0xcdd0c4 : p.kind === 'bendu' ? 0xb0b2a4 : 0xa8aba0 }),
         secondary: mat({ color: p.secondary }),
       });
     }

@@ -21,6 +21,10 @@ Los hitos tienen estructuras propias, no el mismo cubo con un cartel distinto:
   los colores se contrastaron con la foto de casa central del sitio oficial.
 - Técnica 5: frente claro de dos alturas, banda acanalada, letras rojas E.E.T.
   Nº 5, ventanas altas y mural circular del 5, según las fotos consultadas.
+- Polideportivo Islas Malvinas: arena ovalada de cuatro lotes al 3525, con
+  cubierta clara, nervaduras radiales, ventanales perimetrales, escalinata y
+  predio verde. La fachada usa bandas de colores como interpretación del mural
+  exterior; no reproduce su composición ni incorpora fotografías como texturas.
 
 En esos lotes se conservan los paredones y se despejan las rejas altas y los
 árboles que ocultaban las fachadas. Los edificios comunes conservan sus rejas.
@@ -112,3 +116,10 @@ coste total del juego. La memoria de texturas aumenta de 18 a 23 variantes.
   referencia de los comercios bajos de la avenida.
 - [Inmueble en Juan B. Justo y San Juan](https://www.rossigiagnoriopropiedades.com.ar/p/7385893-Casa-en-Venta-en-Mar-Del-Plata-juan-b-justo-al-4200):
   extremo del recorrido al 4200 y mezcla comercial/residencial de baja altura.
+- [EMDER: resoluciones municipales de septiembre de 2022](https://sibom.slyt.gba.gov.ar/bulletins/7781/contents/1796966):
+  dirección del Polideportivo Islas Malvinas, Juan B. Justo 3525, y autorización
+  del mural exterior. La dirección fija el orden del hito; sus proporciones se
+  comprimen para el juego.
+- [Fachada del polideportivo](https://www.infobrisas.com/noticias/2022/10/13/48678-se-presento-la-nueva-fachada-del-estadio-polideportivo):
+  referencia de la intervención exterior presentada en 2022. Las bandas del
+  juego son un dibujo procedural propio inspirado en su carácter colorido.

@@ -63,6 +63,17 @@ test('Juan B. Justo repite fachadas y muros, reinicia en la costa y mantiene rec
      const hit=ray.intersectObject(body)[0];
      if(!hit||hit.point.x<10)throw Error('La estación dejó de ser una playa abierta');
     }
+    if(profile.kind==='arena'){
+     b.cornice.geometry.computeBoundingBox();const roof=b.cornice.geometry.boundingBox;
+     if(roof.max.y<12||roof.max.z-roof.min.z<80)throw Error('El polideportivo perdió su cubierta amplia');
+     const vertices=b.facade.geometry.attributes.position;
+     const curved=new Set(Array.from({length:vertices.count},(_,i)=>vertices.getX(i).toFixed(2)));
+     if(curved.size<12||!b.awning.visible)throw Error('Falta la fachada curva o el anillo vidriado');
+     for(let offset=0;offset<landmark.span;offset++){
+      const segment=world.segments.find(s=>s.s===landmark.side&&s.slot===landmark.slot+offset);
+      if(segment.fence.visible||segment.tree.visible||segment.furniture.visible)throw Error('El predio del polideportivo queda tapado');
+     }
+    }
    }
    if(world.avenueMaterials.size>AVENUE_PROFILES.length||world.windowDetails.size+world.landmarkDetails.size>AVENUE_PROFILES.length+LANDMARKS.length||world.streetSignMaterials.size!==4)throw Error('Los recursos crecen por vuelta');
    if(world.buildings.length!==32||game.scene.children.length!==children)throw Error('Se acumulan objetos al reciclar');
@@ -72,12 +83,20 @@ test('Juan B. Justo repite fachadas y muros, reinicia en la costa y mantiene rec
    return {buildings:world.buildings.length,facades:world.avenueMaterials.size,signs:world.streetSignMaterials.size};
   });
   await mkdir('test-results',{recursive:true});
-  for(const [name,distance] of [['costa',0],['textiles',720],['san-juan',1944]]){
-   await page.evaluate(distance=>{
+  for(const [name,distance] of [['costa',0],['textiles',720],['polideportivo',1704],['san-juan',1944]]){
+   await page.evaluate(async distance=>{
     const g=window.avenueDemo;g.distance=distance;g.nextSpawn=Infinity;g.update(0);
+    const {routeState}=await import('./avenue-route.js'),route=routeState(distance);
+    document.querySelector('#route-zone').textContent=`${route.zone} · Vuelta ${route.lap}`;
    },distance);
    await page.screenshot({path:`test-results/jb-justo-${name}.png`,timeout:60000});
   }
+  await page.evaluate(()=>{
+   const g=window.avenueDemo;g.distance=1680;g.update(0);
+   document.querySelector('#route-zone').textContent='Hacia San Juan · Vuelta 1';
+   g.camera.position.set(6,15,26);g.camera.lookAt(-31,9,-40);g.renderer.render(g.scene,g.camera);
+  });
+  await page.screenshot({path:'test-results/jb-justo-polideportivo-detalle.png',timeout:60000});
   assert.equal(stats.buildings,32);assert.deepEqual(errors,[]);
  }finally{await page.close();}
 });

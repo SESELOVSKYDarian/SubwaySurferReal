@@ -102,6 +102,39 @@ export function landmarkGeometry(profile, width) {
     }
     for (const z of [-width * .46, -width * .32, -width * .18]) box('detail', .14, 7.6, .1, -2.12, 3.8, z);
     for (const y of [0, 3.5, 5.4, 7.5]) box('detail', .15, .13, width * .3, -2.12, y, -width * .32);
+  } else if (kind === 'arena') {
+    const cx = 22, rx = 17, rz = width * .43, eave = 7.6;
+    const ring = (key, y, height, radiusX, radiusZ, rect = [0, 0, 1, 1]) => {
+      const geo = new THREE.CylinderGeometry(1, 1, height, 24, 1, true);
+      const uv = geo.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i,
+        rect[0] + uv.getX(i) * rect[2], 1 - rect[1] - rect[3] + uv.getY(i) * rect[3]);
+      parts[key].push(geo.scale(radiusX, 1, radiusZ).translate(cx, y + height / 2, 0));
+    };
+    // Predio abierto, arena ovalada y cubierta baja de gran luz.
+    box('secondary', 46, .18, width, 23, .09, 0);
+    ring('body', .45, eave - .45, rx, rz);
+    ring('front', .55, 5.5, rx + .02, rz + .02, [0, .25, 1, .75]);
+    ring('glass', 6.15, 1.05, rx + .04, rz + .04);
+    ring('trim', 7.2, .4, rx + .15, rz + .15);
+    parts.trim.push(new THREE.ConeGeometry(1, h - eave, 24)
+      .scale(rx + .6, 1, rz + .6).translate(cx, (h + eave) / 2, 0));
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI / 8, x = cx + Math.cos(a) * (rx + .2), z = Math.sin(a) * (rz + .2);
+      box('body', .32, eave, .32, x, eave / 2, z);
+      const top = new THREE.Vector3(cx, h + .05, 0);
+      const edge = new THREE.Vector3(cx + Math.cos(a) * (rx + .6), eave + .05, Math.sin(a) * (rz + .6));
+      const direction = edge.clone().sub(top), middle = edge.clone().add(top).multiplyScalar(.5);
+      parts.body.push(new THREE.CylinderGeometry(.075, .075, direction.length(), 4)
+        .applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()))
+        .translate(middle.x, middle.y, middle.z));
+    }
+    // Acceso central, escalinata y nombre orientado hacia la avenida.
+    for (let i = 0; i < 3; i++) box('trim', 4.8 - i, .16, width * .32, 2.6 + i * .5, .2 + i * .16, 0);
+    panel('glass', width * .25, 2.7, 4.4, 2.1, 0);
+    box('detail', 4.8, .25, width * .33, 4.5, 3.8, 0);
+    for (const z of [-width * .145, width * .145]) box('body', .2, 3.6, .2, 2.7, 1.8, z);
+    panel('front', width * .4, 2.2, 2.08, 5.1, 0, [0, 0, 1, .25]);
   } else if (kind === 'school') {
     box('body', 8, h, width, 4, h / 2, 0);
     panel('front', width, h, -.04, h / 2, 0);

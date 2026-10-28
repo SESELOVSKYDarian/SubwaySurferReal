@@ -107,6 +107,22 @@ function landmarkFacade(ctx, profile) {
     for (let y = 164; y < 512; y += 109) ctx.fillRect(0, y, 1024, 11);
     return true;
   }
+  if (kind === 'arena') {
+    ctx.fillStyle = accent;ctx.fillRect(0, 0, 1024, 128);
+    text(ctx, 'ESTADIO POLIDEPORTIVO', 512, 42, 960, 40, '#f7f5e9');
+    text(ctx, name, 512, 111, 960, 73, '#ffffff');
+    ctx.save();ctx.beginPath();ctx.rect(0, 128, 1024, 384);ctx.clip();
+    ctx.fillStyle = '#e5d9bd';ctx.fillRect(0, 128, 1024, 384);
+    const colors = ['#d4a42d', '#b95538', '#2a6b95', '#477b68'];
+    for (let i = 0; i < 12; i++) {
+      const x = i * 105 - 80;
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.beginPath();ctx.moveTo(x, 128);ctx.lineTo(x + 100, 128);
+      ctx.lineTo(x + 225, 512);ctx.lineTo(x + 90, 512);ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+    return true;
+  }
   if (kind === 'school') {
     ctx.fillStyle = color;ctx.fillRect(0, 0, 1024, 512);
     for (const x of [26, 230, 434, 638, 842]) glass(ctx, x, 25, 156, 132);

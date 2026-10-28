@@ -31,9 +31,10 @@ export const AVENUE_PROFILES = Object.freeze([
   profile('shell', 'station', 'Shell', '#f0eee2', '#ffd329', 5.3, '#c32e26'),
   profile('maderera-jbj', 'lumber', 'JUAN B. JUSTO', '#deded0', '#873d2d', 9.8, '#bc915c'),
   profile('tecnica-5', 'school', 'E.E.T. Nº 5', '#e5e2ce', '#bc2627', 8.6, '#ccbd7f'),
+  profile('polideportivo', 'arena', 'ISLAS MALVINAS', '#d6dedb', '#26546a', 12.2, '#638351'),
 ]);
 
-export const isLandmarkKind = kind => ['station', 'bendu', 'lumber', 'school'].includes(kind);
+export const isLandmarkKind = kind => ['station', 'bendu', 'lumber', 'school', 'arena'].includes(kind);
 
 // Alturas verificadas en las fuentes de docs/juan-b-justo.md. La posición lateral
 // y los lotes de relleno son escenográficos; las fachadas son interpretaciones.
@@ -50,6 +51,7 @@ export const LANDMARKS = Object.freeze([
   { address: 1670, side: 1, profile: 'spinaker' },
   { address: 2035, span: 2, side: -1, profile: 'ypf' },
   { address: 2402, span: 2, side: 1, profile: 'shell' },
+  { address: 3525, span: 4, side: -1, profile: 'polideportivo' },
   { address: 3820, side: 1, profile: 'san-pablo' },
   // El remate se comprime para incluir la escuela pedida, al 4287, junto a San Juan.
   { address: 4153, slot: 80, span: 2, side: -1, profile: 'maderera-jbj' },
