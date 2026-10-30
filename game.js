@@ -35,6 +35,7 @@ const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 export class Game {
   constructor(canvas, callbacks = {}) {
     this.cb = callbacks;
+    this.inputGrace = 0;     // segundos de compensación de latencia (solo al jugar con cámara)
     this.quality = 'auto';
     this.pixelRatio = Math.min(window.devicePixelRatio, 1.25);
     this.frameAverage = 1 / 60;
@@ -438,6 +439,8 @@ export class Game {
     this.invuln = 0;
     this.stumbleTimer = 0;
     this.stumbleContacts = new Set();
+    this.pendingHits = new Map(); // choques en suspenso mientras llega el gesto de la cámara
+    this.forgiven = new Set();    // obstáculos que el gesto (tardío) llegó a esquivar
     this.chase = 3;          // al empezar el guardia sale corriendo detrás
     this.danger = false;     // tropezar con el guardia cerca = te atrapa
     this.caughtReason = null;
@@ -487,6 +490,14 @@ export class Game {
   }
 
   // --- Controles ---
+  // Compensación de latencia de la cámara: la cámara y el detector tardan en reconocer un gesto (unos
+  // 100–300 ms según el equipo). Con este margen, un choque queda en suspenso ese tiempo y, si llega el
+  // gesto que lo evitaba (saltar un tablero, agacharse bajo un banco, salir del carril de un colectivo),
+  // se perdona. Con 0 (teclado) los choques son inmediatos como siempre.
+  setInputGrace(seconds) {
+    this.inputGrace = Math.max(0, Math.min(0.35, seconds || 0));
+  }
+
   setLane(lane) {
     if (this.state !== 'playing') return;
     lane = Math.max(0, Math.min(2, lane));
@@ -785,6 +796,33 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
+  holdHit(obstacle, kind) {
+    this.pendingHits.set(obstacle, { kind, lane: this.lane, until: this.time + this.inputGrace });
+  }
+
+  // Revisa los choques en suspenso: si ya se hizo el gesto, se perdonan; si se acabó el margen, cuentan.
+  // Devuelve true si la partida terminó.
+  resolvePendingHits() {
+    for (const o of this.forgiven) if (!this.obstacles.includes(o)) this.forgiven.delete(o);
+    for (const [o, hit] of this.pendingHits) {
+      if (!this.obstacles.includes(o)) { this.pendingHits.delete(o); continue; }
+      const leftLane = this.lane !== hit.lane;
+      const avoided = hit.kind === 'low' ? this.vy > 0 || this.y >= o.yMax || leftLane
+        : hit.kind === 'high' ? this.rollTimer > 0 || leftLane
+        : leftLane || this.y >= TRAIN_TOP - SURFACE_EPS;
+      if (avoided) {
+        this.pendingHits.delete(o);
+        this.forgiven.add(o);
+      } else if (this.time >= hit.until) {
+        this.pendingHits.delete(o);
+        if (hit.kind === 'low') this.stumble(o);
+        else this.gameOver('crash');
+        if (this.state === 'over') return true;
+      }
+    }
+    return false;
+  }
+
   updatePhysics(dt, move) {
     const previousX = this.x;
     const previousY = this.y;
@@ -834,12 +872,14 @@ export class Game {
     if (this.jumpBuffer > 0 && this.grounded) this.jump();
 
     if (this.invuln > 0 || this.flyTimer > 0) return;
+    if (this.resolvePendingHits()) return;
     for (const o of this.stumbleContacts) {
       if (!this.obstacles.includes(o) || !overlapsObstacle(o, previousX, -move)) this.stumbleContacts.delete(o);
     }
     const height = this.playerHeight;
     const stumbles = [];
     for (const o of this.obstacles) {
+      if (this.forgiven.has(o) || this.pendingHits.has(o)) continue;
       const contact = obstacleContact(o, previousX, this.x, targetX, dt, move);
       if (!contact || this.stumbleContacts.has(o)) continue;
       const impactY = THREE.MathUtils.lerp(previousY, this.y, contact.time);
@@ -850,6 +890,8 @@ export class Game {
         if (impactY >= TRAIN_TOP - SURFACE_EPS || this.y >= TRAIN_TOP - SURFACE_EPS) continue;
         if (contact.side) {
           stumbles.push({ obstacle: o, side: true });
+        } else if (this.inputGrace > 0) {
+          this.holdHit(o, 'train');
         } else {
           this.gameOver('crash');
           return;
@@ -858,7 +900,8 @@ export class Game {
       }
       const exitY = THREE.MathUtils.lerp(previousY, this.y, contact.exit);
       if (Math.min(impactY, exitY) < o.yMax && Math.max(impactY, exitY) + height > o.yMin) {
-        if (o.type === 'low') stumbles.push({ obstacle: o, side: false });
+        if (this.inputGrace > 0) this.holdHit(o, o.type);
+        else if (o.type === 'low') stumbles.push({ obstacle: o, side: false });
         else {
           this.gameOver('crash');
           return;

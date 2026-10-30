@@ -28,38 +28,74 @@ dispositivo del jugador.
 - El detector corre en `pose-worker.js`. `vision_bundle.cjs` se descarga como texto y se carga desde un
   Blob: Chrome rechaza `importScripts` de archivos servidos como `text/plain` (pasaba con servidores
   simples) y entonces el seguimiento caía al hilo principal y trababa el juego.
-- Una sola persona (`numPoses: 1`): MediaPipe reutiliza el seguimiento en vez de detectar en cada cuadro.
-- Escalera automática de modelos: completo GPU → ligero GPU → ligero CPU. Si la inferencia media supera
-  34 ms (después de 45 cuadros) el controlador baja un peldaño. El modelo se calienta dentro del worker
-  antes de avisar `ready`, así el primer cuadro real no tarda segundos.
+- **Un solo detector de una persona en modo VIDEO** (`numPoses: 1`): después del primer cuadro MediaPipe
+  sigue al jugador recortando su zona, sin volver a buscar en toda la imagen. Medido en una Intel UHD 617
+  (inferencia sola): 38 ms por cuadro con el modelo completo, contra 64 ms buscando hasta 3 personas y
+  65 ms (p90 102 ms) con el recorte analizado en modo IMAGE que se usaba antes.
+- **Niveles que se miden en la máquina real:** completo GPU → ligero GPU → ligero CPU. Si la mediana de
+  30 cuadros pasa de 45 ms se prueba el siguiente nivel y **solo se queda si es al menos 15 % más
+  rápido**; si no, vuelve al anterior. La prueba se repite cada minuto como mucho, porque la carga cambia
+  (por ejemplo, cuando empieza la partida). El nivel nuevo se carga en segundo plano mientras el actual
+  sigue analizando: cambiar de modelo no frena el seguimiento. (Antes se bajaba a ciegas: en esta Mac,
+  con el juego corriendo, terminaba en CPU a 2,5 cuadros por segundo y 664 ms por cuadro.)
 - Se piden 30 fps a la cámara (60 fps pedidos suelen bajar la exposición) y a cada cuadro se le reduce el
   tamaño a 384×288 antes de enviarlo al worker.
 - Los puntos de los brazos pasan por un filtro One Euro y el muñeco los sigue más rápido.
-- Calibración por tiempo (~0,7 s quieto, mediana en vez de media) con guía: acercarse, alejarse o centrarse.
+- Calibración por tiempo (~0,7 s quieto y al menos 4 cuadros, para cámaras lentas) con guía: acercarse,
+  alejarse o centrarse.
 - La barra de estado muestra fps, ms de inferencia y retraso cámara→resultado.
+
+## Detección de gestos (`gestures.js`)
+
+- Todo se mide en proporciones del cuerpo: lo vertical en largos de torso (T) y lo lateral en anchos de
+  hombro, así funciona igual con un chico lejos o un adulto cerca.
+- Sin filtros con retraso en la decisión: se usan los puntos como llegan y la velocidad se calcula con
+  regresión sobre los últimos 2–4 cuadros.
+- **Salto:** por posición (cadera y hombros suben 0,12 T) o por movimiento (suben al menos 0,06 T,
+  ~3 cm, a más de 2 T/s: un salto despega a 3–6 T/s y trotar no pasa de ~0,8). Encoger o levantar los
+  brazos sube solo los hombros y no cuenta. Después de bajar (el amague de un salto o una agachada), para
+  saltar tienen que despegar los pies si se ven, o subir 0,17 T por encima de la altura de pie: el amague
+  ya no frena el salto y pararse de golpe no cuenta como salto. Un cuadro que sube más rápido de lo que
+  puede un cuerpo (8 T/s) se confirma con el siguiente.
+- **Agachado:** por posición (hombros bajan 0,25 T, dos cuadros; 0,33 T alcanza uno) o por movimiento
+  (bajan 0,17 T a más de 1,5 T/s, sin que la cadera suba). Inclinarse hacia la cámara también cuenta.
+  Al levantarse rápido se suelta enseguida, y si queda parado más abajo que al calibrar se corrige solo.
+- **Carril:** entra a 0,5 anchos de hombro; con el cuerpo en marcha se proyecta un cuadro hacia adelante
+  (lo que tarda el siguiente resultado), siempre que ya se haya movido al menos 0,3. Vuelve al centro por
+  debajo de 0,32. Cambiar de carril y saltar enseguida ya no pide un salto más alto.
+
+## Compensación de latencia
+
+La cámara y el detector tardan en reconocer un gesto (100–300 ms según el equipo). Al jugar con cámara,
+un choque con un tablero, un banco o el frente de un colectivo queda en suspenso ese tiempo (el retraso
+medido en el equipo más un cuadro, entre 0,1 y 0,35 s): si llega el gesto que lo evitaba (saltar,
+agacharse o salir del carril) se perdona. Con teclado los choques son inmediatos como siempre.
+
+## Medición de punta a punta
+
+`gestos.y4m` es un video de cámara virtual con el número de cuadro codificado y gestos con tiempos
+conocidos (salto con amague, salto sin amague, pasos laterales, agachado, agacharse y pararse rápido, paso
+y salto). Se mide cuánto tarda el juego en reconocer cada gesto desde que empieza el movimiento.
+Para repetirlo en otro equipo (por ejemplo, el de la Expo): `tools/latencia/` (instrucciones al
+principio de `medir.cjs`).
+
+| Medido en una Mac Intel i5 de 2 núcleos (UHD 617), muy cargada | Salto | Agachado | Carril |
+|---|---|---|---|
+| Antes (con el juego): 3 de 4 saltos y 2 pasos sin detectar | 433 ms | 600 ms | 834 ms |
+| Ahora, con el juego corriendo | 400 ms | 517 ms | 467 ms |
+| Ahora, solo cámara (inferencia sin competir con el juego) | 133 ms | 150 ms | 233 ms |
+
+Con el juego corriendo, en esa máquina de dos núcleos el límite lo pone la CPU compartida (los tres
+niveles rinden parecido): ahí actúa la compensación de latencia. En equipos más holgados los tiempos se
+acercan a la fila "solo cámara".
 
 ## Jugador fijo entre mucha gente
 
-- **Búsqueda y seguimiento:** el worker tiene dos detectores. Mientras no hay jugador fijado se busca en el
-  cuadro completo (hasta 3 personas, se elige la más grande cerca del centro). Una vez fijado, cada cuadro
-  se recorta alrededor de la caja del jugador (estrecha a los costados, con margen para saltos) y solo ese
-  recorte pasa al detector: lo que se mueve detrás queda fuera y el modelo ve al jugador más grande.
-- **Identidad:** al calibrar se guarda la proporción hombros/torso. Si en el recorte asoma otra persona, gana
-  la que coincide en posición, tamaño y proporción.
+- **Seguimiento de una persona:** MediaPipe sigue al jugador por su zona y no salta a quien pasa por
+  detrás mientras el jugador siga a la vista. Si se pierde, vuelve a buscar en toda la imagen.
+- **Identidad:** al calibrar se guarda la proporción hombros/torso; una persona que no coincide en
+  posición, tamaño y proporción no se toma como jugador.
 - **Perderse y volver:** si el jugador sale de cuadro un momento y vuelve con el mismo tamaño y lugar, se
   conserva la calibración (no pide quedarse quieto otra vez). Si hay duda, se recalibra.
-- **Latencia:** filtro horizontal más ágil y umbrales de carril y salto algo menores.
-- Prueba sintética (canvas como cámara, dos personas cruzando detrás): calibra en ~2 s, 30 fps, ~20 ms por
-  cuadro, carril y salto detectados y ningún "te perdí".
-
-## Moverse por toda la pantalla
-
-- El recorte sigue al jugador con predicción: se adelanta según su velocidad (el resultado llega ~2
-  cuadros tarde) y se ensancha cuanto más rápido se mueve, así no se queda atrás en un cruce de lado a lado.
-- Con el jugador pegado a un borde lateral (centro de hombros a menos de 14 % del borde) alcanza con ver los
-  hombros; en el centro, caderas ocultas siguen contando como detección parcial.
-- Al desplazarse de lado a más de 3,5 anchos de hombro por segundo el salto pide 1,7 veces más altura y no
-  se usa la detección temprana: cruzar rápido no dispara saltos falsos.
-- Prueba sintética de estrés (3 vueltas: cruce completo ida y vuelta, salto y agachada, con dos personas
-  pasando por detrás): 96 % de los cuadros con jugador, 30 fps, ~23 ms, sin "te perdí". Quedó algún
-  salto falso aislado cuando el cuerpo toca el borde izquierdo a toda velocidad.
+- Con el jugador pegado a un borde lateral (centro de hombros a menos de 14 % del borde) o agachado
+  alcanza con ver los hombros; de pie en el centro, caderas ocultas siguen contando como detección parcial.

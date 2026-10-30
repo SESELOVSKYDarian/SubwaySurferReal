@@ -251,7 +251,15 @@ function syncMusic() {
   backgroundMusic.update(game.state, !overlay.classList.contains('hidden') || story?.videoOpen || document.hidden);
 }
 document.addEventListener('visibilitychange', syncMusic);
+// Compensación de latencia: con la cámara, un choque espera lo que tarda en llegar un gesto (retraso
+// cámara→resultado medido en este equipo más un cuadro de análisis). Con teclado no hay espera.
+function cameraGrace() {
+  if (!pose?.running || session.keyboard) return 0;
+  const { latency = 0, fps = 0 } = pose.stats || {};
+  return Math.max(0.1, (latency + 1000 / Math.max(fps, 4)) / 1000);
+}
 function frame(now) {
+  game.setInputGrace?.(cameraGrace());
   // El menú es una ilustración: no gastar GPU dibujando la escena detrás.
   if (overlay.classList.contains('hidden')) game.update((now - last) / 1000);
   story?.updateHud();

@@ -3,7 +3,7 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 // Poses simuladas a 30 fps con reloj falso: el detector real (filtros, calibración y umbrales).
 // Torso de 0,27 (hombros 0,35 → caderas 0,62), así que 0,1 torsos ≈ 0,027 del cuadro.
 const T=.27;
-function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false,head=0,scale=1,noFeet=false,wide=1}={}){
+function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false,head=0,scale=1,noFeet=false,wide=1,dx=0}={}){
  const p=Array.from({length:33},()=>({x:.5,y:.5,visibility:1}));
  const set=(i,x,y)=>{p[i]={x,y,visibility:1};};
  set(0,.5,.25+body+shoulders+head);
@@ -15,6 +15,7 @@ function pose({body=0,shoulders=0,hips=0,feet=0,wrists=null,hipsOut=false,head=0
  set(25,.46,.78+body+hips);set(26,.54,.78+body+hips);
  set(27,.46,.92+body+feet);set(28,.54,.92+body+feet);
  if(noFeet){p[27].visibility=0;p[28].visibility=0;}
+ if(dx)for(const q of p)q.x+=dx;   // paso al costado (en coordenadas de la imagen)
  // Jugadores de otro tamaño o a otra distancia: el cuerpo entero se escala alrededor del pecho.
  if(scale!==1)for(const q of p){q.x=.5+(q.x-.5)*scale;q.y=.45+(q.y-.45)*scale;}
  return p;
@@ -25,9 +26,9 @@ async function detector(base={},calibMs=33){
  let clock=1000;
  const real=Object.getOwnPropertyDescriptor(globalThis,'performance');
  Object.defineProperty(globalThis,'performance',{configurable:true,value:{now:()=>clock}});
- const count={jump:0,duck:0,duckEnd:0,lost:0,calibrated:0};
+ const count={jump:0,duck:0,duckEnd:0,lost:0,calibrated:0,lane:0};
  const p=new PoseController({videoWidth:640,videoHeight:480},{getContext:()=>({})},{
-  onJump:()=>count.jump++,onDuck:()=>count.duck++,onDuckEnd:()=>count.duckEnd++,
+  onJump:()=>count.jump++,onDuck:()=>count.duck++,onDuckEnd:()=>count.duckEnd++,onLane:()=>count.lane++,
   onLost:()=>count.lost++,onCalibrated:()=>count.calibrated++,
  });
  p.draw=()=>{};
@@ -169,14 +170,15 @@ test('agacharse y levantarse rápido no es saltar (con y sin pies a la vista)',a
  for(const noFeet of [false,true]){
   const d=await detector({noFeet});
   try{
-   // Agachada corta, que no llega a contar como agachado, y se para de golpe pasando un poco de largo.
-   for(const h of [.08,.16,.22,.22,.12,-.04,-.12,-.1,-.04,0])d.feed(pose({body:h*T,noFeet}));
+   // Agachada corta y se para de golpe pasando un poco de largo; los pies no despegan del piso.
+   for(const h of [.08,.16,.22,.22,.12,-.04,-.12,-.1,-.04,0])d.feed(pose({body:h*T,feet:-h*T,noFeet}));
    d.feed(pose({noFeet}),20);
    assert.equal(d.count.jump,0,'levantarse de una agachada corta no es saltar'+(noFeet?' (sin pies)':''));
    // Agachada completa y se para con impulso.
-   for(const h of [.15,.3,.45,.5,.5,.5,.5,.3,.1,-.1,-.16,-.12,-.05,0])d.feed(pose({body:h*T,noFeet}));
+   for(const h of [.15,.3,.45,.5,.5,.5,.5,.3,.1,-.1,-.16,-.12,-.05,0])d.feed(pose({body:h*T,feet:-h*T,noFeet}));
    d.feed(pose({noFeet}),20);
-   assert.equal(d.count.duck,1);
+   // (la agachada corta pero rápida también cuenta: es la que hacen muchos para pasar bajo un banco)
+   assert.equal(d.count.duck,2);
    assert.equal(d.count.jump,0,'levantarse de agachado con impulso no es saltar'+(noFeet?' (sin pies)':''));
   }finally{d.restore();}
  }
@@ -213,9 +215,9 @@ test('cámara lenta: un cuadro erróneo mientras se agacha no es un salto',async
   try{
    d.feed(pose({noFeet}),20,100);
    // Agachada corta (no llega a agachado) y un cuadro en el que el detector ve todo el cuerpo más arriba.
-   d.feed(pose({body:.22*T,noFeet}),3,100);
+   d.feed(pose({body:.22*T,feet:-.22*T,noFeet}),3,100);
    d.feed(pose({body:-.2*T,noFeet}),1,100);
-   d.feed(pose({body:.22*T,noFeet}),3,100);
+   d.feed(pose({body:.22*T,feet:-.22*T,noFeet}),3,100);
    d.feed(pose({noFeet}),15,100);
    assert.equal(d.count.jump,0,noFeet?'sin pies':'con pies');
   }finally{d.restore();}
@@ -250,6 +252,30 @@ test('calibra con la cámara lenta (5 y 6 fps) y no se queda en 100 %',async()=>
    assert.match(d.p.lastStatus,/✅/,'quedó calibrado a '+Math.round(1000/ms)+' fps');
   }finally{d.restore();}
  }
+});
+
+test('reacción: cada gesto se reconoce en el primer cuadro posible',async()=>{
+ const d=await detector();
+ const until=(frames,key)=>{const n0=d.count[key];for(let i=0;i<frames.length;i++){frames[i]();if(d.count[key]>n0)return i+1;}return Infinity;};
+ try{
+  // Salto con amague: baja 0,12 T con los pies apoyados y despega; los pies dejan el piso en el 2.º cuadro.
+  for(const h of [.06,.12,.12])d.feed(pose({body:h*T,feet:-h*T}));
+  const salto=until([-.08,-.25,-.45,-.55].map((h,i)=>()=>d.feed(pose({body:h*T,feet:i?0:-h*T}))),'jump');
+  assert.equal(salto,2,'el salto con amague se reconoce cuando despegan los pies');
+  d.feed(pose(),20);
+  // Agachado rápido: alcanza con bajar 0,2 T a buena velocidad.
+  const agachado=until([.1,.2,.3,.4].map(h=>()=>d.feed(pose({body:h*T,feet:-h*T}))),'duck');
+  assert.equal(agachado,2,'el agachado rápido se reconoce a mitad de camino');
+  d.feed(pose(),20);
+  // Paso al costado a 15 fps: con el cuerpo en marcha se anticipa un cuadro.
+  d.feed(pose(),10,67);
+  const carril=until([.024,.048,.072,.096].map(x=>()=>d.feed(pose({dx:x}),1,67)),'lane');
+  assert.equal(carril,2,'el carril se anticipa cuando el cuerpo ya va hacia el costado');
+  // Y saltar enseguida después del paso no pide más altura.
+  d.feed(pose({dx:.096}),6,67);
+  const tras=until([-.1,-.25,-.45].map(h=>()=>d.feed(pose({body:h*T,dx:.096}),1,67)),'jump');
+  assert.ok(tras<=2,'salto después del paso en '+tras+' cuadros');
+ }finally{d.restore();}
 });
 
 test('de pie en el centro, unas caderas que no se ven siguen siendo una detección parcial',async()=>{

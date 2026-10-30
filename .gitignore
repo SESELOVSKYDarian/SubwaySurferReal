@@ -3,3 +3,8 @@ test-results/
 __pycache__/
 *.pyc
 *.blend1
+
+# Video de cámara virtual para medir latencia (se genera con tools/latencia/make_gestures_y4m.py)
+tools/latencia/*.y4m
+tools/latencia/*.y4m.json
+tools/latencia/resultado*.json

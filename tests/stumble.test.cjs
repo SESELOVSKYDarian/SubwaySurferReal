@@ -135,6 +135,46 @@ test('reacción, pausa, escape a los cinco segundos y reinicio limpio',{timeout:
  }finally{await page.close();}
 });
 
+test('compensación de latencia de la cámara: el gesto tardío perdona el choque; sin gesto, cuenta',{timeout:120000},async()=>{
+ const page=await gamePage();
+ try{
+  const r=await page.evaluate(()=>{
+   const g=window.game,out={};
+   // Corre hasta tocar el obstáculo; después espera `late` segundos y hace el gesto (o nada).
+   const run=(type,grace,gesture,late=0.1)=>{
+    resetGame();g.speed=20;g.chase=0;g.danger=false;g.setInputGrace(grace);
+    if(type==='train')addBus(1,-5);else g.addObstacle(type,1,-4);
+    const o=g.obstacles.at(-1);
+    let t=0,hitAt=null,done=false;
+    while(t<1.6&&g.state==='playing'){
+     g.update(1/60);t+=1/60;
+     const touched=g.pendingHits.has(o)||g.danger||g.state!=='playing';
+     if(touched&&hitAt==null)hitAt=t;
+     if(hitAt!=null&&gesture&&!done&&t-hitAt>=late-1e-9){done=true;if(gesture==='jump')g.jump();else if(gesture==='roll')g.roll();else g.setLane(0);}
+    }
+    return {state:g.state,danger:g.danger,hit:hitAt!=null};
+   };
+   out.tableroSalto=run('low',0.2,'jump');
+   out.tableroNada=run('low',0.2,null);
+   out.bancoAgacha=run('high',0.2,'roll');
+   out.bancoNada=run('high',0.2,null);
+   out.colectivoCarril=run('train',0.2,'lane');
+   out.colectivoNada=run('train',0.2,null);
+   out.gestoDemasiadoTarde=run('low',0.2,'jump',0.3);
+   out.tecladoInmediato=run('low',0,'jump',0.05);
+   return out;
+  });
+  assert.deepEqual(r.tableroSalto,{state:'playing',danger:false,hit:true},'saltar tarde perdona el tablero');
+  assert.equal(r.tableroNada.danger,true,'sin saltar, tropieza');
+  assert.deepEqual(r.bancoAgacha,{state:'playing',danger:false,hit:true},'agacharse tarde perdona el banco');
+  assert.equal(r.bancoNada.state,'over','sin agacharse, choca con el banco');
+  assert.deepEqual(r.colectivoCarril,{state:'playing',danger:false,hit:true},'salir del carril tarde perdona el colectivo');
+  assert.equal(r.colectivoNada.state,'over','sin moverse, choca con el colectivo');
+  assert.equal(r.gestoDemasiadoTarde.danger,true,'un gesto después del margen no perdona');
+  assert.equal(r.tecladoInmediato.danger,true,'con teclado (margen 0) el choque es inmediato');
+ }finally{await page.close();}
+});
+
 test('indicador de persecución legible en móvil, pausa y aviso de escape',async()=>{
  const page=await env.browser.newPage({viewport:{width:320,height:640}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
