@@ -93,7 +93,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   const euler = new THREE.Euler();
   const poseState = {
     crouch: 0, air: 0, run: 0, flight: 0, phase: 0, stance: 0.58,
-    rootDrop: 0, runLift: 0, landing: 0, tuck: 0, turn: 0, stumble: 0,
+    rootDrop: 0, runLift: 0, landing: 0, tuck: 0, turn: 0, stumble: 0, crash: 0,
     leftSupport: false, rightSupport: false,
   };
   let wasAirborne = false, lastVerticalSpeed = 0, animationTime = 0;
@@ -303,8 +303,8 @@ export async function loadRunner(parent, { teacher = false } = {}) {
   const studentArms = alpha => {
     const run = poseState.run * (1 - poseState.crouch), air = poseState.air;
     const crouch = poseState.crouch, flight = poseState.flight;
-    const stumble = poseState.stumble * (1 - crouch);
-    const idle = Math.max(0, 1 - run - air - crouch - flight);
+    const stumble = poseState.stumble * (1 - crouch), impact = poseState.crash;
+    const idle = Math.max(0, 1 - run - air - crouch - flight) * (1 - impact);
     for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
       if (holdsPhone) {
         // Sostiene el teléfono con ambas manos: brazos en la pose del escaneo.
@@ -326,6 +326,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       add(run * (1 - stumble), pump * .72 + .05, 1.45 + .25 * Math.max(0, pump), .14, .22, .78);
       add(air * (1 - stumble), sign > 0 ? 1.0 : .7, .9, .26, .05, .18);
       add(stumble, .9, .8, .5, .05, .25);
+      add(impact * 3, 1.9, .35, .55, 0, .1);
       add(crouch, .85, 1.55, .32, .10, .55);
       add(flight, -.35, .45, .62, 0, .10);
       add(idle, .06, .28, .10, .05, .38);
@@ -387,7 +388,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       for (const name of Object.keys(armWeights)) { armWeights[name] = 0; delete armRotations[name]; }
       Object.assign(poseState, {
         crouch: 0, air: 0, run: 0, flight: 0, phase: 0, stance: gait.stance,
-        rootDrop: 0, runLift: 0, landing: 0, tuck: 0, turn: 0, stumble: 0,
+        rootDrop: 0, runLift: 0, landing: 0, tuck: 0, turn: 0, stumble: 0, crash: 0,
         leftSupport: false, rightSupport: false,
       });
       wasAirborne=false;lastVerticalSpeed=0;animationTime=0;
@@ -395,7 +396,7 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       model.rotation.set(0,0,0);
       controller.update(0.1, {});
     },
-    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false, arms = null, verticalSpeed = 0, turn = 0, look = 0, stumble = 0 } = {}) {
+    update(dt, { running = false, airborne = false, rolling = false, speed = 14, flying = false, grabbing = false, arms = null, verticalSpeed = 0, turn = 0, look = 0, stumble = 0, crash = 0 } = {}) {
       dt = THREE.MathUtils.clamp(dt,0,0.1);
       animationTime += dt;
       if(wasAirborne && !airborne && !flying) poseState.landing=Math.min(.09,Math.abs(lastVerticalSpeed)*.007);
@@ -406,6 +407,9 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       const crouching = rolling && !airborne && !flying;
       poseState.stumble = THREE.MathUtils.damp(poseState.stumble, flying ? 0 : stumble, 24, dt);
       const reaction = poseState.stumble * (1 - poseState.crouch);
+      // Golpe de frente: entra rápido (latigazo) y queda arqueado hacia atrás.
+      poseState.crash = THREE.MathUtils.damp(poseState.crash, crash, 18, dt);
+      const impact = poseState.crash;
       const blend = 1 - Math.exp(-22 * dt);
       poseState.crouch = THREE.MathUtils.damp(poseState.crouch, crouching ? 1 : 0, 22, dt);
       poseState.air = THREE.MathUtils.damp(poseState.air, airborne ? 1 : 0, 14, dt);
@@ -460,16 +464,16 @@ export async function loadRunner(parent, { teacher = false } = {}) {
       } else if (detailed) {
         // Tres vértebras: la inclinación se reparte y el pecho contrarrota la
         // cadera; al cambiar de carril el tronco se inclina hacia la curva.
-        const lean = -gait.lean*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7 - reaction*.5;
+        const lean = -gait.lean*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7 - reaction*.5 + impact*.55;
         const bank = -poseState.turn*.10*(1-poseState.crouch);
         move('Spine', lean*.6, -sway*0.035, -sway*0.012 + bank*.6, blend);
         move('Spine1', lean*.4, -sway*0.03, -sway*0.008 + bank*.4, blend);
         move('Spine2', -0.35*poseState.crouch + .04*poseState.air, -sway*0.07, sway*0.018, blend);
-        move('Neck', 0.12*poseState.crouch, sway*0.035, -sway*0.012 - bank*.4, blend);
-        move('Head', 0.02 + .06*poseState.run, -sway*0.025, sway*0.01 - bank*.3, blend);
+        move('Neck', 0.12*poseState.crouch + impact*.3, sway*0.035, -sway*0.012 - bank*.4, blend);
+        move('Head', 0.02 + .06*poseState.run + impact*.35, -sway*0.025, sway*0.01 - bank*.3, blend);
         studentArms(1 - Math.exp(-(poseState.run > .35 ? 30 : 14) * dt));
       } else {
-        move('Spine', -gait.lean*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7 - reaction*.5,
+        move('Spine', -gait.lean*poseState.run - 0.65*poseState.crouch - 0.1*poseState.flight - poseState.landing*.7 - reaction*.5 + impact*.55,
           -Math.sin(poseState.phase)*0.06*poseState.run, -Math.sin(poseState.phase)*0.02*poseState.run, blend);
         move('Spine2', -0.35*poseState.crouch, -Math.sin(poseState.phase)*0.075*poseState.run,
           Math.sin(poseState.phase)*0.018*poseState.run, blend);

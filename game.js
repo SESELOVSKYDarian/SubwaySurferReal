@@ -688,7 +688,9 @@ export class Game {
     dt = Math.min(Math.max(dt, 0), 0.05);
     this.time += dt;
     const playing = this.state === 'playing';
-    const move = playing ? this.speed * dt : 0;
+    // Con un choque en suspenso (margen de cámara) el corredor queda frenado
+    // contra el obstáculo: así no lo atraviesa mientras espera el gesto.
+    const move = playing && this.pendingHits.size === 0 ? this.speed * dt : 0;
 
     if (playing) {
       this.speed = Math.min(MAX_SPEED, this.speed + dt * 0.35);
@@ -766,15 +768,22 @@ export class Game {
     if (playing) this.emitScore();
 
     this.updatePlayerMesh(dt, rolling);
-    this.characterAnchor.position.set(this.x, this.y, 0);
+    // Golpe: el choque frontal lo despide hacia atrás y cae de espaldas en
+    // ~0.4 s con un rebote; si lo atrapa el profesor solo se desploma.
+    const crash = this.state === 'over' ? this.time - this.crashAt : -1;
+    const fall = crash >= 0 ? Math.min(1, crash / 0.4) : 0;
+    const hit = 1 - Math.pow(1 - fall, 3);
+    const knock = crash >= 0 && this.caughtReason !== 'caught' ? 1 : 0;
+    this.characterAnchor.position.set(this.x, this.y + knock * Math.sin(Math.PI * fall) * 0.25, knock * 0.9 * hit);
     this.characterAnchor.rotation.z = THREE.MathUtils.damp(this.characterAnchor.rotation.z,
       THREE.MathUtils.clamp(this.rig.root.rotation.z, -0.16, 0.16), 12, dt);
-    this.characterAnchor.rotation.x = this.state === 'over' ? 0.35 : 0;
+    this.characterAnchor.rotation.x = crash >= 0 ? 0.35 * hit + Math.sin(Math.PI * Math.min(1, crash / 0.25)) * 0.25 : 0;
     if (this.runner) {
       this.runner.setDetail(this.quality !== 'balanced' && this.pixelRatio > .7);
       if (this.state !== 'paused') this.runner.update(dt, { running: playing, airborne: !this.grounded && this.flyTimer === 0, flying: this.flyTimer > 0, rolling, speed: this.speed, verticalSpeed: this.vy,
         turn: THREE.MathUtils.clamp((LANE_X[this.lane]-this.x)/2.2,-1,1),
         stumble: this.stumbleTimer / STUMBLE_TIME,
+        crash: this.state === 'over' ? 1 : 0,
         arms: performance.now() - this.armSeenAt < 350 ? this.armTargets : null });
 
     }
@@ -1028,6 +1037,7 @@ export class Game {
   gameOver(reason) {
     this.state = 'over';
     this.caughtReason = reason;
+    this.crashAt = this.time;
     this.shake = 1;
     this.flyTimer = 0;
     this.jetpack.visible = false;
